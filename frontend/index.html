@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DA-IICT Faculty &amp; Staff AI Buddy</title>
+    <meta name="description" content="Conversational AI search assistant for Dhirubhai Ambani University faculty and staff profiles.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=200">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- ── Sidebar ─────────────────────────────────────────────── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                    <h2>DAU Buddy</h2>
+                </div>
+                <span class="badge">AI</span>
+            </div>
+
+            <div class="sidebar-content">
+                <button class="new-chat-btn" id="new-chat-btn">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New Chat</span>
+                </button>
+                <div class="chat-history-list" id="chat-history-list">
+                    <!-- Dynamically rendered -->
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="clear-history-btn" id="clear-history-btn">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Clear History</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ── Main Chat Area ─────────────────────────────────────── -->
+        <main class="chat-area">
+
+            <!-- Header -->
+            <header class="chat-header">
+                <div class="header-left">
+                    <button class="icon-btn" id="sidebar-toggle" title="Toggle Sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="header-info">
+                        <h1>Faculty &amp; Staff Intelligence Assistant</h1>
+                        <p>Conversational search engine for Dhirubhai Ambani University</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="theme-toggle" title="Toggle Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button class="icon-btn" id="clear-chat" title="Clear Chat">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Viewport -->
+            <div class="chat-viewport" id="chat-viewport">
+
+                <!-- Welcome screen -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <div class="welcome-icon">
+                        <i class="fa-solid fa-comments"></i>
+                    </div>
+                    <h2>How can I help you today?</h2>
+                    <p class="welcome-sub">
+                        Ask anything about DA-IICT faculty or staff — search by name, specialization, department, or role.
+                    </p>
+
+                    <div class="prompt-grid">
+                        <button class="prompt-card" data-prompt="I want a faculty for machine learning">
+                            <i class="fa-solid fa-robot card-icon"></i>
+                            <div class="card-text">
+                                <h4>Find Experts</h4>
+                                <p>"I want a faculty for machine learning"</p>
+                            </div>
+                        </button>
+                        <button class="prompt-card" data-prompt="Give me the detailed profile of Prof. Ankush Chander">
+                            <i class="fa-solid fa-id-card card-icon"></i>
+                            <div class="card-text">
+                                <h4>Get Detailed Profile</h4>
+                                <p>"Profile of Prof. Ankush Chander"</p>
+                            </div>
+                        </button>
+                        <button class="prompt-card" data-prompt="Who is in the finance and accounts department?">
+                            <i class="fa-solid fa-users card-icon"></i>
+                            <div class="card-text">
+                                <h4>Find Staff</h4>
+                                <p>"Finance, accounts, or admin staff"</p>
+                            </div>
+                        </button>
+                        <button class="prompt-card" data-prompt="Sync latest faculty and staff details from website">
+                            <i class="fa-solid fa-rotate card-icon"></i>
+                            <div class="card-text">
+                                <h4>Sync Live Data</h4>
+                                <p>"Sync latest details from website"</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="messages-container" id="messages-container"></div>
+            </div>
+
+            <!-- Input -->
+            <footer class="input-area">
+                <form class="input-form" id="input-form">
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="user-input"
+                            placeholder="Ask about a faculty member, specialization, or staff role…"
+                            autocomplete="off"
+                        >
+                        <button type="submit" class="send-btn" id="send-btn" title="Send">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="input-disclaimer">
+                    <p>DAU Buddy answers based on real-time data scraped from
+                        <a href="https://www.daiict.ac.in" target="_blank" rel="noopener">daiict.ac.in</a>
+                    </p>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="app.js?v=200"></script>
+</body>
+
+</html>

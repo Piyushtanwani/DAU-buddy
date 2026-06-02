@@ -1,0 +1,69 @@
+import os
+import logging
+from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load .env from the project root (one level up from core/)
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+load_dotenv(dotenv_path=_env_path, override=True)
+
+# ==============================================================================
+# Logging Configuration
+# ==============================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a named logger using the standard logging configuration."""
+    return logging.getLogger(name)
+
+
+logger = get_logger("core.config")
+
+
+# ==============================================================================
+# Database Configuration
+# ==============================================================================
+def get_db_config() -> Dict[str, Any]:
+    """
+    Retrieve and validate PostgreSQL connection parameters from environment variables.
+    Raises ValueError if any required variable is missing.
+    """
+    host = os.getenv("DB_HOST")
+    port = os.getenv("DB_PORT", "5432")
+    name = os.getenv("DB_NAME")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
+
+    missing = []
+    if not host:     missing.append("DB_HOST")
+    if not name:     missing.append("DB_NAME")
+    if not user:     missing.append("DB_USER")
+    if not password: missing.append("DB_PASSWORD")
+
+    if missing:
+        err = f"Missing required environment variable(s): {', '.join(missing)}"
+        logger.error(err)
+        raise ValueError(err)
+
+    return {
+        "host": host,
+        "port": int(port),
+        "database": name,
+        "user": user,
+        "password": password,
+    }
+
+
+# ==============================================================================
+# External API Keys
+# ==============================================================================
+def get_gemini_api_key() -> str:
+    """Return the configured Gemini API key, or empty string if not set."""
+    return os.getenv("GEMINI_API_KEY", "")
