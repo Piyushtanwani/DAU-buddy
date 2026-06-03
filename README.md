@@ -15,13 +15,13 @@ MCP Project/
 ├── api/                        # FastAPI web layer
 │   ├── main.py                 # Application factory (create_app)
 │   ├── routes/
-│   │   ├── chat.py             # POST /api/chat
+│   │   ├── chat.py             # POST /api/chat (SSE streaming enabled)
 │   │   └── health.py           # GET  /api/health
 │   └── services/
-│       ├── gemini.py           # Gemini API client + circuit breaker
+│       ├── gemini.py           # Gemini 2.5 Flash API client + circuit breaker (120s timeout)
 │       ├── faculty_service.py  # Faculty DB queries + context caching
 │       ├── staff_service.py    # Staff DB queries + context caching
-│       └── fallback.py         # 8-pass rule-based NLP fallback engine
+│       └── fallback.py         # Advanced NLP fallback engine (stateless chat, name extraction, default summaries)
 │
 ├── scrapers/                   # Web scraping layer
 │   ├── faculty_scraper.py      # Scrapes all 5 faculty category pages
