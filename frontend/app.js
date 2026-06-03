@@ -524,8 +524,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     } else {
                         // Finished typing
                         bubble.innerHTML = renderMarkdown(text);
-                        actions.style.opacity = "1";
-                        actions.style.pointerEvents = "auto";
+                        actions.style.opacity = "";
+                        actions.style.pointerEvents = "";
                         scrollToBottom();
                         setInputState(true);
                     }

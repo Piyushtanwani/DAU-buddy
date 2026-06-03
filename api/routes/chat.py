@@ -91,10 +91,10 @@ async def chat_endpoint(request: ChatRequest):
                 logger.error(f"Error during full sync: {e}")
                 return ChatResponse(response=f"[Error during synchronization]: {e}")
 
-        # ── 2. Gemini RAG Pipeline ─────────────────────────────────────────────
-        api_key = config.get_gemini_api_key()
+        # ── 2. LLM RAG Pipeline (OpenRouter) ───────────────────────────────────
+        api_key = os.getenv("OPENROUTER_API_KEY")
         if api_key and is_gemini_available():
-            logger.info("Processing via Gemini RAG pipeline...")
+            logger.info("Processing via LLM RAG pipeline (OpenRouter)...")
             faculty_db = fetch_all_faculty_context()
             staff_db = fetch_all_staff_context()
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(

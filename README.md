@@ -54,45 +54,81 @@ MCP Project/
 
 ## Quick Start
 
-### 1. Set up environment
+### 1. Set up environment variables
 
+Copy the example file and add your Gemini API Key and PostgreSQL credentials.
 ```bash
 cp .env.example .env
-# Edit .env with your PostgreSQL credentials and Gemini API key
 ```
 
-### 2. Install dependencies
+---
 
-```bash
-pip install -r requirements.txt
-```
+### 2. Operating System Specific Setup
 
-### 3. Seed the database
+#### Option A: Windows (PowerShell)
+*Windows does not have `make` installed by default. You will run Python commands directly.*
 
-```bash
-# Seed faculty data
-python scripts/seed_faculty.py
+1. **Install Dependencies:**
+   ```powershell
+   # It is recommended to run this in a virtual environment, or install globally if you prefer:
+   pip install -r requirements.txt
+   ```
+2. **Seed the Database** (Ensure your Windows PostgreSQL service is running and `daiict_db` is created):
+   ```powershell
+   python scripts/seed_faculty.py
+   python scripts/seed_staff.py
+   ```
+3. **Start the Web Server:**
+   ```powershell
+   # Development (hot-reload)
+   python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8000 --reload
+   
+   # Production
+   python -m uvicorn api.main:create_app --factory --host 0.0.0.0 --port 8080
+   ```
 
-# Seed staff data  
-python scripts/seed_staff.py
+#### Option B: Linux / Ubuntu (WSL)
+*Modern Ubuntu versions enforce strict Python environment rules (`externally-managed-environment`). You must use a Virtual Environment.*
 
-# Or use Makefile
-make seed
-```
+1. **Create and Activate a Virtual Environment:**
+   ```bash
+   # Install the venv package if you don't have it
+   sudo apt update && sudo apt install python3.12-venv
+   
+   # Create and activate it
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+2. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Configure Database & Seed Data:**
+   *(If your database is running on Windows, you cannot use `localhost` in WSL. It is easiest to install PostgreSQL directly in Ubuntu).*
+   ```bash
+   # Install PostgreSQL in Ubuntu
+   sudo apt install postgresql postgresql-contrib
+   sudo service postgresql start
+   
+   # Log in and configure the user/database to match your .env file
+   sudo -u postgres psql
+   # Run: ALTER USER postgres PASSWORD 'your_password';
+   # Run: CREATE DATABASE daiict_db;
+   # Run: \q
+   
+   # Seed the data using Make
+   make seed
+   ```
+4. **Start the Web Server:**
+   ```bash
+   make dev
+   ```
 
-### 4. Start the web server
+---
 
-```bash
-# Development (hot-reload, localhost:8000)
-make dev
-# or: python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8000 --reload
-
-# Production (0.0.0.0:8080)
-make run
-```
+### 3. Access the Chatbot
 
 Open your browser at: `http://127.0.0.1:8000`
-
 ---
 
 ## MCP Servers
