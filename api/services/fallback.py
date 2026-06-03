@@ -223,69 +223,72 @@ def process_fallback_message(prompt: str) -> str:
                                 best_faculty = name
 
             if best_staff_score >= 0.5 or best_faculty_score >= 0.5:
-                work_keywords = [
-                    "work", "doing", "role", "job", "designation", "position",
-                    "task", "duties", "responsibility", "responsibilities",
-                    "profile", "specializ", "expert", "teach",
+                detail_keywords = [
+                    "detail", "detailed", "more", "everything", "contact", "email",
+                    "phone", "address", "full", "information", "info"
                 ]
-                is_work_query = any(wk in cleaned for wk in work_keywords)
+                is_detail_query = any(dk in cleaned for dk in detail_keywords)
 
                 if best_staff_score >= best_faculty_score and best_staff:
-                    if is_work_query:
-                        with db_connection() as conn:
-                            with conn.cursor() as cursor:
-                                cursor.execute(
-                                    "SELECT name, designation, qualification FROM staff WHERE name = %s;",
-                                    (best_staff,),
-                                )
-                                res = cursor.fetchone()
-                        if res:
-                            s_name, s_desig, s_qual = res
-                            qual_str = f" (holding credentials in {s_qual})" if s_qual else ""
-                            dl = (s_desig or "").lower()
-                            if "it" in dl or "system" in dl or "network" in dl:
-                                desc = "managing, maintaining, and supporting the campus IT infrastructure, networks, and computer systems."
-                            elif "account" in dl or "finance" in dl or "audit" in dl:
-                                desc = "managing financial audits, accounts, salaries, fee collections, and billing operations."
-                            elif "library" in dl or "resource" in dl or "librarian" in dl:
-                                desc = "managing library books, journals, resource center logs, and academic database cataloguing."
-                            elif "placement" in dl or "career" in dl:
-                                desc = "coordinating corporate recruitment, placement drives, internships, and student career counseling."
-                            elif "hostel" in dl or "warden" in dl or "residential" in dl:
-                                desc = "managing campus student housing, hostels, mess facilities, and residential campus guidelines."
-                            elif "lab" in dl or "laboratory" in dl or "workshop" in dl:
-                                desc = "managing practical lab equipment, maintaining lab schedules, and supporting student workshops."
-                            else:
-                                desc = f"providing vital {s_desig or 'administrative'} services to support the operations of the institute."
-                            return (
-                                f"**{s_name}** works at DA-IICT as **{s_desig}**{qual_str}.\n\n"
-                                f"Their primary role involves **{desc}**"
+                    if is_detail_query:
+                        result = get_staff_details_db(best_staff, error_on_empty=False)
+                        if result:
+                            return result
+                    
+                    with db_connection() as conn:
+                        with conn.cursor() as cursor:
+                            cursor.execute(
+                                "SELECT name, designation, qualification FROM staff WHERE name = %s;",
+                                (best_staff,),
                             )
-                    result = get_staff_details_db(best_staff, error_on_empty=False)
-                    if result:
-                        return result
+                            res = cursor.fetchone()
+                    if res:
+                        s_name, s_desig, s_qual = res
+                        qual_str = f" (holding credentials in {s_qual})" if s_qual else ""
+                        dl = (s_desig or "").lower()
+                        if "it" in dl or "system" in dl or "network" in dl:
+                            desc = "managing, maintaining, and supporting the campus IT infrastructure, networks, and computer systems."
+                        elif "account" in dl or "finance" in dl or "audit" in dl:
+                            desc = "managing financial audits, accounts, salaries, fee collections, and billing operations."
+                        elif "library" in dl or "resource" in dl or "librarian" in dl:
+                            desc = "managing library books, journals, resource center logs, and academic database cataloguing."
+                        elif "placement" in dl or "career" in dl:
+                            desc = "coordinating corporate recruitment, placement drives, internships, and student career counseling."
+                        elif "hostel" in dl or "warden" in dl or "residential" in dl:
+                            desc = "managing campus student housing, hostels, mess facilities, and residential campus guidelines."
+                        elif "lab" in dl or "laboratory" in dl or "workshop" in dl:
+                            desc = "managing practical lab equipment, maintaining lab schedules, and supporting student workshops."
+                        else:
+                            desc = f"providing vital {s_desig or 'administrative'} services to support the operations of the institute."
+                        return (
+                            f"**{s_name}** works at DA-IICT as **{s_desig}**{qual_str}.\n\n"
+                            f"Their primary role involves **{desc}**\n\n"
+                            f"*(If you need their contact info or full details, just ask for \"details of {s_name.split()[0]}\"!)*"
+                        )
 
                 elif best_faculty:
-                    if is_work_query:
-                        with db_connection() as conn:
-                            with conn.cursor() as cursor:
-                                cursor.execute(
-                                    "SELECT name, faculty_type, specialization, education FROM faculty WHERE name = %s;",
-                                    (best_faculty,),
-                                )
-                                res = cursor.fetchone()
-                        if res:
-                            f_name, f_type, f_spec, f_edu = res
-                            spec_str = f" specializing in **{f_spec}**" if f_spec else ""
-                            edu_str = f" They hold academic qualifications from {f_edu}." if f_edu else ""
-                            return (
-                                f"**{f_name}** is a **{f_type}** Faculty at DA-IICT{spec_str}.{edu_str}\n\n"
-                                "Their work primarily involves teaching academic courses and conducting "
-                                "advanced research in their fields of specialization."
+                    if is_detail_query:
+                        result = get_faculty_details_db(best_faculty, error_on_empty=False)
+                        if result:
+                            return result
+                            
+                    with db_connection() as conn:
+                        with conn.cursor() as cursor:
+                            cursor.execute(
+                                "SELECT name, faculty_type, specialization, education FROM faculty WHERE name = %s;",
+                                (best_faculty,),
                             )
-                    result = get_faculty_details_db(best_faculty, error_on_empty=False)
-                    if result:
-                        return result
+                            res = cursor.fetchone()
+                    if res:
+                        f_name, f_type, f_spec, f_edu = res
+                        spec_str = f" specializing in **{f_spec}**" if f_spec else ""
+                        edu_str = f" They hold academic qualifications from {f_edu}." if f_edu else ""
+                        return (
+                            f"**{f_name}** is a **{f_type}** Faculty at DA-IICT{spec_str}.{edu_str}\n\n"
+                            f"Their work primarily involves teaching academic courses and conducting "
+                            f"advanced research in their fields of specialization.\n\n"
+                            f"*(If you need their contact info or full details, just ask for \"details of {f_name.split()[0]}\"!)*"
+                        )
 
         except Exception as e:
             logger.error(f"Named entity matching failed: {e}")
@@ -365,14 +368,32 @@ def process_fallback_message(prompt: str) -> str:
         "thank you", "thanks", "thankyou", "awesome", "perfect", "superb",
         "wonderful", "excellent", "brilliant", "amazing", "cool", "nice", "ty",
     ]
-    if any(p in cleaned for p in appreciation_phrases):
+    if any(re.search(r'\b' + re.escape(p) + r'\b', cleaned) for p in appreciation_phrases):
         return (
             "Thank you so much! I'm glad I could be of assistance. "
             "Feel free to ask if you need any other information about DA-IICT faculty or staff!"
         )
 
+    if any(k in cleaned for k in ["who are you", "what are you", "about you"]):
+        return (
+            "I am the **DA-IICT Faculty & Staff AI Assistant**! My job is to help you search "
+            "and find people across the Dhirubhai Ambani Institute of Information and Communication Technology."
+        )
+        
+    if any(k in cleaned for k in ["how are you", "how are you doing", "what's up", "whats up"]):
+        return (
+            "I'm functioning perfectly, thank you for asking! How can I assist you in finding "
+            "DA-IICT faculty or staff today?"
+        )
+        
+    if any(k in cleaned for k in ["who am i", "what is my name", "whats my name"]):
+        return (
+            "I don't actually know your name! I am a privacy-first assistant designed solely "
+            "to help you search the DA-IICT university directory."
+        )
+
     closing_phrases = ["bye", "goodbye", "see you", "see ya", "exit", "quit"]
-    if any(p in cleaned for p in closing_phrases):
+    if any(re.search(r'\b' + re.escape(p) + r'\b', cleaned) for p in closing_phrases):
         return "Goodbye! Have a wonderful day, and don't hesitate to reach out anytime!"
 
     # ── Pass 4: Directory Shortcuts ───────────────────────────────────────────

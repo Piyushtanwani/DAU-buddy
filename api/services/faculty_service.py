@@ -86,11 +86,12 @@ def search_faculty_db(query: str, error_on_empty: bool = True) -> Optional[str]:
                 if not rows:
                     if error_on_empty:
                         return (
-                            f"I couldn't find any faculty members or specializations matching "
+                            f"I couldn't find any faculty or staff members matching "
                             f"**'{query}'** in our records.\n\n"
                             "Please try searching for:\n"
-                            "- A specific professor's name (e.g., *'Yash Vasavada'*)\n"
+                            "- A specific professor's or staff member's name (e.g., *'Yash Vasavada'*, *'Pinal Patel'*)\n"
                             "- A research field (e.g., *'Machine Learning'*, *'VLSI'*, *'NLP'*)\n"
+                            "- A staff department or role (e.g., *'Finance'*, *'Placement'*)\n"
                             "- Or educational background (e.g., *'IIT Bombay'*)"
                         )
                     return None

@@ -14,6 +14,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const suggestedLinks = document.querySelectorAll(".suggested-link");
     const promptCards = document.querySelectorAll(".prompt-card");
 
+    const sendBtn = document.getElementById("send-btn");
+
+    let isResponding = false;
+
+    function setInputState(enabled) {
+        isResponding = !enabled;
+        sendBtn.disabled = !enabled;
+        if (enabled) {
+            sendBtn.style.opacity = "1";
+            sendBtn.style.cursor = "pointer";
+            userInput.focus();
+        } else {
+            sendBtn.style.opacity = "0.5";
+            sendBtn.style.cursor = "not-allowed";
+        }
+    }
+
     // New DOM Elements for Chat History
     const chatHistoryList = document.getElementById("chat-history-list");
     const newChatBtn = document.getElementById("new-chat-btn");
@@ -39,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentTheme = document.body.getAttribute("data-theme");
         const newTheme = currentTheme === "light" ? "dark" : "light";
         document.body.setAttribute("data-theme", newTheme);
-        
+
         // Update Theme Icon
         const icon = themeToggle.querySelector("i");
         if (newTheme === "light") {
@@ -60,14 +77,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 chatSessions = [];
             }
         }
-        
+
         // Select active chat or create a fresh one if empty
         if (chatSessions.length > 0) {
             activeChatId = chatSessions[0].id;
         } else {
             createNewChat();
         }
-        
+
         renderChatHistoryList();
         loadActiveChat();
     }
@@ -104,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Render left sidebar chat history items
     function renderChatHistoryList() {
         chatHistoryList.innerHTML = "";
-        
+
         if (chatSessions.length === 0) {
             const emptyEl = document.createElement("div");
             emptyEl.style.padding = "16px";
@@ -123,14 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const mainDiv = document.createElement("div");
             mainDiv.className = "chat-item-main";
-            
+
             const icon = document.createElement("i");
             icon.className = "fa-regular fa-message";
-            
+
             const titleSpan = document.createElement("span");
             titleSpan.className = "chat-item-title";
             titleSpan.textContent = session.title || "New Chat";
-            
+
             mainDiv.appendChild(icon);
             mainDiv.appendChild(titleSpan);
 
@@ -138,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
             deleteBtn.className = "delete-chat-btn";
             deleteBtn.title = "Delete Chat";
             deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-            
+
             // Delete chat click handler
             deleteBtn.addEventListener("click", (e) => {
                 e.stopPropagation(); // Avoid selecting the chat when deleting
@@ -202,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
         }
-        
+
         renderChatHistoryList();
         loadActiveChat();
     }
@@ -233,7 +250,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Submit user question
     async function handleSend(text) {
-        if (!text.trim()) return;
+        if (!text.trim() || isResponding) return;
+
+        setInputState(false);
 
         // Hide welcome screen
         welcomeScreen.style.display = "none";
@@ -272,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     message: text,
                     history: activeSession.messages
                 })
@@ -283,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await response.json();
-            
+
             // Remove typing indicator
             typingIndicator.remove();
 
@@ -292,22 +311,23 @@ document.addEventListener("DOMContentLoaded", () => {
             saveChatHistory();
 
             // Render AI response
-            appendMessageHTML("ai", data.response, activeSession.messages.length - 1);
+            appendMessageHTML("ai", data.response, activeSession.messages.length - 1, true);
         } catch (error) {
             typingIndicator.remove();
-            
+            setInputState(true);
+
             const errorMsg = `⚠️ Sorry, I encountered an error communicating with the database: ${error.message}`;
             activeSession.messages.push({ sender: "ai", text: errorMsg });
             saveChatHistory();
-            
-            appendMessageHTML("ai", errorMsg, activeSession.messages.length - 1);
+
+            appendMessageHTML("ai", errorMsg, activeSession.messages.length - 1, true);
         }
-        
+
         scrollToBottom();
     }
 
     // Append Message Row to Container (UI rendering only)
-    function appendMessageHTML(sender, text, index) {
+    function appendMessageHTML(sender, text, index, animate = false) {
         const row = document.createElement("div");
         row.className = `msg-row ${sender}`;
         if (sender === "user" && typeof index === "number") {
@@ -323,14 +343,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const bubble = document.createElement("div");
         bubble.className = "bubble";
-        
+
         if (sender === "user") {
             bubble.textContent = text;
-            
+
             // Create user bubble actions (Copy and Edit buttons) below the bubble
             const actions = document.createElement("div");
             actions.className = "bubble-actions";
-            
+
             const copyBtn = document.createElement("button");
             copyBtn.className = "bubble-action-btn copy-btn";
             copyBtn.title = "Copy prompt";
@@ -369,17 +389,17 @@ document.addEventListener("DOMContentLoaded", () => {
             editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
             editBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
-                
+
                 // Switch bubble to Edit Mode (in-place text editing)
                 bubble.innerHTML = "";
-                
+
                 const textarea = document.createElement("textarea");
                 textarea.className = "edit-textarea";
                 textarea.value = text;
-                
+
                 const btnContainer = document.createElement("div");
                 btnContainer.className = "edit-bubble-actions";
-                
+
                 const cancelBtn = document.createElement("button");
                 cancelBtn.className = "edit-action-btn cancel";
                 cancelBtn.textContent = "Cancel";
@@ -387,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     e2.stopPropagation();
                     loadActiveChat(); // Simply reload the active chat to restore state
                 });
-                
+
                 const submitBtn = document.createElement("button");
                 submitBtn.className = "edit-action-btn submit";
                 submitBtn.textContent = "Save & Submit";
@@ -395,18 +415,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     e2.stopPropagation();
                     const newText = textarea.value.trim();
                     if (!newText) return;
-                    
+
                     const activeSession = chatSessions.find(s => s.id === activeChatId);
                     if (!activeSession) return;
-                    
+
                     // Slice session history to exclude this message and all subsequent messages
                     if (typeof index === "number") {
                         activeSession.messages = activeSession.messages.slice(0, index);
                     }
-                    
+
                     // Clear and re-render the chat window to remove subsequent messages
                     loadActiveChat();
-                    
+
                     // Triggers the standard sending pipeline with the newly edited prompt
                     handleSend(newText);
                 });
@@ -418,13 +438,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         submitBtn.click();
                     }
                 });
-                
+
                 btnContainer.appendChild(cancelBtn);
                 btnContainer.appendChild(submitBtn);
-                
+
                 bubble.appendChild(textarea);
                 bubble.appendChild(btnContainer);
-                
+
                 // Focus textarea and position cursor at the end
                 textarea.focus();
                 textarea.setSelectionRange(textarea.value.length, textarea.value.length);
@@ -432,56 +452,139 @@ document.addEventListener("DOMContentLoaded", () => {
 
             actions.appendChild(copyBtn);
             actions.appendChild(editBtn);
-            
+
             wrapper.appendChild(bubble);
             wrapper.appendChild(actions);
         } else {
-            bubble.innerHTML = renderMarkdown(text);
-            
-            // Create AI bubble actions (Copy response) below the bubble
-            const actions = document.createElement("div");
-            actions.className = "bubble-actions";
-            
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "bubble-action-btn copy-btn";
-            copyBtn.title = "Copy response";
-            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-            copyBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const copyText = () => {
-                    copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    copyBtn.style.color = "#10b981";
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                        copyBtn.style.color = "";
-                    }, 2000);
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(copyText);
-                } else {
-                    const textarea = document.createElement("textarea");
-                    textarea.value = text;
-                    textarea.style.position = "fixed";
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    try {
-                        document.execCommand("copy");
-                        copyText();
-                    } catch (err) {
-                        console.error("Fallback copy failed", err);
+            // AI Message rendering with optional streaming animation
+            if (animate) {
+                // progressive streaming/typing effect
+                let currentLength = 0;
+
+                // Hide actions while typing
+                const actions = document.createElement("div");
+                actions.className = "bubble-actions";
+                actions.style.opacity = "0";
+                actions.style.pointerEvents = "none";
+                actions.style.transition = "opacity 0.3s ease";
+
+                const copyBtn = document.createElement("button");
+                copyBtn.className = "bubble-action-btn copy-btn";
+                copyBtn.title = "Copy response";
+                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+                copyBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const copyText = () => {
+                        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                        copyBtn.style.color = "#10b981";
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+                            copyBtn.style.color = "";
+                        }, 2000);
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(copyText);
+                    } else {
+                        const textarea = document.createElement("textarea");
+                        textarea.value = text;
+                        textarea.style.position = "fixed";
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand("copy");
+                            copyText();
+                        } catch (err) {
+                            console.error("Fallback copy failed", err);
+                        }
+                        document.body.removeChild(textarea);
                     }
-                    document.body.removeChild(textarea);
+                });
+
+                actions.appendChild(copyBtn);
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(actions);
+
+                function streamText() {
+                    if (currentLength < text.length) {
+                        // Advance by a larger chunk of characters for a faster streaming effect
+                        let increment = Math.floor(Math.random() * 3) + 2; // 6 to 10 chars
+                        currentLength = Math.min(text.length, currentLength + increment);
+
+                        const chunk = text.substring(0, currentLength);
+                        bubble.innerHTML = renderMarkdown(chunk) + '<span class="typing-cursor"></span>';
+
+                        scrollToBottom();
+
+                        let delay = 8;
+                        if (text[currentLength - 1] === '\n') {
+                            delay = 35; // Shorter pause for newlines
+                        }
+
+                        setTimeout(streamText, delay);
+                    } else {
+                        // Finished typing
+                        bubble.innerHTML = renderMarkdown(text);
+                        actions.style.opacity = "1";
+                        actions.style.pointerEvents = "auto";
+                        scrollToBottom();
+                        setInputState(true);
+                    }
                 }
-            });
-            
-            actions.appendChild(copyBtn);
-            wrapper.appendChild(bubble);
-            wrapper.appendChild(actions);
+
+                setTimeout(streamText, 50);
+
+            } else {
+                bubble.innerHTML = renderMarkdown(text);
+
+                // Create AI bubble actions (Copy response) below the bubble
+                const actions = document.createElement("div");
+                actions.className = "bubble-actions";
+
+                const copyBtn = document.createElement("button");
+                copyBtn.className = "bubble-action-btn copy-btn";
+                copyBtn.title = "Copy response";
+                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+                copyBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const copyText = () => {
+                        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                        copyBtn.style.color = "#10b981";
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+                            copyBtn.style.color = "";
+                        }, 2000);
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(copyText);
+                    } else {
+                        const textarea = document.createElement("textarea");
+                        textarea.value = text;
+                        textarea.style.position = "fixed";
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand("copy");
+                            copyText();
+                        } catch (err) {
+                            console.error("Fallback copy failed", err);
+                        }
+                        document.body.removeChild(textarea);
+                    }
+                });
+
+                actions.appendChild(copyBtn);
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(actions);
+            }
         }
 
         row.appendChild(avatar);
         row.appendChild(wrapper);
         messagesContainer.appendChild(row);
+
+        if (!animate && sender === "ai") {
+            setInputState(true);
+        }
     }
 
     // Append Typing Indicator Row
@@ -498,17 +601,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const bubble = document.createElement("div");
         bubble.className = "bubble";
-        
+
         const dots = document.createElement("div");
         dots.className = "typing-dots";
         dots.innerHTML = "<span></span><span></span><span></span>";
-        
+
         bubble.appendChild(dots);
         wrapper.appendChild(bubble);
         row.appendChild(avatar);
         row.appendChild(wrapper);
         messagesContainer.appendChild(row);
-        
+
         return row;
     }
 
@@ -547,7 +650,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Mobile Responsive Sidebar Navigation Toggle
     const sidebarToggle = document.getElementById("sidebar-toggle");
     const sidebar = document.getElementById("sidebar") || document.querySelector(".sidebar");
-    
+
     // Inject sidebar overlay dynamically into DOM
     const overlay = document.createElement("div");
     overlay.className = "sidebar-overlay";
