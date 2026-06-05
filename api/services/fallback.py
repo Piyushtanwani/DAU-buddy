@@ -374,6 +374,13 @@ def process_fallback_message(prompt: str) -> str:
             "Feel free to ask if you need any other information about DA-IICT faculty or staff!"
         )
 
+    acknowledgment_phrases = [
+        "ok", "okay", "okkay", "done", "got it", "understood", "alright", "sure", "fine", "kk"
+    ]
+    # Check exact match or if the entire cleaned string only consists of an acknowledgment
+    if cleaned in acknowledgment_phrases or any(re.search(r'^' + re.escape(p) + r'$', cleaned) for p in acknowledgment_phrases):
+        return "You're welcome! Let me know if you need anything else."
+
     if any(k in cleaned for k in ["who are you", "what are you", "about you"]):
         return (
             "I am the **DA-IICT Faculty & Staff AI Assistant**! My job is to help you search "

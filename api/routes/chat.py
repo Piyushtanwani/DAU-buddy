@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 from core import config
 from core.schemas import ChatRequest, ChatResponse
 from api.services import (
-    fetch_all_faculty_context,
-    fetch_all_staff_context,
     call_gemini_api,
     process_fallback_message,
     clear_context_caches,
@@ -14,6 +12,11 @@ from api.services import (
     record_gemini_failure,
     SYSTEM_INSTRUCTIONS_TEMPLATE,
 )
+from api.services.retrieval import PostgresFullTextRetriever
+from api.services.context_builder import build_faculty_context, build_staff_context
+from api.services.faculty_service import list_all_faculty_db
+from api.services.staff_service import list_all_staff_db
+
 from scrapers import faculty_scraper, staff_scraper
 
 logger = config.get_logger("api.routes.chat")
@@ -91,12 +94,30 @@ async def chat_endpoint(request: ChatRequest):
                 logger.error(f"Error during full sync: {e}")
                 return ChatResponse(response=f"[Error during synchronization]: {e}")
 
-        # ── 2. LLM RAG Pipeline (OpenRouter) ───────────────────────────────────
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        # ── 2. Retrieval Strategy Selection ──────────────────────────────────────
+        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")
+
+        # Strategy B: List/Intent Queries (Bypass RAG)
+        if any(k in cleaned for k in ["list all staff", "show all staff", "staff directory", "all staff"]):
+            return ChatResponse(response=list_all_staff_db())
+        if any(k in cleaned for k in ["list all", "show all", "directory", "all faculty", "all faculties"]) and \
+           not any(k in cleaned for k in ["specializ", "expert", "teach", "research", "subject"]):
+            return ChatResponse(response=list_all_faculty_db())
+
+        # Strategy A: Informational Queries (RAG)
         if api_key and is_gemini_available():
-            logger.info("Processing via LLM RAG pipeline (OpenRouter)...")
-            faculty_db = fetch_all_faculty_context()
-            staff_db = fetch_all_staff_context()
+            logger.info("Processing via RAG pipeline (Strategy A)...")
+            retriever = PostgresFullTextRetriever()
+            limit = config.get_retrieval_limit()
+            
+            faculty_records = retriever.retrieve_faculty(request.message, limit=limit)
+            staff_records = retriever.retrieve_staff(request.message, limit=limit)
+            
+            faculty_db = build_faculty_context(faculty_records)
+            staff_db = build_staff_context(staff_records)
+            
+            logger.info(f"Context Size - Faculty chars: {len(faculty_db)}, Staff chars: {len(staff_db)}")
+
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
                 faculty_database=faculty_db,
                 staff_database=staff_db,

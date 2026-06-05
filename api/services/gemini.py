@@ -72,7 +72,9 @@ Their primary role involves [describe their role briefly based on their designat
 5. When suggesting professors/staff, explain *why* based on specializations, designations, and education.
 6. If the user wants to email someone, draft a polished, professional email referencing their actual role.
 7. Use clean markdown. Keep initial responses concise and interactive.
+8. Whenever you are asked to provide details or list out information about a faculty or staff member (like their email, phone, office, specialization, etc.), you MUST format the response using clear, markdown bullet points. Do not present details in a dense paragraph.
 """
+
 
 
 # ==============================================================================
@@ -84,42 +86,45 @@ def call_gemini_api(
     history: Optional[List[ChatMessage]] = None,
 ) -> str:
     """
-    Call the OpenRouter API with the provided system instruction and
-    full conversation history, utilizing model routing (Gemini + Llama 3 fallback).
+    Call the native Google Gemini API using google-generativeai.
     """
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "http://localhost:8000",
-        "X-Title": "DA-IICT AI Buddy",
-        "Content-Type": "application/json"
-    }
+    import os
+    import google.generativeai as genai
 
-    messages = [{"role": "system", "content": system_instruction}]
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        raise ValueError("GEMINI_API_KEY is missing. Cannot use native Gemini API.")
+    
+    genai.configure(api_key=gemini_key)
+    
+    # Using 2.5 flash
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-flash",
+        system_instruction=system_instruction,
+        generation_config={"temperature": 0.3, "max_output_tokens": 800}
+    )
+    
+    # Format history
+    formatted_history = []
+    latest_msg = "Hello"
     
     if history:
-        for msg in history:
+        for i, msg in enumerate(history):
             if not msg.text or not msg.text.strip():
                 continue
-            role = "user" if msg.sender == "user" else "assistant"
-            messages.append({"role": role, "content": msg.text})
-
-    if len(messages) == 1:
-        messages.append({"role": "user", "content": "Hello"})
-
-    payload = {
-        "models": ["google/gemini-2.5-flash", "meta-llama/llama-3-8b-instruct"],
-        "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 800,
-    }
-
-    response = requests.post(url, headers=headers, json=payload, timeout=(5.0, 120.0))
-    response.raise_for_status()
-    res_json = response.json()
-
-    choices = res_json.get("choices", [])
-    if choices:
-        return choices[0].get("message", {}).get("content", "")
-
-    return "Sorry, I could not parse a valid response from the AI model."
+            
+            # The last message from user must be sent via send_message
+            if i == len(history) - 1 and msg.sender == "user":
+                latest_msg = msg.text
+                break
+                
+            role = "user" if msg.sender == "user" else "model"
+            formatted_history.append({"role": role, "parts": [msg.text]})
+    
+    try:
+        chat = model.start_chat(history=formatted_history)
+        response = chat.send_message(latest_msg)
+        return response.text
+    except Exception as e:
+        logger.error(f"Native Gemini API Error: {e}")
+        raise e

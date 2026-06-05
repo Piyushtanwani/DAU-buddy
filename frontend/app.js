@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
         activeSession.messages.forEach((msg, idx) => {
             appendMessageHTML(msg.sender, msg.text, idx);
         });
-        scrollToBottom();
+        scrollToBottom(true);
     }
 
     // Delete a specific chat session
@@ -278,11 +278,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // 1. Render User Message
         appendMessageHTML("user", text, activeSession.messages.length - 1);
         userInput.value = "";
-        scrollToBottom();
+        scrollToBottom(true);
 
         // 2. Render AI Typing Indicator
         const typingIndicator = appendTypingIndicator();
-        scrollToBottom();
+        scrollToBottom(true);
 
         // 3. Perform Server API Call
         try {
@@ -323,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
             appendMessageHTML("ai", errorMsg, activeSession.messages.length - 1, true);
         }
 
-        scrollToBottom();
+        scrollToBottom(true);
     }
 
     // Append Message Row to Container (UI rendering only)
@@ -526,7 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         bubble.innerHTML = renderMarkdown(text);
                         actions.style.opacity = "";
                         actions.style.pointerEvents = "";
-                        scrollToBottom();
+                        scrollToBottom(true);
                         setInputState(true);
                     }
                 }
@@ -615,12 +615,37 @@ document.addEventListener("DOMContentLoaded", () => {
         return row;
     }
 
-    // Smooth scroll chat to bottom
-    function scrollToBottom() {
-        viewport.scrollTo({
-            top: viewport.scrollHeight,
-            behavior: "smooth"
-        });
+    let userScrolledUp = false;
+    let isAutoScrolling = false;
+
+    // Track when the user manually scrolls up
+    viewport.addEventListener("scroll", () => {
+        if (isAutoScrolling) return; // Ignore scroll events caused by scrollToBottom()
+        
+        // If they are within 10px of the bottom, they haven't scrolled up
+        const isNearBottom = viewport.scrollHeight - Math.ceil(viewport.scrollTop) - viewport.clientHeight < 10;
+        userScrolledUp = !isNearBottom;
+    });
+
+    // Smart scroll chat to bottom
+    function scrollToBottom(force = false) {
+        if (force) {
+            userScrolledUp = false;
+            isAutoScrolling = true;
+            viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: "smooth"
+            });
+            // Reset flag after smooth scroll animation completes (~800ms)
+            setTimeout(() => { isAutoScrolling = false; }, 800);
+        } else if (!userScrolledUp) {
+            isAutoScrolling = true;
+            viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: "auto" // Auto is instant, no smooth animation
+            });
+            setTimeout(() => { isAutoScrolling = false; }, 50);
+        }
     }
 
     // Form Event Listener

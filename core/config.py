@@ -67,3 +67,21 @@ def get_db_config() -> Dict[str, Any]:
 def get_gemini_api_key() -> str:
     """Return the configured Gemini API key, or empty string if not set."""
     return os.getenv("GEMINI_API_KEY", "")
+
+
+# ==============================================================================
+# Retrieval and RAG Configuration
+# ==============================================================================
+def get_retrieval_limit() -> int:
+    """Maximum number of records to retrieve per entity type during search."""
+    try:
+        return int(os.getenv("RETRIEVAL_LIMIT", "5"))
+    except ValueError:
+        return 5
+
+def get_max_context_records() -> int:
+    """Maximum total number of records allowed in the LLM context prompt."""
+    try:
+        return int(os.getenv("MAX_CONTEXT_RECORDS", "10"))
+    except ValueError:
+        return 10

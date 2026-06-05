@@ -2,6 +2,16 @@
 
 Production-grade conversational search assistant for Dhirubhai Ambani Institute of Information and Communication Technology (DA-IICT).
 
+## Features
+
+- **Conversational RAG Search**: Powered by Google's Gemini 2.5 Flash, enabling natural language queries over live university directories.
+- **Robust NLP Fallback**: A local, stateless rule-based engine routing queries instantly when Gemini is offline or on cooldown.
+- **Advanced Full-Text Search**: Uses PostgreSQL's `websearch_to_tsquery` combined with dynamic `OR` logic to understand conversational search intents.
+- **Auto-Formatting Profiles**: Clean, readable markdown bullet-point generation for all faculty and staff information.
+- **Live Scrapers & Sync**: Built-in chat triggers (e.g., *"sync faculty"*) to dynamically scrape and update the database directly from the DA-IICT website.
+- **Separated MCP Servers**: Native Model Context Protocol (MCP) servers for both Faculty and Staff, integrating directly with external agents.
+
+
 ## Project Structure
 
 ```
@@ -21,6 +31,8 @@ MCP Project/
 │       ├── gemini.py           # Gemini 2.5 Flash API client + circuit breaker (120s timeout)
 │       ├── faculty_service.py  # Faculty DB queries + context caching
 │       ├── staff_service.py    # Staff DB queries + context caching
+│       ├── retrieval.py        # RAG retrieval service using PostgreSQL full-text search
+│       ├── context_builder.py  # Transforms DB rows into clean context for Gemini
 │       └── fallback.py         # Advanced NLP fallback engine (stateless chat, name extraction, default summaries)
 │
 ├── scrapers/                   # Web scraping layer
@@ -202,7 +214,7 @@ Browser
 FastAPI (api/main.py)
   ├── /api/chat   →  routes/chat.py
   │                    ├── Sync triggers → scrapers/
-  │                    ├── Gemini RAG   → services/gemini.py + faculty/staff_service.py
+  │                    ├── Gemini RAG   → services/gemini.py + retrieval.py + context_builder.py
   │                    └── NLP Fallback → services/fallback.py
   └── /api/health →  routes/health.py → core/database.py
 

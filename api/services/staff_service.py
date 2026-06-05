@@ -6,6 +6,7 @@ Handles all staff-related database queries and in-memory context caching.
 from typing import Optional
 from core import config
 from core.database import db_connection
+from api.services.retrieval import PostgresFullTextRetriever
 
 logger = config.get_logger("api.services.staff_service")
 
@@ -67,42 +68,33 @@ def fetch_all_staff_context() -> str:
 # Direct Database Query Helpers
 # ==============================================================================
 def search_staff_db(query: str, error_on_empty: bool = True) -> Optional[str]:
-    """Full-text search across staff name, designation, qualification, and email."""
-    pattern = f"%{query.strip()}%"
+    """Full-text search across staff name, designation, qualification, and email using RAG retriever."""
     try:
-        with db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    SELECT name, email, phone, address, qualification, designation, profile_url
-                    FROM staff
-                    WHERE name ILIKE %s OR designation ILIKE %s
-                       OR qualification ILIKE %s OR email ILIKE %s
-                    ORDER BY name;
-                """, (pattern, pattern, pattern, pattern))
-                rows = cursor.fetchall()
+        retriever = PostgresFullTextRetriever()
+        records = retriever.retrieve_staff(query, limit=10)
 
-                if not rows:
-                    if error_on_empty:
-                        return (
-                            f"I couldn't find any staff members matching **'{query}'** in our records.\n\n"
-                            "Please try:\n"
-                            "- A specific name (e.g., *'Akash Desai'*)\n"
-                            "- A designation (e.g., *'Finance'*, *'Library'*, *'Registrar'*)\n"
-                            "- Or a qualification (e.g., *'MBA'*)"
-                        )
-                    return None
+        if not records:
+            if error_on_empty:
+                return (
+                    f"I couldn't find any staff members matching **'{query}'** in our records.\n\n"
+                    "Please try:\n"
+                    "- A specific name (e.g., *'Akash Desai'*)\n"
+                    "- A designation (e.g., *'Finance'*, *'Library'*, *'Registrar'*)\n"
+                    "- Or a qualification (e.g., *'MBA'*)"
+                )
+            return None
 
-                out = [f"### Staff Search Results for '{query}'", f"Found {len(rows)} record(s):", ""]
-                for i, (name, email, phone, addr, qual, desig, url) in enumerate(rows, 1):
-                    out.append(f"#### {i}. {name}")
-                    if desig: out.append(f"- **Designation/Role:** {desig}")
-                    if email: out.append(f"- **Email:** {email}")
-                    if phone: out.append(f"- **Phone:** {phone}")
-                    if addr:  out.append(f"- **Office Address:** {addr}")
-                    if qual:  out.append(f"- **Qualification:** {qual}")
-                    if url:   out.append(f"- **Profile:** [{url}]({url})")
-                    out.append("")
-                return "\n".join(out)
+        out = [f"### Staff Search Results for '{query}'", f"Found {len(records)} record(s):", ""]
+        for i, rec in enumerate(records, 1):
+            out.append(f"#### {i}. {rec.get('name')}")
+            if rec.get('designation'): out.append(f"- **Designation/Role:** {rec.get('designation')}")
+            if rec.get('email'): out.append(f"- **Email:** {rec.get('email')}")
+            if rec.get('phone'): out.append(f"- **Phone:** {rec.get('phone')}")
+            if rec.get('address'): out.append(f"- **Office Address:** {rec.get('address')}")
+            if rec.get('qualification'): out.append(f"- **Qualification:** {rec.get('qualification')}")
+            if rec.get('profile_url'): out.append(f"- **Profile:** [{rec.get('profile_url')}]({rec.get('profile_url')})")
+            out.append("")
+        return "\n".join(out)
     except Exception as e:
         logger.error(f"search_staff_db failed: {e}")
         return f"Database query failed: {e}"
