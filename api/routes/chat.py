@@ -110,8 +110,13 @@ async def chat_endpoint(request: ChatRequest):
             retriever = PostgresFullTextRetriever()
             limit = config.get_retrieval_limit()
             
-            faculty_records = retriever.retrieve_faculty(request.message, limit=limit)
-            staff_records = retriever.retrieve_staff(request.message, limit=limit)
+            # Query Expansion to ensure retriever fetches correct staff
+            search_query = request.message
+            if any(k in cleaned for k in ["wifi", "internet", "network", "router"]):
+                search_query += " IT SYSTEMS"
+            
+            faculty_records = retriever.retrieve_faculty(search_query, limit=limit)
+            staff_records = retriever.retrieve_staff(search_query, limit=limit)
             
             faculty_db = build_faculty_context(faculty_records)
             staff_db = build_staff_context(staff_records)
