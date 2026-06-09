@@ -85,3 +85,13 @@ def get_max_context_records() -> int:
         return int(os.getenv("MAX_CONTEXT_RECORDS", "10"))
     except ValueError:
         return 10
+
+
+# ==============================================================================
+# Library / OPAC Configuration
+# ==============================================================================
+def get_library_opac_base_url() -> str:
+    """Base URL of the DA-IICT Koha OPAC (no trailing slash)."""
+    return os.getenv("LIBRARY_OPAC_BASE_URL", "https://opac.daiict.ac.in").rstrip("/")
+
+
