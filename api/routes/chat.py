@@ -136,6 +136,64 @@ def _extract_book_query(text: str) -> str:
     return cleaned if len(cleaned) >= 2 else text.strip()
 
 
+async def handle_library_fallback(book_query: str) -> str:
+    """Helper to process library fallback logic and return the formatted markdown string."""
+    try:
+        results = await _library_svc.search_books(query=book_query, limit=5)
+        if not results:
+            return (
+                f"📚 I searched the DA-IICT Resource Centre for **\"{book_query}\"** "
+                f"but found no matching books.\n\n"
+                "You can also search directly at: "
+                "[opac.daiict.ac.in](https://opac.daiict.ac.in)"
+            )
+
+        lines = [
+            f"📚 **Library Search Results for \"{ book_query }\"**",
+            f"Found **{len(results)}** book(s) in the DA-IICT Resource Centre:",
+            "",
+        ]
+        
+        # Fetch availability in parallel
+        async def fetch_avail(bib):
+            if not bib: return None
+            try:
+                return await _library_svc.get_book_details(bib)
+            except Exception:
+                return None
+                
+        import asyncio
+        details_list = await asyncio.gather(*(fetch_avail(b.get("biblionumber")) for b in results))
+
+        for book, details in zip(results, details_list):
+            title     = book.get("title", "Unknown Title")
+            author    = book.get("author", "")
+            link      = book.get("link", "")
+            
+            avail_str = "Unknown"
+            if details:
+                avail_str = f"{details.get('available_copies', 0)} / {details.get('total_copies', 0)}"
+
+            lines.append(f"- **{title}**")
+            if author:
+                lines.append(f"  - Author: {author}")
+            lines.append(f"  - Availability: {avail_str}")
+            if link:
+                lines.append(f"  - Link: {link}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error(f"Library search error in chat: {e}")
+        return (
+            f"⚠️ I tried to search the library catalog for **\"{book_query}\"** "
+            f"but encountered an error: `{e}`\n\n"
+            "Please try searching directly at: "
+            "[opac.daiict.ac.in](https://opac.daiict.ac.in)"
+        )
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
@@ -152,56 +210,12 @@ async def chat_endpoint(request: ChatRequest):
 
         cleaned = request.message.strip().lower()
 
-        # ── 0. Library Search Trigger ─────────────────────────────────────────
-        if _is_library_query(request.message):
-            logger.info("Chat trigger: library search detected.")
+        # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
+        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if _is_library_query(request.message) and not (api_key and is_gemini_available()):
+            logger.info("Chat trigger: library search detected (Gemini unavailable).")
             book_query = _extract_book_query(request.message)
-            try:
-                results = await _library_svc.search_books(query=book_query, limit=8)
-                if not results:
-                    return ChatResponse(response=(
-                        f"📚 I searched the DA-IICT Resource Centre for **\"{book_query}\"** "
-                        f"but found no matching books.\n\n"
-                        "You can also search directly at: "
-                        "[opac.daiict.ac.in](https://opac.daiict.ac.in)"
-                    ))
-
-                lines = [
-                    f"📚 **Library Search Results for \"{ book_query }\"**",
-                    f"Found **{len(results)}** book(s) in the DA-IICT Resource Centre:",
-                    "",
-                ]
-                for i, book in enumerate(results, 1):
-                    title     = book.get("title", "Unknown Title")
-                    author    = book.get("author", "")
-                    publisher = book.get("publisher", "")
-                    year      = book.get("year", "")
-                    isbn      = book.get("isbn", "")
-                    link      = book.get("link", "")
-                    bib       = book.get("biblionumber", "")
-
-                    lines.append(f"#### {i}. {title}")
-                    if author:    lines.append(f"- **Author:** {author}")
-                    if publisher: lines.append(f"- **Publisher:** {publisher}")
-                    if year:      lines.append(f"- **Year:** {year}")
-                    if isbn:      lines.append(f"- **ISBN:** {isbn}")
-                    if link:      lines.append(f"- **OPAC Link:** [View & Check Availability]({link})")
-                    lines.append("")
-
-                lines.append(
-                    "*To check real-time copy availability, click an OPAC link above "
-                    "or ask me: \"check availability of book [title]\".*"
-                )
-                return ChatResponse(response="\n".join(lines))
-
-            except Exception as e:
-                logger.error(f"Library search error in chat: {e}")
-                return ChatResponse(response=(
-                    f"⚠️ I tried to search the library catalog for **\"{book_query}\"** "
-                    f"but encountered an error: `{e}`\n\n"
-                    "Please try searching directly at: "
-                    "[opac.daiict.ac.in](https://opac.daiict.ac.in)"
-                ))
+            return ChatResponse(response=await handle_library_fallback(book_query))
 
         # ── 1. Sync Triggers ──────────────────────────────────────────────────
         if any(k in cleaned for k in ["sync staff", "scrape staff", "reload staff", "update staff database"]):
@@ -278,6 +292,9 @@ async def chat_endpoint(request: ChatRequest):
             search_query = request.message
             if any(k in cleaned for k in ["wifi", "internet", "network", "router"]):
                 search_query += " IT SYSTEMS"
+                
+            if any(k in cleaned for k in ["light", "fan", "ac"]) and any(w in cleaned for w in ["not work", "stop", "broken"]):
+                search_query += " electrician electrical maintenance"
             
             faculty_records = retriever.retrieve_faculty(search_query, limit=limit)
             staff_records = retriever.retrieve_staff(search_query, limit=limit)
@@ -292,15 +309,19 @@ async def chat_endpoint(request: ChatRequest):
                 staff_database=staff_db,
             )
             try:
-                response_text = call_gemini_api(api_key, system_instruction, request.history)
+                response_text, token_usage = call_gemini_api(api_key, system_instruction, request.history)
                 return ChatResponse(response=response_text)
             except Exception:
-                logger.exception("Gemini RAG failed — falling back to local NLP engine.")
+                logger.exception("Gemini RAG failed — falling back to local NLP engine/library.")
                 record_gemini_failure()
+                if _is_library_query(request.message):
+                    return ChatResponse(response=await handle_library_fallback(_extract_book_query(request.message)))
                 return ChatResponse(response=process_fallback_message(request.message))
 
         # ── 3. Local NLP Fallback ──────────────────────────────────────────────
         logger.info("Gemini unavailable or in cooldown — using local NLP engine.")
+        if _is_library_query(request.message):
+            return ChatResponse(response=await handle_library_fallback(_extract_book_query(request.message)))
         return ChatResponse(response=process_fallback_message(request.message))
 
     except Exception as e:

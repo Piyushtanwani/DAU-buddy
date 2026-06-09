@@ -25,6 +25,17 @@ logger = config.get_logger("api.services.fallback")
 # Support Category Intent Router
 # ==============================================================================
 _SUPPORT_CATEGORIES = {
+    "electrical": {
+        "keywords": ["light", "fan", "ac", "air conditioner", "electricity", "electrical", "power", "switch", "plug", "socket", "wiring"],
+        "title": "Electrical & Maintenance Staff",
+        "description": (
+            "For issues regarding lights, fans, ACs, power supply, or electrical maintenance in classes or rooms, please contact:"
+        ),
+        "conditions": [
+            "designation ILIKE '%electrician%'", "designation ILIKE '%electrical%'",
+            "designation ILIKE '%maintenance%'", "designation ILIKE '%wireman%'"
+        ],
+    },
     "it": {
         "keywords": ["wifi", "wi-fi", "internet", "network", "it", "computer", "system",
                      "systems", "portal", "login", "email account", "online", "server",
@@ -35,9 +46,8 @@ _SUPPORT_CATEGORIES = {
             "connectivity, or campus computer systems, please contact the IT & Systems department:"
         ),
         "conditions": [
-            "designation ILIKE '%system%'", "designation ILIKE '%network%'",
-            "designation ILIKE '%it%'", "designation ILIKE '%computer%'",
-            "designation ILIKE '%systems%'", "designation ILIKE '%technical%'",
+            "designation ILIKE '%it & system%'", "designation ILIKE '%it & systems%'", 
+            "designation ILIKE '%network%'", "designation ILIKE '%computer%'",
         ],
     },
     "finance": {
@@ -295,7 +305,7 @@ def process_fallback_message(prompt: str) -> str:
 
     # ── Pass 1: Intent-Based Category Routing ─────────────────────────────────
     for cat_name, cat in _SUPPORT_CATEGORIES.items():
-        if any(kw in cleaned for kw in cat["keywords"]):
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', cleaned) for kw in cat["keywords"]):
             try:
                 with db_connection() as conn:
                     with conn.cursor() as cursor:
@@ -422,20 +432,50 @@ def process_fallback_message(prompt: str) -> str:
         r = get_staff_details_db(name, error_on_empty=False)
         if r: return r
 
+    # ── Pass 5b: Exact Designation Match ─────────────────────────────────────
+    extracted = _extract_topic(prompt)
+    if extracted:
+        role_clean = re.sub(r"^(?:the|a|an)\s+", "", extracted.lower())
+        if len(role_clean) > 3:
+            try:
+                with db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT name, designation, email, phone FROM staff WHERE designation ILIKE %s ORDER BY name;",
+                            (f"%{role_clean}%",)
+                        )
+                        rows = cursor.fetchall()
+                        if rows:
+                            out = [f"### Staff matching role: '{role_clean}'", f"Found {len(rows)} record(s):", ""]
+                            for i, (s_name, s_desig, s_email, s_phone) in enumerate(rows, 1):
+                                out.append(f"#### {i}. {s_name}")
+                                if s_desig: out.append(f"- **Designation/Role:** {s_desig}")
+                                if s_email: out.append(f"- **Email:** {s_email}")
+                                if s_phone: out.append(f"- **Phone:** {s_phone}")
+                                out.append("")
+                            return "\n".join(out)
+            except Exception as e:
+                logger.error(f"Pass 5b Exact Designation Match failed: {e}")
+
     # ── Pass 6: Topic Extraction + DB Search ─────────────────────────────────
     extracted = _extract_topic(prompt)
     if extracted and extracted != cleaned:
         name_clean = re.sub(r"^(?:prof(?:essor)?|dr)\.?\s+", "", extracted)
-        for fn in [
-            lambda: get_faculty_details_db(name_clean, error_on_empty=False),
-            lambda: get_staff_details_db(name_clean, error_on_empty=False),
-            lambda: search_faculty_by_expertise_db(extracted, error_on_empty=False),
-            lambda: search_faculty_db(extracted, error_on_empty=False),
-            lambda: search_staff_db(extracted, error_on_empty=False),
-        ]:
-            r = fn()
-            if r:
-                return r
+        r = get_faculty_details_db(name_clean, error_on_empty=False)
+        if r: return r
+        
+        r = get_staff_details_db(name_clean, error_on_empty=False)
+        if r: return r
+        
+        r = search_faculty_by_expertise_db(extracted, error_on_empty=False)
+        if r: return r
+        
+        fac_r = search_faculty_db(extracted, error_on_empty=False)
+        staff_r = search_staff_db(extracted, error_on_empty=False)
+        if fac_r and staff_r:
+            return fac_r + "\n\n---\n\n" + staff_r
+        if fac_r: return fac_r
+        if staff_r: return staff_r
 
     # ── Pass 7: Specialization Regex ─────────────────────────────────────────
     spec_match = re.search(
@@ -449,9 +489,12 @@ def process_fallback_message(prompt: str) -> str:
             return search_faculty_by_expertise_db(topic, error_on_empty=True)
 
     # ── Pass 8: Raw Full-Text Fallback ────────────────────────────────────────
-    r = search_faculty_db(prompt, error_on_empty=False)
-    if r: return r
-    r = search_staff_db(prompt, error_on_empty=False)
-    if r: return r
+    fac_r = search_faculty_db(prompt, error_on_empty=False)
+    staff_r = search_staff_db(prompt, error_on_empty=False)
+    
+    if fac_r and staff_r:
+        return fac_r + "\n\n---\n\n" + staff_r
+    if fac_r: return fac_r
+    if staff_r: return staff_r
 
     return search_faculty_db(prompt, error_on_empty=True)

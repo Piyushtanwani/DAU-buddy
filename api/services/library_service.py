@@ -185,14 +185,30 @@ class LibraryService:
             if value:
                 result[label] = value
 
-        # Fallback regex pass for plain-text descriptions
+        # Fallback pass for plain-text descriptions without span labels
         if not result:
-            for line in re.split(r"<br\s*/?>|\n", description_html):
-                clean = re.sub(r"<[^>]+>", "", line).strip()
-                if ":" in clean:
-                    k, _, v = clean.partition(":")
+            lines = [re.sub(r"<[^>]+>", "", line).strip() for line in re.split(r"<br\s*/?>|\n", description_html)]
+            lines = [L for L in lines if L]
+            
+            for line in lines:
+                if line.startswith("By "):
+                    result["author"] = line[3:].strip(" .")
+                elif ":" in line and "," in line and "cm" not in line and "pages" not in line:
+                    # Attempt to parse "City : Publisher, Year ."
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        pub_year = parts[1].rsplit(",", 1)
+                        if len(pub_year) == 2:
+                            result["publisher"] = pub_year[0].strip(" .")
+                            year_match = re.search(r"(\d{4})", pub_year[1])
+                            if year_match:
+                                result["date"] = year_match.group(1)
+                
+                # If there's a strict colon line, keep the old fallback just in case
+                if ":" in line and not line.startswith("By "):
+                    k, _, v = line.partition(":")
                     k, v = k.strip().lower(), v.strip()
-                    if k and v:
+                    if k and v and k not in result:
                         result[k] = v
 
         return result

@@ -1,9 +1,11 @@
 import time
 import requests
-from typing import List, Optional
+import asyncio
+from typing import List, Optional, Tuple, Dict, Any
 
 from core import config
 from core.schemas import ChatMessage
+from api.services.library_service import LibraryService
 
 logger = config.get_logger("api.services.gemini")
 
@@ -74,10 +76,54 @@ Their primary role involves [describe their role briefly based on their designat
 7. Use clean markdown. Keep initial responses concise and interactive.
 8. Whenever you are asked to provide details or list out information about a faculty or staff member (like their email, phone, office, specialization, etc.), you MUST format the response using clear, markdown bullet points. Do not present details in a dense paragraph.
 9. Domain Mapping Rule: If a user asks about "WiFi", "Internet", or "Network" problems, you must look for and suggest staff members whose designation involves "IT & SYSTEMS".
-10. Library Rule: If the user asks about books, the library, or the Resource Centre, let them know that the system has a live library search. You do NOT have book data in your context — the library search is handled separately by querying the Koha OPAC in real time. Simply say: "I can search the DA-IICT Resource Centre for you — please ask me something like *'find a book on machine learning'* and I'll look it up live."
+10. Library Rule: If the user asks about books, use the library search tools. When you receive the book results, you MUST use the `get_book_details` tool to check their availability. Then, present the results using exactly this format for each book:
+- **[Book Title]**
+  - Author: [Author]
+  - Availability: [Available Copies / Total Copies]
+  - Link: [OPAC Link]
 """
 
 
+
+
+# ==============================================================================
+# Gemini Tools (Library)
+# ==============================================================================
+_library_svc = LibraryService()
+
+def _run_async_in_thread(coro):
+    import threading
+    result = None
+    exception = None
+    def worker():
+        nonlocal result, exception
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(coro)
+            loop.close()
+        except Exception as e:
+            exception = e
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join()
+    if exception:
+        raise exception
+    return result
+
+def search_library_books(query: str, limit: int = 10) -> list[dict]:
+    """Search the DA-IICT Resource Centre (Koha OPAC) catalog. Use this tool when the user asks to find a book."""
+    try:
+        return _run_async_in_thread(_library_svc.search_books(query=query, limit=limit))
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_book_details(biblionumber: str) -> dict:
+    """Fetch the full catalog record and real-time copy availability for a book. Use this tool to check if a book is available, using the biblionumber from the search results."""
+    try:
+        return _run_async_in_thread(_library_svc.get_book_details(biblionumber=biblionumber))
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ==============================================================================
@@ -87,9 +133,10 @@ def call_gemini_api(
     api_key: str,
     system_instruction: str,
     history: Optional[List[ChatMessage]] = None,
-) -> str:
+) -> Tuple[str, Dict[str, int]]:
     """
-    Call the native Google Gemini API using google-generativeai.
+    Call the native Google Gemini API using google-generativeai, with tool support.
+    Returns a tuple of (response_text, usage_metadata_dict).
     """
     import os
     import google.generativeai as genai
@@ -104,6 +151,7 @@ def call_gemini_api(
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash",
         system_instruction=system_instruction,
+        tools=[search_library_books, get_book_details],
         generation_config={"temperature": 0.3, "max_output_tokens": 800}
     )
     
@@ -127,7 +175,71 @@ def call_gemini_api(
     try:
         chat = model.start_chat(history=formatted_history)
         response = chat.send_message(latest_msg)
-        return response.text
+        
+        # Tool calling loop
+        while True:
+            fc = None
+            if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    # In google-generativeai, the function_call field on a Part is populated if it's a tool call
+                    if type(part).to_dict(part).get("function_call") or getattr(part, "function_call", None):
+                        fc = getattr(part, "function_call", None)
+                        if fc and not getattr(fc, "name", None): # Sometimes it's empty
+                            fc = None
+                        if fc:
+                            break
+                            
+            if not fc and getattr(response, "function_call", None):
+                fc = response.function_call
+                
+            if not fc:
+                break
+                
+            function_name = fc.name
+            # convert protobuf map to dict safely
+            args = {}
+            if hasattr(fc, "args"):
+                for k, v in fc.args.items():
+                    args[k] = v
+            
+            logger.info(f"Gemini requested tool call: {function_name}({args})")
+            
+            tool_result = None
+            if function_name == "search_library_books":
+                tool_result = search_library_books(**args)
+            elif function_name == "get_book_details":
+                tool_result = get_book_details(**args)
+            else:
+                tool_result = {"error": f"Unknown tool: {function_name}"}
+                
+            logger.info(f"Returning tool result to Gemini...")
+            response = chat.send_message(
+                genai.protos.Part(
+                    function_response=genai.protos.FunctionResponse(
+                        name=function_name,
+                        response={"result": tool_result}
+                    )
+                )
+            )
+
+        usage = response.usage_metadata
+        usage_dict = {
+            "prompt_token_count": usage.prompt_token_count,
+            "candidates_token_count": usage.candidates_token_count,
+            "total_token_count": usage.total_token_count
+        } if usage else {}
+
+        try:
+            out_text = response.text
+        except ValueError:
+            out_text = "I checked the system, but there is no additional information to provide right now."
+            if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                try:
+                    out_text = response.candidates[0].content.parts[0].text
+                except Exception:
+                    pass
+
+        return out_text, usage_dict
     except Exception as e:
         logger.error(f"Native Gemini API Error: {e}")
         raise e

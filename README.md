@@ -5,7 +5,8 @@ Production-grade conversational search assistant for Dhirubhai Ambani Institute 
 ## Features
 
 - **Conversational RAG Search**: Powered by Google's Gemini 2.5 Flash, enabling natural language queries over live university directories.
-- **Robust NLP Fallback**: A local, stateless rule-based engine routing queries instantly when Gemini is offline or on cooldown.
+- **Real-Time Library OPAC Integration**: Native Gemini tool calling integration with DA-IICT's Koha OPAC to search books, check real-time availability, and fetch catalog details.
+- **Robust NLP Fallback**: A local, stateless rule-based engine routing queries instantly when Gemini is offline or on cooldown (now includes Exact Designation Matching).
 - **Advanced Full-Text Search**: Uses PostgreSQL's `websearch_to_tsquery` combined with dynamic `OR` logic to understand conversational search intents.
 - **Auto-Formatting Profiles**: Clean, readable markdown bullet-point generation for all faculty and staff information.
 - **Live Scrapers & Sync**: Built-in chat triggers (e.g., *"sync faculty"*) to dynamically scrape and update the database directly from the DA-IICT website.
@@ -26,11 +27,13 @@ MCP Project/
 │   ├── main.py                 # Application factory (create_app)
 │   ├── routes/
 │   │   ├── chat.py             # POST /api/chat (SSE streaming enabled)
-│   │   └── health.py           # GET  /api/health
+│   │   ├── health.py           # GET  /api/health
+│   │   └── library.py          # GET  /api/v1/library/* (OPAC API wrapper)
 │   └── services/
 │       ├── gemini.py           # Gemini 2.5 Flash API client + circuit breaker (120s timeout)
 │       ├── faculty_service.py  # Faculty DB queries + context caching
 │       ├── staff_service.py    # Staff DB queries + context caching
+│       ├── library_service.py  # DA-IICT Koha OPAC scraping & HTTP client
 │       ├── retrieval.py        # RAG retrieval service using PostgreSQL full-text search
 │       ├── context_builder.py  # Transforms DB rows into clean context for Gemini
 │       └── fallback.py         # Advanced NLP fallback engine (stateless chat, name extraction, default summaries)
@@ -41,7 +44,8 @@ MCP Project/
 │
 ├── mcp/                        # Separated MCP server layer
 │   ├── faculty_mcp_server.py   # Faculty-only MCP tools (stdio transport)
-│   └── staff_mcp_server.py     # Staff-only MCP tools (stdio transport)
+│   ├── staff_mcp_server.py     # Staff-only MCP tools (stdio transport)
+│   └── library_mcp_server.py   # Library OPAC MCP tools (stdio transport)
 │
 ├── frontend/                   # Web UI
 │   ├── index.html
@@ -49,12 +53,14 @@ MCP Project/
 │   └── style.css
 │
 ├── scripts/                    # Operational one-shot scripts
+│   ├── init_db.sql             # Database schema initialization
 │   ├── seed_faculty.py         # Seed faculty data from live website
 │   └── seed_staff.py           # Seed staff data from live website
 │
 ├── tests/                      # Test suite
 │   ├── test_faculty_service.py
-│   └── test_staff_service.py
+│   ├── test_staff_service.py
+│   └── test_library.py
 │
 ├── .env                        # Local credentials (not committed)
 ├── .env.example                # Template for .env
@@ -145,7 +151,17 @@ Open your browser at: `http://127.0.0.1:8000`
 
 ## MCP Servers
 
-The Faculty and Staff MCP servers are **fully separated** and independently runnable.
+The Faculty, Staff, and Library MCP servers are **fully separated** and independently runnable.
+
+### Library MCP Server
+
+```bash
+python -m mcp.library_mcp_server
+```
+
+**Tools exposed:**
+- `search_library_books(query, limit)` — Keyword / title / author / ISBN search on OPAC
+- `get_book_details(biblionumber)` — Full record + real-time copy availability
 
 ### Faculty MCP Server
 
@@ -182,6 +198,8 @@ python -m mcp.staff_mcp_server
 |--------|----------|-------------|
 | `POST` | `/api/chat` | Main chat endpoint (Gemini RAG + NLP fallback) |
 | `GET`  | `/api/health` | Database health probe |
+| `GET`  | `/api/v1/library/search` | Search Koha OPAC library catalog |
+| `GET`  | `/api/v1/library/detail/{biblionumber}` | Fetch full book details and availability |
 | `GET`  | `/docs` | Swagger UI |
 | `GET`  | `/redoc` | ReDoc UI |
 
@@ -215,12 +233,15 @@ FastAPI (api/main.py)
   ├── /api/chat   →  routes/chat.py
   │                    ├── Sync triggers → scrapers/
   │                    ├── Gemini RAG   → services/gemini.py + retrieval.py + context_builder.py
+  │                    │                    └── Library Tools → services/library_service.py
   │                    └── NLP Fallback → services/fallback.py
-  └── /api/health →  routes/health.py → core/database.py
+  ├── /api/health →  routes/health.py → core/database.py
+  └── /api/v1/library → routes/library.py → services/library_service.py
 
 MCP Tools (independent processes)
   ├── mcp/faculty_mcp_server.py → core/database.py
-  └── mcp/staff_mcp_server.py   → core/database.py
+  ├── mcp/staff_mcp_server.py   → core/database.py
+  └── mcp/library_mcp_server.py → opac.daiict.ac.in (Live Koha API)
 
 Shared Infrastructure (core/)
   ├── config.py   — env, logging, API keys
