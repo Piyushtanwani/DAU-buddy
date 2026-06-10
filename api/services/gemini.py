@@ -111,7 +111,7 @@ def _run_async_in_thread(coro):
         raise exception
     return result
 
-def search_library_books(query: str, limit: int = 10) -> list[dict]:
+def search_library_books(query: str, limit: int = 3) -> list[dict]:
     """Search the DA-IICT Resource Centre (Koha OPAC) catalog. Use this tool when the user asks to find a book."""
     try:
         return _run_async_in_thread(_library_svc.search_books(query=query, limit=limit))
@@ -121,7 +121,14 @@ def search_library_books(query: str, limit: int = 10) -> list[dict]:
 def get_book_details(biblionumber: str) -> dict:
     """Fetch the full catalog record and real-time copy availability for a book. Use this tool to check if a book is available, using the biblionumber from the search results."""
     try:
-        return _run_async_in_thread(_library_svc.get_book_details(biblionumber=biblionumber))
+        details = _run_async_in_thread(_library_svc.get_book_details(biblionumber=biblionumber))
+        # Return only essential info to save tokens
+        return {
+            "title": details.get("title"),
+            "author": details.get("author"),
+            "total_copies": details.get("total_copies"),
+            "available_copies": details.get("available_copies"),
+        }
     except Exception as e:
         return {"error": str(e)}
 

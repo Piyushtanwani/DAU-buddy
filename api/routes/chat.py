@@ -1,8 +1,6 @@
 import os
 import asyncio
 from fastapi import APIRouter, HTTPException
-from dotenv import load_dotenv
-
 from core import config
 from core.schemas import ChatRequest, ChatResponse
 from api.services import (
@@ -201,17 +199,10 @@ async def chat_endpoint(request: ChatRequest):
     Routes between sync triggers, library search, Gemini RAG, and the local NLP fallback engine.
     """
     try:
-        # Hot-reload .env on every request so Gemini key changes take effect immediately
-        _env_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            ".env",
-        )
-        load_dotenv(dotenv_path=_env_path, override=True)
-
         cleaned = request.message.strip().lower()
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
-        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY")
         if _is_library_query(request.message) and not (api_key and is_gemini_available()):
             logger.info("Chat trigger: library search detected (Gemini unavailable).")
             book_query = _extract_book_query(request.message)
@@ -273,7 +264,7 @@ async def chat_endpoint(request: ChatRequest):
                 return ChatResponse(response=f"[Error during synchronization]: {e}")
 
         # ── 2. Retrieval Strategy Selection ──────────────────────────────────────
-        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY")
 
         # Strategy B: List/Intent Queries (Bypass RAG)
         if any(k in cleaned for k in ["list all staff", "show all staff", "staff directory", "all staff"]):

@@ -26,7 +26,7 @@ MCP Project/
 ├── api/                        # FastAPI web layer
 │   ├── main.py                 # Application factory (create_app)
 │   ├── routes/
-│   │   ├── chat.py             # POST /api/chat (SSE streaming enabled)
+│   │   ├── chat.py             # POST /api/chat
 │   │   ├── health.py           # GET  /api/health
 │   │   └── library.py          # GET  /api/v1/library/* (OPAC API wrapper)
 │   └── services/
