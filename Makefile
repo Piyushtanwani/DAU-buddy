@@ -14,10 +14,10 @@ dev:
 
 # ── MCP Servers ────────────────────────────────────────────────────────────────
 mcp-faculty:
-	python -m mcp.faculty_mcp_server
+	python -m dau_mcp.faculty_mcp_server
 
 mcp-staff:
-	python -m mcp.staff_mcp_server
+	python -m dau_mcp.staff_mcp_server
 
 # ── Data Seeding ───────────────────────────────────────────────────────────────
 seed-faculty:

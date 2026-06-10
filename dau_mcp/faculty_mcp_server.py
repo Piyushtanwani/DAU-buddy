@@ -4,7 +4,7 @@ Faculty MCP Server
 Standalone MCP server exposing DA-IICT faculty tools via stdio transport.
 
 Run with:
-    python -m mcp.faculty_mcp_server
+    python -m dau_mcp.faculty_mcp_server
 
 Tools exposed:
   - list_faculty
@@ -22,7 +22,7 @@ from scrapers import faculty_scraper
 # Server Setup
 # ==============================================================================
 mcp = FastMCP("DA-IICT Faculty Server")
-logger = config.get_logger("mcp.faculty_mcp_server")
+logger = config.get_logger("dau_mcp.faculty_mcp_server")
 
 
 # ==============================================================================

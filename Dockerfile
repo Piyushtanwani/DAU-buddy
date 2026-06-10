@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY core/       /app/core/
 COPY api/        /app/api/
 COPY scrapers/   /app/scrapers/
-COPY mcp/        /app/mcp/
+COPY dau_mcp/        /app/dau_mcp/
 COPY frontend/   /app/frontend/
 COPY .env.example /app/
 

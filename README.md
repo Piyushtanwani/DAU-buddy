@@ -42,7 +42,7 @@ MCP Project/
 │   ├── faculty_scraper.py      # Scrapes all 5 faculty category pages
 │   └── staff_scraper.py        # Scrapes the staff directory page
 │
-├── mcp/                        # Separated MCP server layer
+├── dau_mcp/                        # Separated MCP server layer
 │   ├── faculty_mcp_server.py   # Faculty-only MCP tools (stdio transport)
 │   ├── staff_mcp_server.py     # Staff-only MCP tools (stdio transport)
 │   └── library_mcp_server.py   # Library OPAC MCP tools (stdio transport)
@@ -156,7 +156,7 @@ The Faculty, Staff, and Library MCP servers are **fully separated** and independ
 ### Library MCP Server
 
 ```bash
-python -m mcp.library_mcp_server
+python -m dau_mcp.library_mcp_server
 ```
 
 **Tools exposed:**
@@ -166,7 +166,7 @@ python -m mcp.library_mcp_server
 ### Faculty MCP Server
 
 ```bash
-python -m mcp.faculty_mcp_server
+python -m dau_mcp.faculty_mcp_server
 # or: make mcp-faculty
 ```
 
@@ -180,7 +180,7 @@ python -m mcp.faculty_mcp_server
 ### Staff MCP Server
 
 ```bash
-python -m mcp.staff_mcp_server
+python -m dau_mcp.staff_mcp_server
 # or: make mcp-staff
 ```
 
@@ -239,9 +239,9 @@ FastAPI (api/main.py)
   └── /api/v1/library → routes/library.py → services/library_service.py
 
 MCP Tools (independent processes)
-  ├── mcp/faculty_mcp_server.py → core/database.py
-  ├── mcp/staff_mcp_server.py   → core/database.py
-  └── mcp/library_mcp_server.py → opac.daiict.ac.in (Live Koha API)
+  ├── dau_mcp/faculty_mcp_server.py → core/database.py
+  ├── dau_mcp/staff_mcp_server.py   → core/database.py
+  └── dau_mcp/library_mcp_server.py → opac.daiict.ac.in (Live Koha API)
 
 Shared Infrastructure (core/)
   ├── config.py   — env, logging, API keys

@@ -4,7 +4,7 @@ Staff MCP Server
 Standalone MCP server exposing DA-IICT staff tools via stdio transport.
 
 Run with:
-    python -m mcp.staff_mcp_server
+    python -m dau_mcp.staff_mcp_server
 
 Tools exposed:
   - list_staff
@@ -21,7 +21,7 @@ from scrapers import staff_scraper
 # Server Setup
 # ==============================================================================
 mcp = FastMCP("DA-IICT Staff Server")
-logger = config.get_logger("mcp.staff_mcp_server")
+logger = config.get_logger("dau_mcp.staff_mcp_server")
 
 
 # ==============================================================================

@@ -4,7 +4,7 @@ Library MCP Server
 Standalone MCP server exposing DA-IICT library catalog tools via stdio transport.
 
 Run with:
-    python -m mcp.library_mcp_server
+    python -m dau_mcp.library_mcp_server
 
 Tools exposed:
   - search_library_books   — keyword / title / author / ISBN search
@@ -29,7 +29,7 @@ from api.services.library_service import LibraryService
 # Server Setup
 # ==============================================================================
 mcp    = FastMCP("DA-IICT Library Server")
-logger = config.get_logger("mcp.library_mcp_server")
+logger = config.get_logger("dau_mcp.library_mcp_server")
 _svc   = LibraryService()   # stateless singleton — safe to share
 
 
