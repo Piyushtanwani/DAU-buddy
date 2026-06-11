@@ -8,6 +8,7 @@ __pycache__/
 env/
 venv/
 .venv/
+win_venv/
 ENV/
 
 # Environment variables
@@ -36,3 +37,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Data
+*.csv

@@ -8,14 +8,13 @@ Run with:
 
 Tools exposed:
   - search_library_books   — keyword / title / author / ISBN search
-  - get_book_details       — full record + real-time copy availability
+  - get_book_details       — full record details
 
 Design note
 -----------
-All data is fetched **live** from the Koha OPAC at https://opac.daiict.ac.in.
-Nothing is stored in the local PostgreSQL database — the library catalog is far
-too large to cache, and real-time availability information would be stale
-within minutes of being written.
+Data is fetched from the local PostgreSQL database, seeded from a provided CSV.
+The original live Koha OPAC scraping has been replaced for stability. OPAC links are
+provided in tool responses for real-time availability checks.
 """
 import asyncio
 import json
@@ -38,13 +37,16 @@ _svc   = LibraryService()   # stateless singleton — safe to share
 # ==============================================================================
 
 @mcp.tool()
-def search_library_books(query: str, limit: int = 10) -> list[dict]:
+async def search_library_books(query: str, limit: int = 10) -> list[dict]:
     """
     Search the DA-IICT Resource Centre (Koha OPAC) catalog.
 
     Returns a list of matching books with title, author, publisher, year,
-    ISBN, and a link to the full OPAC record.  Data is fetched live — no
-    local database is involved.
+    ISBN, and a link to the OPAC search. Data is fetched from the local PostgreSQL database.
+
+    IMPORTANT FOR AI: When presenting the search results to the user, you MUST 
+    include the OPAC `link` for each book, telling the user they can use it to 
+    check real-time availability.
 
     Parameters
     ----------
@@ -60,7 +62,7 @@ def search_library_books(query: str, limit: int = 10) -> list[dict]:
     """
     logger.info(f"Tool 'search_library_books' invoked — query={query!r}, limit={limit}")
     try:
-        results = asyncio.run(_svc.search_books(query=query, limit=limit))
+        results = await _svc.search_books(query=query, limit=limit)
         logger.info(f"search_library_books: {len(results)} results")
         return results
     except ValueError as exc:
@@ -68,17 +70,21 @@ def search_library_books(query: str, limit: int = 10) -> list[dict]:
         return [{"error": str(exc)}]
     except Exception as exc:
         logger.error(f"search_library_books failed: {exc}", exc_info=True)
-        return [{"error": f"OPAC search failed: {exc}"}]
+        return [{"error": f"Local database search failed: {exc}"}]
 
 
 @mcp.tool()
-def get_book_details(biblionumber: str) -> dict:
+async def get_book_details(biblionumber: str) -> dict:
     """
-    Fetch the full catalog record and real-time copy availability for a book.
+    Fetch the full catalog record for a book from the local database.
 
-    Queries the Koha OPAC detail page live and returns bibliographic metadata
-    plus a list of physical holdings (item type, library branch, call number,
-    availability status, barcode, and due date if checked out).
+    Queries the local PostgreSQL database and returns bibliographic metadata.
+    Real-time physical holdings are not tracked locally; instead, an OPAC link
+    is returned for the user to check availability directly.
+
+    IMPORTANT FOR AI: Always present the `opac_availability_link` prominently 
+    to the user in your response, advising them to click it to check real-time 
+    copy availability and branch locations!
 
     Parameters
     ----------
@@ -94,7 +100,7 @@ def get_book_details(biblionumber: str) -> dict:
     """
     logger.info(f"Tool 'get_book_details' invoked — biblionumber={biblionumber!r}")
     try:
-        result = asyncio.run(_svc.get_book_details(biblionumber=biblionumber))
+        result = await _svc.get_book_details(biblionumber=biblionumber)
         logger.info(
             f"get_book_details: {result.get('total_copies', 0)} copies, "
             f"{result.get('available_copies', 0)} available"
@@ -105,7 +111,7 @@ def get_book_details(biblionumber: str) -> dict:
         return {"error": str(exc)}
     except Exception as exc:
         logger.error(f"get_book_details failed: {exc}", exc_info=True)
-        return {"error": f"OPAC detail lookup failed: {exc}"}
+        return {"error": f"Local database detail lookup failed: {exc}"}
 
 
 # ==============================================================================

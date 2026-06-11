@@ -88,6 +88,45 @@ CREATE INDEX IF NOT EXISTS idx_staff_email
     ON staff (email);
 
 -- =============================================================================
+-- Library Books Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS library_books (
+    id              SERIAL PRIMARY KEY,
+    acc_date        VARCHAR(50),
+    acc_no          VARCHAR(50) UNIQUE,
+    title           TEXT,
+    isbn            VARCHAR(255),
+    author_editor   TEXT,
+    edition_volume  VARCHAR(255),
+    place_publisher TEXT,
+    year            VARCHAR(50),
+    pages           VARCHAR(100),
+    class_no        VARCHAR(100),
+    description     TEXT,
+    poster_url      TEXT,
+    book_url        TEXT,
+    scraped_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Generated tsvector column for full-text search (PostgreSQL 12+)
+ALTER TABLE library_books
+    ADD COLUMN IF NOT EXISTS search_vector tsvector
+    GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(author_editor, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(description, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(isbn, '')), 'D')
+    ) STORED;
+
+-- GIN index for fast full-text searches
+CREATE INDEX IF NOT EXISTS idx_library_books_search_vector
+    ON library_books USING GIN (search_vector);
+
+-- Optional: index on acc_no for direct lookups
+CREATE INDEX IF NOT EXISTS idx_library_books_acc_no
+    ON library_books (acc_no);
+
+-- =============================================================================
 -- Done
 -- =============================================================================
-\echo '✅  daiict_db initialised successfully (faculty + staff tables ready).'
+\echo '✅  daiict_db initialised successfully (faculty + staff + library tables ready).'

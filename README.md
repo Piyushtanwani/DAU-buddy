@@ -1,250 +1,137 @@
-# DA-IICT Faculty & Staff AI Buddy
+# DA-IICT Unified MCP Server
 
-Production-grade conversational search assistant for Dhirubhai Ambani Institute of Information and Communication Technology (DA-IICT).
+A Model Context Protocol (MCP) server providing Claude (and other LLMs) with direct access to Dhirubhai Ambani Institute of Information and Communication Technology (DA-IICT) databases.
+
+This server enables AI models to natively search the faculty directory, staff directory, and the library OPAC catalog through a local high-performance PostgreSQL database.
 
 ## Features
 
-- **Conversational RAG Search**: Powered by Google's Gemini 2.5 Flash, enabling natural language queries over live university directories.
-- **Real-Time Library OPAC Integration**: Native Gemini tool calling integration with DA-IICT's Koha OPAC to search books, check real-time availability, and fetch catalog details.
-- **Robust NLP Fallback**: A local, stateless rule-based engine routing queries instantly when Gemini is offline or on cooldown (now includes Exact Designation Matching).
-- **Advanced Full-Text Search**: Uses PostgreSQL's `websearch_to_tsquery` combined with dynamic `OR` logic to understand conversational search intents.
-- **Auto-Formatting Profiles**: Clean, readable markdown bullet-point generation for all faculty and staff information.
-- **Live Scrapers & Sync**: Built-in chat triggers (e.g., *"sync faculty"*) to dynamically scrape and update the database directly from the DA-IICT website.
-- **Separated MCP Servers**: Native Model Context Protocol (MCP) servers for both Faculty and Staff, integrating directly with external agents.
-
+- **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
+- **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
+- **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC for physical availability checking.
+- **Unified Server**: Exposes all tools over standard `stdio` transport for seamless integration with Claude Desktop.
 
 ## Project Structure
 
-```
+```text
 MCP Project/
 │
 ├── core/                       # Shared infrastructure layer
-│   ├── config.py               # Environment loading, logging factory, API keys
+│   ├── config.py               # Environment loading, logging factory
 │   ├── database.py             # Thread-safe PostgreSQL connection pool
 │   └── schemas.py              # Shared Pydantic models
 │
-├── api/                        # FastAPI web layer
-│   ├── main.py                 # Application factory (create_app)
-│   ├── routes/
-│   │   ├── chat.py             # POST /api/chat
-│   │   ├── health.py           # GET  /api/health
-│   │   └── library.py          # GET  /api/v1/library/* (OPAC API wrapper)
-│   └── services/
-│       ├── gemini.py           # Gemini 2.5 Flash API client + circuit breaker (120s timeout)
-│       ├── faculty_service.py  # Faculty DB queries + context caching
-│       ├── staff_service.py    # Staff DB queries + context caching
-│       ├── library_service.py  # DA-IICT Koha OPAC scraping & HTTP client
-│       ├── retrieval.py        # RAG retrieval service using PostgreSQL full-text search
-│       ├── context_builder.py  # Transforms DB rows into clean context for Gemini
-│       └── fallback.py         # Advanced NLP fallback engine (stateless chat, name extraction, default summaries)
+├── api/services/               # Business Logic layer
+│   ├── faculty_service.py      # Faculty DB queries
+│   ├── staff_service.py        # Staff DB queries
+│   └── library_service.py      # Local Library DB queries
 │
 ├── scrapers/                   # Web scraping layer
 │   ├── faculty_scraper.py      # Scrapes all 5 faculty category pages
 │   └── staff_scraper.py        # Scrapes the staff directory page
 │
-├── dau_mcp/                        # Separated MCP server layer
-│   ├── faculty_mcp_server.py   # Faculty-only MCP tools (stdio transport)
-│   ├── staff_mcp_server.py     # Staff-only MCP tools (stdio transport)
-│   └── library_mcp_server.py   # Library OPAC MCP tools (stdio transport)
-│
-├── frontend/                   # Web UI
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
+├── dau_mcp/                    # Model Context Protocol Servers
+│   ├── unified_mcp_server.py   # Exposes ALL tools (Recommended)
+│   ├── faculty_mcp_server.py   # Faculty-only MCP tools
+│   ├── staff_mcp_server.py     # Staff-only MCP tools
+│   └── library_mcp_server.py   # Library MCP tools
 │
 ├── scripts/                    # Operational one-shot scripts
 │   ├── init_db.sql             # Database schema initialization
 │   ├── seed_faculty.py         # Seed faculty data from live website
-│   └── seed_staff.py           # Seed staff data from live website
+│   ├── seed_staff.py           # Seed staff data from live website
+│   └── seed_library.py         # Seed library catalog from CSV
 │
-├── tests/                      # Test suite
-│   ├── test_faculty_service.py
-│   ├── test_staff_service.py
-│   └── test_library.py
-│
-├── .env                        # Local credentials (not committed)
 ├── .env.example                # Template for .env
 ├── .gitignore
-├── Dockerfile
-├── Makefile
 └── requirements.txt
 ```
 
-## Quick Start
+## Setup & Installation
 
-### 1. Set up environment variables
+### 1. Configure Environment
 
-Copy the example file and add your Gemini API Key and PostgreSQL credentials.
+Copy the example file and add your PostgreSQL credentials:
 ```bash
 cp .env.example .env
 ```
 
----
+Ensure your `.env` contains the required database connection variables:
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=daiict_db
+DB_USER=postgres
+DB_PASSWORD=your_password
+```
 
-### 2. Operating System Specific Setup
+### 2. Install Dependencies
 
-#### Option A: Windows (PowerShell)
-*Windows does not have `make` installed by default. You will run Python commands directly.*
+You must install dependencies in your Python environment. For Windows, using a virtual environment (`win_venv`) is highly recommended.
 
-1. **Install Dependencies:**
-   ```powershell
-   # It is recommended to run this in a virtual environment, or install globally if you prefer:
-   pip install -r requirements.txt
-   ```
-2. **Seed the Database** (Ensure your Windows PostgreSQL service is running and `daiict_db` is created):
+```powershell
+# Create and activate a virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# Install requirements
+pip install -r requirements.txt
+```
+
+### 3. Initialize Database
+
+1. Ensure PostgreSQL is running and you have created a database named `daiict_db`.
+2. Run the `scripts/init_db.sql` script in pgAdmin or `psql` to create the tables.
+3. Seed the data:
    ```powershell
    python scripts/seed_faculty.py
    python scripts/seed_staff.py
-   ```
-3. **Start the Web Server:**
-   ```powershell
-   # Development (hot-reload)
-   python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8000 --reload
-   
-   # Production
-   python -m uvicorn api.main:create_app --factory --host 0.0.0.0 --port 8080
+   python scripts/seed_library.py
    ```
 
-#### Option B: Linux / Ubuntu (WSL)
-*Modern Ubuntu versions enforce strict Python environment rules (`externally-managed-environment`). You must use a Virtual Environment.*
+## Adding to Claude Desktop
 
-1. **Create and Activate a Virtual Environment:**
-   ```bash
-   # Install the venv package if you don't have it
-   sudo apt update && sudo apt install python3.12-venv
-   
-   # Create and activate it
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Configure Database & Seed Data:**
-   *(If your database is running on Windows, you cannot use `localhost` in WSL. It is easiest to install PostgreSQL directly in Ubuntu).*
-   ```bash
-   # Install PostgreSQL in Ubuntu
-   sudo apt install postgresql postgresql-contrib
-   sudo service postgresql start
-   
-   # Log in and configure the user/database to match your .env file
-   sudo -u postgres psql
-   # Run: ALTER USER postgres PASSWORD 'your_password';
-   # Run: CREATE DATABASE daiict_db;
-   # Run: \q
-   
-   # Seed the data using Make
-   make seed
-   ```
-4. **Start the Web Server:**
-   ```bash
-   make dev
-   ```
+To allow Claude to use these tools, add the Unified Server to your Claude Desktop configuration file.
 
----
+On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 
-### 3. Access the Chatbot
-
-Open your browser at: `http://127.0.0.1:8000`
----
-
-## MCP Servers
-
-The Faculty, Staff, and Library MCP servers are **fully separated** and independently runnable.
-
-### Library MCP Server
-
-```bash
-python -m dau_mcp.library_mcp_server
+```json
+{
+  "mcpServers": {
+    "daiict-unified": {
+      "command": "C:\\path\\to\\MCP Project\\win_venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "dau_mcp.unified_mcp_server"
+      ],
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\MCP Project"
+      }
+    }
+  }
+}
 ```
+*(Make sure to replace `C:\\path\\to\\MCP Project` with the actual absolute path to your project folder).*
 
-**Tools exposed:**
-- `search_library_books(query, limit)` — Keyword / title / author / ISBN search on OPAC
-- `get_book_details(biblionumber)` — Full record + real-time copy availability
+After saving the configuration, **fully restart Claude Desktop** to initialize the server.
 
-### Faculty MCP Server
+## Available Tools
 
-```bash
-python -m dau_mcp.faculty_mcp_server
-# or: make mcp-faculty
-```
+Once configured, Claude can natively call the following tools:
 
-**Tools exposed:**
-- `list_faculty` — List all faculty members
-- `search_faculty(query)` — Search across name, specialization, education, email
-- `get_faculty_details(name_or_email)` — Full profile lookup
-- `search_faculty_by_expertise(expertise)` — Expertise-specific search
-- `sync_faculty_data()` — Live scrape & reload
+**Faculty:**
+- `list_faculty()`
+- `search_faculty(query)`
+- `get_faculty_details(name_or_email)`
+- `search_faculty_by_expertise(expertise)`
+- `sync_faculty_data()`
 
-### Staff MCP Server
+**Staff:**
+- `list_staff()`
+- `search_staff(query)`
+- `get_staff_details(name_or_email)`
+- `sync_staff_data()`
 
-```bash
-python -m dau_mcp.staff_mcp_server
-# or: make mcp-staff
-```
-
-**Tools exposed:**
-- `list_staff` — List all staff members
-- `search_staff(query)` — Search across name, designation, qualification, email
-- `get_staff_details(name_or_email)` — Full profile lookup
-- `sync_staff_data()` — Live scrape & reload
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/chat` | Main chat endpoint (Gemini RAG + NLP fallback) |
-| `GET`  | `/api/health` | Database health probe |
-| `GET`  | `/api/v1/library/search` | Search Koha OPAC library catalog |
-| `GET`  | `/api/v1/library/detail/{biblionumber}` | Fetch full book details and availability |
-| `GET`  | `/docs` | Swagger UI |
-| `GET`  | `/redoc` | ReDoc UI |
-
----
-
-## Running Tests
-
-```bash
-make test
-# or: python -m pytest tests/ -v
-```
-
----
-
-## Docker
-
-```bash
-docker build -t dau-buddy .
-docker run -p 8080:8080 --env-file .env dau-buddy
-```
-
----
-
-## Architecture
-
-```
-Browser
-  │
-  ▼
-FastAPI (api/main.py)
-  ├── /api/chat   →  routes/chat.py
-  │                    ├── Sync triggers → scrapers/
-  │                    ├── Gemini RAG   → services/gemini.py + retrieval.py + context_builder.py
-  │                    │                    └── Library Tools → services/library_service.py
-  │                    └── NLP Fallback → services/fallback.py
-  ├── /api/health →  routes/health.py → core/database.py
-  └── /api/v1/library → routes/library.py → services/library_service.py
-
-MCP Tools (independent processes)
-  ├── dau_mcp/faculty_mcp_server.py → core/database.py
-  ├── dau_mcp/staff_mcp_server.py   → core/database.py
-  └── dau_mcp/library_mcp_server.py → opac.daiict.ac.in (Live Koha API)
-
-Shared Infrastructure (core/)
-  ├── config.py   — env, logging, API keys
-  ├── database.py — threaded connection pool
-  └── schemas.py  — Pydantic models
-```
+**Library:**
+- `search_library_books(query, limit)`
+- `get_book_details(biblionumber)`

@@ -375,8 +375,10 @@ def process_fallback_message(prompt: str) -> str:
 
     appreciation_phrases = [
         "great work", "good job", "doing great", "very helpful", "so helpful",
-        "thank you", "thanks", "thankyou", "awesome", "perfect", "superb",
+         "awesome", "perfect", "superb",
         "wonderful", "excellent", "brilliant", "amazing", "cool", "nice", "ty",
+        "you are best", "you are the best", "you're the best", "you're best",
+        "best bot", "good bot", "smart bot", "love you"
     ]
     if any(re.search(r'\b' + re.escape(p) + r'\b', cleaned) for p in appreciation_phrases):
         return (
@@ -385,7 +387,7 @@ def process_fallback_message(prompt: str) -> str:
         )
 
     acknowledgment_phrases = [
-        "ok", "okay", "okkay", "done", "got it", "understood", "alright", "sure", "fine", "kk"
+        "ok", "okay", "okkay", "done", "got it", "understood", "thank you", "thanks", "thankyou", "alright", "sure", "fine", "kk"
     ]
     # Check exact match or if the entire cleaned string only consists of an acknowledgment
     if cleaned in acknowledgment_phrases or any(re.search(r'^' + re.escape(p) + r'$', cleaned) for p in acknowledgment_phrases):
