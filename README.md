@@ -99,7 +99,7 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 {
   "mcpServers": {
     "daiict-unified": {
-      "command": "C:\\path\\to\\MCP Project\\win_venv\\Scripts\\python.exe",
+      "command": "C:\\path\\to\\MCP Project\\venv\\Scripts\\python.exe",
       "args": [
         "-m",
         "dau_mcp.unified_mcp_server"
