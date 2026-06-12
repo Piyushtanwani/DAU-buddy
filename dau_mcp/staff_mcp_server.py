@@ -56,6 +56,10 @@ def search_staff(query: str) -> str:
     """
     Search for staff members matching a query string.
     Matches against names, designations, qualifications, and emails.
+    
+    IMPORTANT ROUTING RULES FOR AI AGENTS:
+    - If the user asks about "WiFi", "Internet", or "Network" problems, search for "IT & SYSTEMS" or "Network".
+    - If the user asks about "light", "AC", "fan", "electricity", or "power" problems, search for "Electrician", "Electrical", or "Maintenance".
     """
     logger.info(f"Tool 'search_staff' invoked — query: '{query}'")
     if not query.strip():

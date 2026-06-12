@@ -284,7 +284,7 @@ async def chat_endpoint(request: ChatRequest):
             if any(k in cleaned for k in ["wifi", "internet", "network", "router"]):
                 search_query += " IT SYSTEMS"
                 
-            if any(k in cleaned for k in ["light", "fan", "ac"]) and any(w in cleaned for w in ["not work", "stop", "broken"]):
+            if any(k in cleaned for k in ["light", "fan", "ac"]) and any(w in cleaned for w in ["not work", "stop", "broken", "problem", "problems", "issue", "issues", "fix"]):
                 search_query += " electrician electrical maintenance"
             
             faculty_records = retriever.retrieve_faculty(search_query, limit=limit)
