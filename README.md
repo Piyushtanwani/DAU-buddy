@@ -67,7 +67,7 @@ DB_PASSWORD=your_password
 
 ### 2. Install Dependencies
 
-You must install dependencies in your Python environment. For Windows, using a virtual environment (`win_venv`) is highly recommended.
+You must install dependencies in your Python environment. For Windows, using a virtual environment (`venv`) is highly recommended.
 
 ```powershell
 # Create and activate a virtual environment
