@@ -13,7 +13,7 @@ from core.database import db_connection
 logger = config.get_logger("scripts.seed_library")
 
 def main():
-    csv_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "clean_description.csv")
+    csv_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "library_data.csv")
     if not os.path.exists(csv_file_path):
         logger.error(f"CSV file not found: {csv_file_path}")
         return

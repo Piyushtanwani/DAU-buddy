@@ -40,3 +40,4 @@ Thumbs.db
 
 # Data
 *.csv
+!data/library_data.csv
