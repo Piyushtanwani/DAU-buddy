@@ -58,6 +58,7 @@ def get_db_config() -> Dict[str, Any]:
         "database": name,
         "user": user,
         "password": password,
+        "sslmode": os.getenv("DB_SSLMODE", "prefer"),
     }
 
 

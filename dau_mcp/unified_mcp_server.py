@@ -19,6 +19,9 @@ from dau_mcp.staff_mcp_server import (
 from dau_mcp.library_mcp_server import (
     search_library_books, get_book_details
 )
+from dau_mcp.timetable_mcp_server import (
+    get_faculty_location, get_faculty_schedule, find_faculty_free_time, get_course_schedule, get_program_timetable, list_programs
+)
 
 # ==============================================================================
 # Server Setup
@@ -42,6 +45,14 @@ mcp.add_tool(sync_staff_data)
 # Register Library Tools
 mcp.add_tool(search_library_books)
 mcp.add_tool(get_book_details)
+
+# Register Timetable Tools
+mcp.add_tool(get_faculty_location)
+mcp.add_tool(get_faculty_schedule)
+mcp.add_tool(find_faculty_free_time)
+mcp.add_tool(get_course_schedule)
+mcp.add_tool(list_programs)
+mcp.add_tool(get_program_timetable)
 
 # ==============================================================================
 # Entry Point

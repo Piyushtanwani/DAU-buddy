@@ -38,6 +38,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Data
-*.csv
-!data/library_data.csv
+# Project Specific
+scripts/
+data/

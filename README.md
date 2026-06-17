@@ -9,6 +9,7 @@ This server enables AI models to natively search the faculty directory, staff di
 - **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
 - **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC for physical availability checking.
+- **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
 - **Unified Server**: Exposes all tools over standard `stdio` transport for seamless integration with Claude Desktop.
 
 ## Project Structure
@@ -20,6 +21,11 @@ MCP Project/
 │   ├── config.py               # Environment loading, logging factory
 │   ├── database.py             # Thread-safe PostgreSQL connection pool
 │   └── schemas.py              # Shared Pydantic models
+│
+├── data/                       # Seed data files
+│   ├── library_data.csv        # Extracted catalog for the library
+│   ├── Lecture Data.xlsx       # Faculty lecture schedules
+│   └── Lab Data.xlsx           # Faculty lab/tutorial schedules
 │
 ├── api/services/               # Business Logic layer
 │   ├── faculty_service.py      # Faculty DB queries
@@ -34,13 +40,15 @@ MCP Project/
 │   ├── unified_mcp_server.py   # Exposes ALL tools (Recommended)
 │   ├── faculty_mcp_server.py   # Faculty-only MCP tools
 │   ├── staff_mcp_server.py     # Staff-only MCP tools
-│   └── library_mcp_server.py   # Library MCP tools
+│   ├── library_mcp_server.py   # Library MCP tools
+│   └── timetable_mcp_server.py # Timetable MCP tools
 │
 ├── scripts/                    # Operational one-shot scripts
 │   ├── init_db.sql             # Database schema initialization
 │   ├── seed_faculty.py         # Seed faculty data from live website
 │   ├── seed_staff.py           # Seed staff data from live website
-│   └── seed_library.py         # Seed library catalog from CSV
+│   ├── seed_library.py         # Seed library catalog from CSV
+│   └── seed_timetable.py       # Seed lecture and lab schedules from Excel
 │
 ├── .env.example                # Template for .env
 ├── .gitignore
@@ -51,18 +59,19 @@ MCP Project/
 
 ### 1. Configure Environment
 
-Copy the example file and add your PostgreSQL credentials:
+Copy the example file and add your database password (ask the project owner if you don't have it) and Gemini API Key:
 ```bash
 cp .env.example .env
 ```
 
-Ensure your `.env` contains the required database connection variables:
+Ensure your `.env` contains the required database connection variables for the online Neon DB:
 ```
-DB_HOST=localhost
+DB_HOST=ep-curly-cloud-atr9widv.c-9.us-east-1.aws.neon.tech
 DB_PORT=5432
-DB_NAME=daiict_db
-DB_USER=postgres
-DB_PASSWORD=your_password
+DB_NAME=neondb
+DB_USER=neondb_owner
+DB_PASSWORD=your_password_here
+DB_SSLMODE=require
 ```
 
 ### 2. Install Dependencies
@@ -71,8 +80,8 @@ You must install dependencies in your Python environment. For Windows, using a v
 
 ```powershell
 # Create and activate a virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv win_venv
+.\win_venv\Scripts\Activate.ps1
 
 # Install requirements
 pip install -r requirements.txt
@@ -80,14 +89,11 @@ pip install -r requirements.txt
 
 ### 3. Initialize Database
 
-1. Ensure PostgreSQL is running and you have created a database named `daiict_db`.
-2. Run the `scripts/init_db.sql` script in pgAdmin or `psql` to create the tables.
-3. Seed the data:
-   ```powershell
-   python scripts/seed_faculty.py
-   python scripts/seed_staff.py
-   python scripts/seed_library.py
-   ```
+🎉 **Zero Local Setup Required!** 🎉
+
+The database is hosted online securely via Neon DB and is already fully seeded with Faculty, Staff, Timetable, and Library data. 
+
+Once your `.env` file is set, you can jump straight into adding it to Claude Desktop.
 
 ## Adding to Claude Desktop
 
@@ -135,3 +141,11 @@ Once configured, Claude can natively call the following tools:
 **Library:**
 - `search_library_books(query, limit)`
 - `get_book_details(biblionumber)`
+
+**Timetables:**
+- `get_faculty_location(faculty_name, day, time)`
+- `get_faculty_schedule(faculty_name, day)`
+- `find_faculty_free_time(faculty_name, day)`
+- `get_course_schedule(course_code, day)`
+- `list_programs()`
+- `get_program_timetable(program_name, day)`
