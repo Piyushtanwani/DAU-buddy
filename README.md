@@ -1,8 +1,6 @@
 # DA-IICT Unified MCP Server
 
-A Model Context Protocol (MCP) server providing Claude (and other LLMs) with direct access to Dhirubhai Ambani Institute of Information and Communication Technology (DA-IICT) databases.
-
-This server enables AI models to natively search the faculty directory, staff directory, and the library OPAC catalog through a local high-performance PostgreSQL database.
+A unified MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, and academic calendar data through PostgreSQL-backed retrieval services.
 
 ## Features
 
@@ -10,6 +8,31 @@ This server enables AI models to natively search the faculty directory, staff di
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
 - **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC for physical availability checking.
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
+- **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DA-IICT sources.
+- **Retrieval-Augmented Search**: Uses PostgreSQL Full-Text Search (TSVECTOR + GIN indexes) to efficiently retrieve relevant faculty, staff, library, and calendar records before serving results.
+
+## Architecture
+
+```text
+Claude Desktop
+        │
+        ▼
+DA-IICT Unified MCP Server
+        │
+ ┌──────┼──────────┬──────────┬──────────┐
+ │      │          │          │          │
+Faculty Staff   Library   Timetable  Calendar
+Service Service Service   Service    Service
+ │      │          │          │          │
+ └──────────── PostgreSQL (Neon) ───────────┘
+```
+
+## Tech Stack
+- **Language**: Python 3.10+
+- **Database**: PostgreSQL (Neon DB Serverless)
+- **Framework**: `mcp` (Model Context Protocol), `FastMCP`
+- **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
+- **Search**: PostgreSQL `tsvector` and GIN Indexes for Full-Text Search
 - **Unified Server**: Exposes all tools over standard `stdio` transport for seamless integration with Claude Desktop.
 
 ## Project Structure
@@ -30,7 +53,9 @@ MCP Project/
 ├── api/services/               # Business Logic layer
 │   ├── faculty_service.py      # Faculty DB queries
 │   ├── staff_service.py        # Staff DB queries
-│   └── library_service.py      # Local Library DB queries
+│   ├── library_service.py      # Local Library DB queries
+│   ├── timetable_service.py    # Timetable DB queries
+│   └── calendar_service.py     # Calendar DB queries
 │
 ├── scrapers/                   # Web scraping layer
 │   ├── faculty_scraper.py      # Scrapes all 5 faculty category pages
@@ -41,14 +66,16 @@ MCP Project/
 │   ├── faculty_mcp_server.py   # Faculty-only MCP tools
 │   ├── staff_mcp_server.py     # Staff-only MCP tools
 │   ├── library_mcp_server.py   # Library MCP tools
-│   └── timetable_mcp_server.py # Timetable MCP tools
+│   ├── timetable_mcp_server.py # Timetable MCP tools
+│   └── calendar_mcp_server.py  # Calendar MCP tools
 │
 ├── scripts/                    # Operational one-shot scripts
 │   ├── init_db.sql             # Database schema initialization
 │   ├── seed_faculty.py         # Seed faculty data from live website
 │   ├── seed_staff.py           # Seed staff data from live website
 │   ├── seed_library.py         # Seed library catalog from CSV
-│   └── seed_timetable.py       # Seed lecture and lab schedules from Excel
+│   ├── seed_timetable.py       # Seed lecture and lab schedules from Excel
+│   └── seed_calendar.py        # Seed academic calendar and holidays
 │
 ├── .env.example                # Template for .env
 ├── .gitignore
@@ -66,11 +93,11 @@ cp .env.example .env
 
 Ensure your `.env` contains the required database connection variables for the online Neon DB:
 ```
-DB_HOST=ep-curly-cloud-atr9widv.c-9.us-east-1.aws.neon.tech
+DB_HOST=your-neon-host
 DB_PORT=5432
-DB_NAME=neondb
-DB_USER=neondb_owner
-DB_PASSWORD=your_password_here
+DB_NAME=your-db
+DB_USER=your-user
+DB_PASSWORD=your-password
 DB_SSLMODE=require
 ```
 
@@ -121,9 +148,9 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 
 After saving the configuration, **fully restart Claude Desktop** to initialize the server.
 
-## Available Tools
+## Available Tools & Example Queries
 
-Once configured, Claude can natively call the following tools:
+Once configured, Claude can natively call the following tools. Try asking Claude these example questions to see it in action!
 
 **Faculty:**
 - `list_faculty()`
@@ -131,16 +158,19 @@ Once configured, Claude can natively call the following tools:
 - `get_faculty_details(name_or_email)`
 - `search_faculty_by_expertise(expertise)`
 - `sync_faculty_data()`
+*Example Query*: "Who is the faculty expert in Machine Learning?" or "Get the profile for Prof. Suman Mitra."
 
 **Staff:**
 - `list_staff()`
 - `search_staff(query)`
 - `get_staff_details(name_or_email)`
 - `sync_staff_data()`
+*Example Query*: "Who is the placement coordinator?"
 
 **Library:**
 - `search_library_books(query, limit)`
 - `get_book_details(biblionumber)`
+*Example Query*: "Find books on Artificial Intelligence in the library."
 
 **Timetables:**
 - `get_faculty_location(faculty_name, day, time)`
@@ -149,3 +179,34 @@ Once configured, Claude can natively call the following tools:
 - `get_course_schedule(course_code, day)`
 - `list_programs()`
 - `get_program_timetable(program_name, day)`
+*Example Query*: "When is Prof. Manish Khare free on Tuesday?" or "Where is the lecture for CS301 on Monday at 10 AM?"
+
+**Calendar:**
+- `get_next_holiday()`
+- `get_upcoming_holidays()`
+- `get_all_holidays()`
+- `get_midsem_dates()`
+- `get_endsem_dates()`
+- `get_next_academic_event()`
+- `search_calendar(query, semester=None)`
+*Example Query*: "When are the mid-semester exams for semester 3?" or "List all the DA-IICT holidays for the year."
+
+## Database Statistics
+
+The Neon PostgreSQL database is actively seeded with:
+- **Faculty Records**: ~116
+- **Staff Records**: ~92
+- **Library Catalog**: 28,000+ Books
+- **Timetable Slots**: 1,200+ (Lectures, Labs, Tutorials)
+- **Academic Calendar**: 120+ Events & Holidays
+
+## Sample Conversations
+
+- Who teaches Machine Learning at DA-IICT?
+- Show details of Prof. Aditya Tatu.
+- Find books on Artificial Intelligence.
+- Where is Prof. Abhishek Gupta currently teaching?
+- Show MSc IT timetable for Monday.
+- When are the Mid-Semester examinations?
+- When is the next public holiday?
+- List all Winter semester academic events.

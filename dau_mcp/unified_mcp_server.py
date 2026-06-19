@@ -6,6 +6,10 @@ Standalone MCP server exposing DA-IICT faculty, staff, and library tools via std
 Run with:
     python -m dau_mcp.unified_mcp_server
 """
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from mcp.server.fastmcp import FastMCP
 from core import config
 
@@ -21,6 +25,9 @@ from dau_mcp.library_mcp_server import (
 )
 from dau_mcp.timetable_mcp_server import (
     get_faculty_location, get_faculty_schedule, find_faculty_free_time, get_course_schedule, get_program_timetable, list_programs
+)
+from dau_mcp.calendar_mcp_server import (
+    get_next_holiday, get_upcoming_holidays, get_all_holidays, get_midsem_dates, get_endsem_dates, get_next_academic_event, search_calendar
 )
 
 # ==============================================================================
@@ -53,6 +60,15 @@ mcp.add_tool(find_faculty_free_time)
 mcp.add_tool(get_course_schedule)
 mcp.add_tool(list_programs)
 mcp.add_tool(get_program_timetable)
+
+# Register Calendar Tools
+mcp.add_tool(get_next_holiday)
+mcp.add_tool(get_upcoming_holidays)
+mcp.add_tool(get_all_holidays)
+mcp.add_tool(get_midsem_dates)
+mcp.add_tool(get_endsem_dates)
+mcp.add_tool(get_next_academic_event)
+mcp.add_tool(search_calendar)
 
 # ==============================================================================
 # Entry Point
