@@ -79,9 +79,10 @@
 
 html,
 body {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body {
@@ -116,10 +117,12 @@ a {
 /* ── App Shell ────────────────────────────────────────────────────────────── */
 .app-container {
     display: flex;
-    height: 100vh;
+    min-height: 100vh;
     width: 100vw;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: var(--bg-app);
+    padding: 40px 20px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -1183,4 +1186,101 @@ a {
 
 [data-theme="light"] .chat-header {
     background: rgba(240, 242, 248, 0.85);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LOGIN OVERLAY (GLASSMORPHISM)
+   ══════════════════════════════════════════════════════════════════════════════ */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(13, 13, 13, 0.85) 0%, rgba(20, 30, 48, 0.95) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.6s ease forwards;
+}
+
+[data-theme="light"] .login-overlay {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(240, 242, 248, 0.95) 100%);
+}
+
+.login-card {
+    background: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-radius: var(--r-lg);
+    padding: 48px;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="light"] .login-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.login-header {
+    margin-bottom: 32px;
+}
+
+.login-logo {
+    font-size: 48px;
+    color: var(--brand);
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.4));
+}
+
+.login-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--txt-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.login-header p {
+    font-size: 14px;
+    color: var(--txt-secondary);
+    line-height: 1.6;
+}
+
+.login-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--error);
+    padding: 12px 16px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 24px;
+    text-align: left;
+    width: 100%;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.login-error i {
+    margin-top: 2px;
+}
+
+#g_id_onload, .g_id_signin {
+    width: 100%;
+    display: flex;
+    justify-content: center;
 }

@@ -1,718 +1,186 @@
 /* ==============================================================================
-   DA-IICT Faculty AI Buddy - Frontend Logic (app.js)
+   DA-IICT Faculty AI Buddy - Frontend Login Logic (app.js)
    ============================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // DOM Elements
-    const form = document.getElementById("input-form");
-    const userInput = document.getElementById("user-input");
-    const viewport = document.getElementById("chat-viewport");
-    const welcomeScreen = document.getElementById("welcome-screen");
-    const messagesContainer = document.getElementById("messages-container");
-    const themeToggle = document.getElementById("theme-toggle");
-    const clearChatBtn = document.getElementById("clear-chat");
-    const suggestedLinks = document.querySelectorAll(".suggested-link");
-    const promptCards = document.querySelectorAll(".prompt-card");
+    // ── Google OAuth & Session Management ─────────────────────────────────────
+    const loginOverlay = document.getElementById("login-overlay");
+    const appContainer = document.getElementById("app-container");
+    const loginError = document.getElementById("login-error");
+    const welcomeName = document.getElementById("welcome-name");
+    const logoutBtn = document.getElementById("logout-btn");
+    const apiKeyInput = document.getElementById("api-key-input");
+    const copyKeyBtn = document.getElementById("copy-key-btn");
+    const regenerateBtn = document.getElementById("regenerate-key-btn");
+    const configCode = document.getElementById("claude-config-code");
+    const welcomeEmail = document.getElementById("welcome-email");
+    const welcomeAvatar = document.getElementById("welcome-avatar");
 
-    const sendBtn = document.getElementById("send-btn");
-
-    let isResponding = false;
-
-    function setInputState(enabled) {
-        isResponding = !enabled;
-        sendBtn.disabled = !enabled;
-        if (enabled) {
-            sendBtn.style.opacity = "1";
-            sendBtn.style.cursor = "pointer";
-            userInput.focus();
-        } else {
-            sendBtn.style.opacity = "0.5";
-            sendBtn.style.cursor = "not-allowed";
-        }
-    }
-
-    // New DOM Elements for Chat History
-    const chatHistoryList = document.getElementById("chat-history-list");
-    const newChatBtn = document.getElementById("new-chat-btn");
-    const clearHistoryBtn = document.getElementById("clear-history-btn");
-
-    // Initialize state
-    let chatSessions = [];
-    let activeChatId = null;
-
-    // Helper: Premium Markdown to HTML Renderer using Marked.js
-    function renderMarkdown(text) {
-        if (!text) return "";
+    async function checkExistingKey(email) {
         try {
-            return marked.parse(text);
-        } catch (e) {
-            console.error("Marked parsing failed, falling back to raw text", e);
-            return text;
-        }
-    }
-
-    // Toggle Theme (Dark / Light)
-    themeToggle.addEventListener("click", () => {
-        const currentTheme = document.body.getAttribute("data-theme");
-        const newTheme = currentTheme === "light" ? "dark" : "light";
-        document.body.setAttribute("data-theme", newTheme);
-
-        // Update Theme Icon
-        const icon = themeToggle.querySelector("i");
-        if (newTheme === "light") {
-            icon.className = "fa-solid fa-sun";
-        } else {
-            icon.className = "fa-solid fa-moon";
-        }
-    });
-
-    // Load chat history from localStorage
-    function loadChatHistory() {
-        const stored = localStorage.getItem("dau_buddy_chats");
-        if (stored) {
-            try {
-                chatSessions = JSON.parse(stored);
-            } catch (e) {
-                console.error("Error parsing stored chat sessions", e);
-                chatSessions = [];
-            }
-        }
-
-        // Select active chat or create a fresh one if empty
-        if (chatSessions.length > 0) {
-            activeChatId = chatSessions[0].id;
-        } else {
-            createNewChat();
-        }
-
-        renderChatHistoryList();
-        loadActiveChat();
-    }
-
-    // Save chat history to localStorage
-    function saveChatHistory() {
-        localStorage.setItem("dau_buddy_chats", JSON.stringify(chatSessions));
-    }
-
-    // Create a new chat session
-    function createNewChat() {
-        // If there's already an active empty chat, just reuse it
-        const currentActive = chatSessions.find(s => s.id === activeChatId);
-        if (currentActive && currentActive.messages.length === 0) {
-            return;
-        }
-
-        const newId = Date.now().toString();
-        const newSession = {
-            id: newId,
-            title: "New Chat",
-            messages: [],
-            timestamp: Date.now()
-        };
-
-        chatSessions.unshift(newSession);
-        activeChatId = newId;
-        saveChatHistory();
-        renderChatHistoryList();
-        loadActiveChat();
-        closeMobileSidebar();
-    }
-
-    // Render left sidebar chat history items
-    function renderChatHistoryList() {
-        chatHistoryList.innerHTML = "";
-
-        if (chatSessions.length === 0) {
-            const emptyEl = document.createElement("div");
-            emptyEl.style.padding = "16px";
-            emptyEl.style.textAlign = "center";
-            emptyEl.style.color = "var(--text-muted)";
-            emptyEl.style.fontSize = "12px";
-            emptyEl.textContent = "No past chats";
-            chatHistoryList.appendChild(emptyEl);
-            return;
-        }
-
-        chatSessions.forEach(session => {
-            const item = document.createElement("div");
-            item.className = `chat-history-item${session.id === activeChatId ? " active" : ""}`;
-            item.setAttribute("data-id", session.id);
-
-            const mainDiv = document.createElement("div");
-            mainDiv.className = "chat-item-main";
-
-            const icon = document.createElement("i");
-            icon.className = "fa-regular fa-message";
-
-            const titleSpan = document.createElement("span");
-            titleSpan.className = "chat-item-title";
-            titleSpan.textContent = session.title || "New Chat";
-
-            mainDiv.appendChild(icon);
-            mainDiv.appendChild(titleSpan);
-
-            const deleteBtn = document.createElement("button");
-            deleteBtn.className = "delete-chat-btn";
-            deleteBtn.title = "Delete Chat";
-            deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-
-            // Delete chat click handler
-            deleteBtn.addEventListener("click", (e) => {
-                e.stopPropagation(); // Avoid selecting the chat when deleting
-                deleteChat(session.id);
-            });
-
-            // Select chat click handler
-            item.addEventListener("click", () => {
-                selectChat(session.id);
-            });
-
-            item.appendChild(mainDiv);
-            item.appendChild(deleteBtn);
-            chatHistoryList.appendChild(item);
-        });
-    }
-
-    // Select a specific chat session
-    function selectChat(id) {
-        if (activeChatId === id) return;
-        activeChatId = id;
-        renderChatHistoryList();
-        loadActiveChat();
-        closeMobileSidebar();
-    }
-
-    // Load active chat messages into the viewport
-    function loadActiveChat() {
-        messagesContainer.innerHTML = "";
-
-        const activeSession = chatSessions.find(s => s.id === activeChatId);
-        if (!activeSession || activeSession.messages.length === 0) {
-            welcomeScreen.style.display = "flex";
-            welcomeScreen.style.flexDirection = "column";
-            welcomeScreen.style.alignItems = "center";
-            welcomeScreen.style.justifyContent = "center";
-            return;
-        }
-
-        welcomeScreen.style.display = "none";
-        activeSession.messages.forEach((msg, idx) => {
-            appendMessageHTML(msg.sender, msg.text, idx);
-        });
-        scrollToBottom(true);
-    }
-
-    // Delete a specific chat session
-    function deleteChat(id) {
-        const index = chatSessions.findIndex(s => s.id === id);
-        if (index === -1) return;
-
-        chatSessions.splice(index, 1);
-        saveChatHistory();
-
-        if (activeChatId === id) {
-            if (chatSessions.length > 0) {
-                activeChatId = chatSessions[0].id;
-            } else {
-                activeChatId = null;
-                createNewChat();
-                return;
-            }
-        }
-
-        renderChatHistoryList();
-        loadActiveChat();
-    }
-
-    // Clear all history
-    function clearAllHistory() {
-        if (confirm("Are you sure you want to delete all chat history? This cannot be undone.")) {
-            chatSessions = [];
-            activeChatId = null;
-            localStorage.removeItem("dau_buddy_chats");
-            createNewChat();
-        }
-    }
-
-    // Clear Active Chat contents (from top right header action)
-    clearChatBtn.addEventListener("click", () => {
-        const activeSession = chatSessions.find(s => s.id === activeChatId);
-        if (activeSession && activeSession.messages.length > 0) {
-            if (confirm("Clear messages in this chat session?")) {
-                activeSession.messages = [];
-                activeSession.title = "New Chat";
-                saveChatHistory();
-                renderChatHistoryList();
-                loadActiveChat();
-            }
-        }
-    });
-
-    // Submit user question
-    async function handleSend(text) {
-        if (!text.trim() || isResponding) return;
-
-        setInputState(false);
-
-        // Hide welcome screen
-        welcomeScreen.style.display = "none";
-
-        // Get or create active session
-        let activeSession = chatSessions.find(s => s.id === activeChatId);
-        if (!activeSession) {
-            createNewChat();
-            activeSession = chatSessions.find(s => s.id === activeChatId);
-        }
-
-        // Generate title if it's the first message
-        if (activeSession.messages.length === 0) {
-            const shortTitle = text.length > 28 ? text.substring(0, 25) + "..." : text;
-            activeSession.title = shortTitle;
-            renderChatHistoryList();
-        }
-
-        // Append to state history and save
-        activeSession.messages.push({ sender: "user", text: text });
-        saveChatHistory();
-
-        // 1. Render User Message
-        appendMessageHTML("user", text, activeSession.messages.length - 1);
-        userInput.value = "";
-        scrollToBottom(true);
-
-        // 2. Render AI Typing Indicator
-        const typingIndicator = appendTypingIndicator();
-        scrollToBottom(true);
-
-        // 3. Perform Server API Call
-        try {
-            const response = await fetch("/api/chat", {
+            const response = await fetch("/api/me", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    message: text,
-                    history: activeSession.messages
-                })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email })
             });
-
-            if (!response.ok) {
-                throw new Error("Server connection issues");
+            if (response.ok) {
+                const data = await response.json();
+                if (data.has_key) {
+                    apiKeyInput.value = "dau_sk_•••••••••••••••• (Hidden for security)";
+                    updateConfigSnippet("dau_sk_xxxxx");
+                    return true;
+                }
             }
-
-            const data = await response.json();
-
-            // Remove typing indicator
-            typingIndicator.remove();
-
-            // Append to state history and save
-            activeSession.messages.push({ sender: "ai", text: data.response });
-            saveChatHistory();
-
-            // Render AI response
-            appendMessageHTML("ai", data.response, activeSession.messages.length - 1, true);
-        } catch (error) {
-            typingIndicator.remove();
-            setInputState(true);
-
-            const errorMsg = `⚠️ Sorry, I encountered an error communicating with the database: ${error.message}`;
-            activeSession.messages.push({ sender: "ai", text: errorMsg });
-            saveChatHistory();
-
-            appendMessageHTML("ai", errorMsg, activeSession.messages.length - 1, true);
+        } catch (e) {
+            console.error("Error checking key", e);
         }
-
-        scrollToBottom(true);
+        return false;
     }
 
-    // Append Message Row to Container (UI rendering only)
-    function appendMessageHTML(sender, text, index, animate = false) {
-        const row = document.createElement("div");
-        row.className = `msg-row ${sender}`;
-        if (sender === "user" && typeof index === "number") {
-            row.setAttribute("data-idx", index);
-        }
-
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.innerHTML = sender === "user" ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-graduation-cap"></i>';
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "bubble-wrapper";
-
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-
-        if (sender === "user") {
-            bubble.textContent = text;
-
-            // Create user bubble actions (Copy and Edit buttons) below the bubble
-            const actions = document.createElement("div");
-            actions.className = "bubble-actions";
-
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "bubble-action-btn copy-btn";
-            copyBtn.title = "Copy prompt";
-            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-            copyBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const copyText = () => {
-                    copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    copyBtn.style.color = "#10b981";
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                        copyBtn.style.color = "";
-                    }, 2000);
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(copyText);
-                } else {
-                    const textarea = document.createElement("textarea");
-                    textarea.value = text;
-                    textarea.style.position = "fixed";
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    try {
-                        document.execCommand("copy");
-                        copyText();
-                    } catch (err) {
-                        console.error("Fallback copy failed", err);
-                    }
-                    document.body.removeChild(textarea);
-                }
+    async function generateKey(email, regenerate = false) {
+        try {
+            apiKeyInput.value = "Generating...";
+            const endpoint = regenerate ? "/api/regenerate-key" : "/api/generate-key";
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email })
             });
-
-            const editBtn = document.createElement("button");
-            editBtn.className = "bubble-action-btn edit-btn";
-            editBtn.title = "Edit prompt";
-            editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
-            editBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-
-                // Switch bubble to Edit Mode (in-place text editing)
-                bubble.innerHTML = "";
-
-                const textarea = document.createElement("textarea");
-                textarea.className = "edit-textarea";
-                textarea.value = text;
-
-                const btnContainer = document.createElement("div");
-                btnContainer.className = "edit-bubble-actions";
-
-                const cancelBtn = document.createElement("button");
-                cancelBtn.className = "edit-action-btn cancel";
-                cancelBtn.textContent = "Cancel";
-                cancelBtn.addEventListener("click", (e2) => {
-                    e2.stopPropagation();
-                    loadActiveChat(); // Simply reload the active chat to restore state
-                });
-
-                const submitBtn = document.createElement("button");
-                submitBtn.className = "edit-action-btn submit";
-                submitBtn.textContent = "Save & Submit";
-                submitBtn.addEventListener("click", async (e2) => {
-                    e2.stopPropagation();
-                    const newText = textarea.value.trim();
-                    if (!newText) return;
-
-                    const activeSession = chatSessions.find(s => s.id === activeChatId);
-                    if (!activeSession) return;
-
-                    // Slice session history to exclude this message and all subsequent messages
-                    if (typeof index === "number") {
-                        activeSession.messages = activeSession.messages.slice(0, index);
-                    }
-
-                    // Clear and re-render the chat window to remove subsequent messages
-                    loadActiveChat();
-
-                    // Triggers the standard sending pipeline with the newly edited prompt
-                    handleSend(newText);
-                });
-
-                // Keydown listener to submit on Enter key (without Shift)
-                textarea.addEventListener("keydown", (eKey) => {
-                    if (eKey.key === "Enter" && !eKey.shiftKey) {
-                        eKey.preventDefault();
-                        submitBtn.click();
-                    }
-                });
-
-                btnContainer.appendChild(cancelBtn);
-                btnContainer.appendChild(submitBtn);
-
-                bubble.appendChild(textarea);
-                bubble.appendChild(btnContainer);
-
-                // Focus textarea and position cursor at the end
-                textarea.focus();
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            });
-
-            actions.appendChild(copyBtn);
-            actions.appendChild(editBtn);
-
-            wrapper.appendChild(bubble);
-            wrapper.appendChild(actions);
-        } else {
-            // AI Message rendering with optional streaming animation
-            if (animate) {
-                // progressive streaming/typing effect
-                let currentLength = 0;
-
-                // Hide actions while typing
-                const actions = document.createElement("div");
-                actions.className = "bubble-actions";
-                actions.style.opacity = "0";
-                actions.style.pointerEvents = "none";
-                actions.style.transition = "opacity 0.3s ease";
-
-                const copyBtn = document.createElement("button");
-                copyBtn.className = "bubble-action-btn copy-btn";
-                copyBtn.title = "Copy response";
-                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                copyBtn.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const copyText = () => {
-                        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                        copyBtn.style.color = "#10b981";
-                        setTimeout(() => {
-                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                            copyBtn.style.color = "";
-                        }, 2000);
-                    };
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(text).then(copyText);
-                    } else {
-                        const textarea = document.createElement("textarea");
-                        textarea.value = text;
-                        textarea.style.position = "fixed";
-                        document.body.appendChild(textarea);
-                        textarea.select();
-                        try {
-                            document.execCommand("copy");
-                            copyText();
-                        } catch (err) {
-                            console.error("Fallback copy failed", err);
-                        }
-                        document.body.removeChild(textarea);
-                    }
-                });
-
-                actions.appendChild(copyBtn);
-                wrapper.appendChild(bubble);
-                wrapper.appendChild(actions);
-
-                function streamText() {
-                    if (currentLength < text.length) {
-                        // Advance by a larger chunk of characters for a faster streaming effect
-                        let increment = Math.floor(Math.random() * 3) + 2; // 6 to 10 chars
-                        currentLength = Math.min(text.length, currentLength + increment);
-
-                        const chunk = text.substring(0, currentLength);
-                        bubble.innerHTML = renderMarkdown(chunk) + '<span class="typing-cursor"></span>';
-
-                        scrollToBottom();
-
-                        let delay = 8;
-                        if (text[currentLength - 1] === '\n') {
-                            delay = 35; // Shorter pause for newlines
-                        }
-
-                        setTimeout(streamText, delay);
-                    } else {
-                        // Finished typing
-                        bubble.innerHTML = renderMarkdown(text);
-                        actions.style.opacity = "";
-                        actions.style.pointerEvents = "";
-                        scrollToBottom(true);
-                        setInputState(true);
-                    }
-                }
-
-                setTimeout(streamText, 50);
-
+            if (response.ok) {
+                const data = await response.json();
+                const key = data.api_key;
+                apiKeyInput.value = key;
+                updateConfigSnippet(key);
             } else {
-                bubble.innerHTML = renderMarkdown(text);
-
-                // Create AI bubble actions (Copy response) below the bubble
-                const actions = document.createElement("div");
-                actions.className = "bubble-actions";
-
-                const copyBtn = document.createElement("button");
-                copyBtn.className = "bubble-action-btn copy-btn";
-                copyBtn.title = "Copy response";
-                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                copyBtn.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const copyText = () => {
-                        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                        copyBtn.style.color = "#10b981";
-                        setTimeout(() => {
-                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-                            copyBtn.style.color = "";
-                        }, 2000);
-                    };
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(text).then(copyText);
-                    } else {
-                        const textarea = document.createElement("textarea");
-                        textarea.value = text;
-                        textarea.style.position = "fixed";
-                        document.body.appendChild(textarea);
-                        textarea.select();
-                        try {
-                            document.execCommand("copy");
-                            copyText();
-                        } catch (err) {
-                            console.error("Fallback copy failed", err);
-                        }
-                        document.body.removeChild(textarea);
-                    }
-                });
-
-                actions.appendChild(copyBtn);
-                wrapper.appendChild(bubble);
-                wrapper.appendChild(actions);
+                const err = await response.json();
+                apiKeyInput.value = err.detail || "Error generating key.";
             }
-        }
-
-        row.appendChild(avatar);
-        row.appendChild(wrapper);
-        messagesContainer.appendChild(row);
-
-        if (!animate && sender === "ai") {
-            setInputState(true);
+        } catch (e) {
+            console.error(e);
+            apiKeyInput.value = "Error generating key.";
         }
     }
 
-    // Append Typing Indicator Row
-    function appendTypingIndicator() {
-        const row = document.createElement("div");
-        row.className = "msg-row ai";
-
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.innerHTML = '<i class="fa-solid fa-graduation-cap"></i>';
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "bubble-wrapper";
-
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-
-        const dots = document.createElement("div");
-        dots.className = "typing-dots";
-        dots.innerHTML = "<span></span><span></span><span></span>";
-
-        bubble.appendChild(dots);
-        wrapper.appendChild(bubble);
-        row.appendChild(avatar);
-        row.appendChild(wrapper);
-        messagesContainer.appendChild(row);
-
-        return row;
+    function updateConfigSnippet(key) {
+        const configText = `{
+  "mcpServers": {
+    "daiict": {
+      "url": "http://localhost:8001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer ${key}"
+      }
+    }
+  }
+}`;
+        configCode.textContent = configText;
     }
 
-    let userScrolledUp = false;
-    let isAutoScrolling = false;
+    let currentEmail = null;
 
-    // Track when the user manually scrolls up
-    viewport.addEventListener("scroll", () => {
-        if (isAutoScrolling) return; // Ignore scroll events caused by scrollToBottom()
+    async function showWelcomeScreen(name, email, picture) {
+        currentEmail = email;
+        loginOverlay.style.display = "none";
+        appContainer.style.display = "block"; // Use block layout for robust scrolling
         
-        // If they are within 10px of the bottom, they haven't scrolled up
-        const isNearBottom = viewport.scrollHeight - Math.ceil(viewport.scrollTop) - viewport.clientHeight < 10;
-        userScrolledUp = !isNearBottom;
-    });
+        if (name) {
+            welcomeName.textContent = `Welcome, ${name.split(" ")[0]}!`;
+        }
+        welcomeEmail.textContent = email;
+        
+        if (picture) {
+            welcomeAvatar.src = picture;
+            welcomeAvatar.style.display = "block";
+            document.getElementById("welcome-icon").style.display = "none";
+        }
 
-    // Smart scroll chat to bottom
-    function scrollToBottom(force = false) {
-        if (force) {
-            userScrolledUp = false;
-            isAutoScrolling = true;
-            viewport.scrollTo({
-                top: viewport.scrollHeight,
-                behavior: "smooth"
-            });
-            // Reset flag after smooth scroll animation completes (~800ms)
-            setTimeout(() => { isAutoScrolling = false; }, 800);
-        } else if (!userScrolledUp) {
-            isAutoScrolling = true;
-            viewport.scrollTo({
-                top: viewport.scrollHeight,
-                behavior: "auto" // Auto is instant, no smooth animation
-            });
-            setTimeout(() => { isAutoScrolling = false; }, 50);
+        const hasKey = await checkExistingKey(email);
+        if (!hasKey) {
+            generateKey(email, false);
         }
     }
 
-    // Form Event Listener
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const text = userInput.value;
-        handleSend(text);
-    });
-
-    // Suggested Actions / Prompts Click Event (Welcome screen prompt cards)
-    promptCards.forEach(card => {
-        card.addEventListener("click", () => {
-            const prompt = card.getAttribute("data-prompt");
-            handleSend(prompt);
-        });
-    });
-
-    // New Chat button event
-    newChatBtn.addEventListener("click", createNewChat);
-
-    // Clear all history button event
-    clearHistoryBtn.addEventListener("click", clearAllHistory);
-
-    // Initialize/Load chat history
-    loadChatHistory();
-
-    // Mobile Responsive Sidebar Navigation Toggle
-    const sidebarToggle = document.getElementById("sidebar-toggle");
-    const sidebar = document.getElementById("sidebar") || document.querySelector(".sidebar");
-
-    // Inject sidebar overlay dynamically into DOM
-    const overlay = document.createElement("div");
-    overlay.className = "sidebar-overlay";
-    overlay.id = "sidebar-overlay";
-    document.body.appendChild(overlay);
-
-    if (sidebarToggle) {
-        const handleToggle = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                sidebar.classList.toggle("open");
-                overlay.classList.toggle("active");
-                sidebar.classList.remove("collapsed");
-            } else {
-                sidebar.classList.toggle("collapsed");
-                sidebar.classList.remove("open");
-                overlay.classList.remove("active");
+    // Check if user is already logged in
+    const storedSession = localStorage.getItem("dau_buddy_auth");
+    if (storedSession) {
+        try {
+            const authData = JSON.parse(storedSession);
+            if (authData.email && (authData.email.endsWith("@dau.ac.in") || authData.email.endsWith("@daiict.ac.in"))) {
+                // Valid session exists, bypass login
+                showWelcomeScreen(authData.name, authData.email, authData.picture);
             }
-        };
-        sidebarToggle.addEventListener("click", handleToggle);
-        sidebarToggle.addEventListener("touchstart", handleToggle, { passive: false });
+        } catch (e) {
+            console.error("Invalid auth session data", e);
+            localStorage.removeItem("dau_buddy_auth");
+        }
     }
 
-    overlay.addEventListener("click", closeMobileSidebar);
-    overlay.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        closeMobileSidebar();
-    }, { passive: false });
+    // Global callback for Google Sign-In
+    window.handleCredentialResponse = (response) => {
+        try {
+            // Decode JWT token payload (middle part)
+            const payloadBase64 = response.credential.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
+            
+            const email = decodedPayload.email;
+            
+            if (email && (email.endsWith("@dau.ac.in") || email.endsWith("@daiict.ac.in"))) {
+                // Successful DAU login
+                localStorage.setItem("dau_buddy_auth", JSON.stringify({ 
+                    email: email, 
+                    name: decodedPayload.name,
+                    picture: decodedPayload.picture 
+                }));
+                loginError.style.display = "none";
+                
+                // Fade out overlay
+                loginOverlay.style.opacity = "0";
+                setTimeout(() => {
+                    showWelcomeScreen(decodedPayload.name, email, decodedPayload.picture);
+                }, 400);
+            } else {
+                // Unauthorized domain
+                loginError.style.display = "flex";
+            }
+        } catch (error) {
+            console.error("Error decoding Google JWT:", error);
+            loginError.style.display = "flex";
+            loginError.querySelector("span").textContent = "Error authenticating. Please try again.";
+        }
+    };
 
-    function closeMobileSidebar() {
-        if (sidebar && sidebar.classList.contains("open")) {
-            sidebar.classList.remove("open");
-        }
-        if (overlay && overlay.classList.contains("active")) {
-            overlay.classList.remove("active");
-        }
+    // Logout handling
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem("dau_buddy_auth");
+            appContainer.style.display = "none";
+            loginOverlay.style.opacity = "1";
+            loginOverlay.style.display = "flex";
+        });
+    }
+
+    // Copy Button functionality
+    if (copyKeyBtn) {
+        copyKeyBtn.addEventListener("click", () => {
+            const key = apiKeyInput.value;
+            if (key && key !== "Generating..." && key !== "Error generating key.") {
+                navigator.clipboard.writeText(key).then(() => {
+                    copyKeyBtn.textContent = "Copied!";
+                    copyKeyBtn.style.background = "#10b981";
+                    setTimeout(() => {
+                        copyKeyBtn.textContent = "Copy";
+                        copyKeyBtn.style.background = "#3b82f6";
+                    }, 2000);
+                });
+            }
+        });
+    }
+
+    // Regenerate Button functionality
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener("click", () => {
+            if (currentEmail && confirm("Are you sure you want to regenerate your API key? This will instantly revoke your current key and break any existing Claude Desktop connections.")) {
+                generateKey(currentEmail, true);
+            }
+        });
     }
 });

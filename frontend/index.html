@@ -4,150 +4,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DA-IICT Faculty &amp; Staff AI Buddy</title>
-    <meta name="description" content="Conversational AI search assistant for Dhirubhai Ambani University faculty and staff profiles.">
+    <title>DA-IICT Unified MCP Login</title>
+    <meta name="description"
+        content="DA-IICT Unified MCP Login Interface">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Marked.js for Markdown -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css?v=202">
 </head>
 
 <body>
-    <div class="app-container">
-
-        <!-- ── Sidebar ─────────────────────────────────────────────── -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-area">
-                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                    <h2>DAU Buddy</h2>
-                </div>
-                <span class="badge">AI</span>
+    <!-- ── Login Container ───────────────────────────────────────────── -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fa-solid fa-graduation-cap login-logo"></i>
+                <h2>DAU Buddy</h2>
+                <p>Sign in with your university account to authenticate.</p>
             </div>
 
-            <div class="sidebar-content">
-                <button class="new-chat-btn" id="new-chat-btn">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>New Chat</span>
+            <div class="login-error" id="login-error" style="display: none;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Access Restricted: Please use a valid @dau.ac.in email address.</span>
+            </div>
+
+            <div id="g_id_onload"
+                data-client_id="590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
+                data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
+                data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+                data-text="signin_with" data-size="large" data-logo_alignment="left">
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App hidden initially -->
+    <div class="app-container" id="app-container" style="display: none; background: var(--bg-app); min-height: 100vh; overflow-y: auto; padding: 10vh 20px 40px; box-sizing: border-box; text-align: left; color: white;">
+        <div class="welcome-card" style="margin: 0 auto; padding: 40px; background: rgba(30,30,30,0.6); border-radius: 22px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 24px 48px rgba(0,0,0,0.5); max-width: 600px; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <img id="welcome-avatar" src="" style="width: 48px; height: 48px; border-radius: 50%; display: none;">
+                    <i id="welcome-icon" class="fa-solid fa-circle-check" style="font-size: 36px; color: #10b981;"></i>
+                    <div>
+                        <h1 id="welcome-name" style="font-family: 'Outfit'; margin: 0; font-size: 24px;">Welcome!</h1>
+                        <p id="welcome-email" style="color: #a0a0a0; margin: 0; font-size: 14px;">Authenticated via DA-IICT OAuth.</p>
+                    </div>
+                </div>
+                <button id="logout-btn" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">
+                    Logout
                 </button>
-                <div class="chat-history-list" id="chat-history-list">
-                    <!-- Dynamically rendered -->
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    Your Personal MCP API Key
+                    <span id="key-status" style="font-size: 11px; padding: 2px 6px; background: #10b981; color: white; border-radius: 10px;">Active</span>
+                </h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <input type="text" id="api-key-input" readonly value="Loading..." style="flex: 1; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; outline: none;">
+                    <button id="copy-key-btn" style="padding: 0 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s;">Copy</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <p style="font-size: 12px; color: #a0a0a0; margin: 0;">This key acts as your password. Do not share it.</p>
+                    <button id="regenerate-key-btn" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s;">
+                        <i class="fa-solid fa-rotate-right"></i> Regenerate
+                    </button>
                 </div>
             </div>
 
-            <div class="sidebar-footer">
-                <button class="clear-history-btn" id="clear-history-btn">
-                    <i class="fa-solid fa-trash-can"></i>
-                    <span>Clear History</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- ── Main Chat Area ─────────────────────────────────────── -->
-        <main class="chat-area">
-
-            <!-- Header -->
-            <header class="chat-header">
-                <div class="header-left">
-                    <button class="icon-btn" id="sidebar-toggle" title="Toggle Sidebar">
-                        <i class="fa-solid fa-bars"></i>
-                    </button>
-                    <div class="header-info">
-                        <h1>Faculty &amp; Staff Intelligence Assistant</h1>
-                        <p>Conversational search engine for Dhirubhai Ambani University</p>
-                    </div>
-                </div>
-                <div class="header-actions">
-                    <button class="icon-btn" id="theme-toggle" title="Toggle Theme">
-                        <i class="fa-solid fa-moon"></i>
-                    </button>
-                    <button class="icon-btn" id="clear-chat" title="Clear Chat">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Viewport -->
-            <div class="chat-viewport" id="chat-viewport">
-
-                <!-- Welcome screen -->
-                <div class="welcome-screen" id="welcome-screen">
-                    <div class="welcome-icon">
-                        <i class="fa-solid fa-comments"></i>
-                    </div>
-                    <h2>How can I help you today?</h2>
-                    <p class="welcome-sub">
-                        Ask anything about DA-IICT faculty or staff — search by name, specialization, department, or role.
-                    </p>
-
-                    <div class="prompt-grid">
-                        <button class="prompt-card" data-prompt="I want a faculty for machine learning">
-                            <i class="fa-solid fa-robot card-icon"></i>
-                            <div class="card-text">
-                                <h4>Find Experts</h4>
-                                <p>"I want a faculty for machine learning"</p>
-                            </div>
-                        </button>
-                        <button class="prompt-card" data-prompt="Give me the detailed profile of Prof. Ankush Chander">
-                            <i class="fa-solid fa-id-card card-icon"></i>
-                            <div class="card-text">
-                                <h4>Get Detailed Profile</h4>
-                                <p>"Profile of Prof. Ankush Chander"</p>
-                            </div>
-                        </button>
-                        <button class="prompt-card" data-prompt="Who is in the finance and accounts department?">
-                            <i class="fa-solid fa-users card-icon"></i>
-                            <div class="card-text">
-                                <h4>Find Staff</h4>
-                                <p>"Finance, accounts, or admin staff"</p>
-                            </div>
-                        </button>
-                        <button class="prompt-card" data-prompt="Sync latest faculty and staff details from website">
-                            <i class="fa-solid fa-rotate card-icon"></i>
-                            <div class="card-text">
-                                <h4>Sync Live Data</h4>
-                                <p>"Sync latest details from website"</p>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Messages -->
-                <div class="messages-container" id="messages-container"></div>
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 12px;">MCP Endpoint (SSE)</h3>
+                <code style="display: block; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333; color: #10b981; border-radius: 6px; font-family: monospace; font-size: 14px; margin-bottom: 0;">http://localhost:8001/mcp/sse</code>
             </div>
 
-            <!-- Input -->
-            <footer class="input-area">
-                <form class="input-form" id="input-form">
-                    <div class="input-wrapper">
-                        <input
-                            type="text"
-                            id="user-input"
-                            placeholder="Ask about a faculty member, specialization, or staff role…"
-                            autocomplete="off"
-                        >
-                        <button type="submit" class="send-btn" id="send-btn" title="Send">
-                            <i class="fa-solid fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </form>
-                <div class="input-disclaimer">
-                    <p>DAU Buddy answers based on real-time data scraped from
-                        <a href="https://www.daiict.ac.in" target="_blank" rel="noopener">daiict.ac.in</a>
-                    </p>
-                </div>
-            </footer>
-        </main>
+            <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 12px;">Claude Desktop Configuration</h3>
+            <p style="font-size: 13px; color: #a0a0a0; margin-bottom: 12px;">Add this exactly to your <code>claude_desktop_config.json</code> file:</p>
+            
+            <div style="position: relative;">
+                <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 13px; color: #d4d4d4;">{
+  "mcpServers": {
+    "daiict": {
+      "url": "http://localhost:8001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer dau_sk_xxxxx"
+      }
+    }
+  }
+}</code></pre>
+            </div>
+        </div>
     </div>
 
     <script src="app.js?v=206"></script>

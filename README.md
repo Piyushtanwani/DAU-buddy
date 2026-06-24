@@ -24,12 +24,12 @@ DA-IICT Unified MCP Server
 Faculty Staff   Library   Timetable  Calendar
 Service Service Service   Service    Service
  │      │          │          │          │
- └──────────── PostgreSQL (Neon) ───────────┘
+ └──────────── PostgreSQL (Local) ───────────┘
 ```
 
 ## Tech Stack
 - **Language**: Python 3.10+
-- **Database**: PostgreSQL (Neon DB Serverless)
+- **Database**: PostgreSQL (Local)
 - **Framework**: `mcp` (Model Context Protocol), `FastMCP`
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
 - **Search**: PostgreSQL `tsvector` and GIN Indexes for Full-Text Search
@@ -76,6 +76,7 @@ MCP Project/
 │   ├── seed_library.py         # Seed library catalog from CSV
 │   ├── seed_timetable.py       # Seed lecture and lab schedules from Excel
 │   └── seed_calendar.py        # Seed academic calendar and holidays
+│   └── seed_calendar.py        # Seed academic calendar and holidays
 │
 ├── .env.example                # Template for .env
 ├── .gitignore
@@ -86,19 +87,18 @@ MCP Project/
 
 ### 1. Configure Environment
 
-Copy the example file and add your database password (ask the project owner if you don't have it) and Gemini API Key:
+Copy the example file to set up your environment variables:
 ```bash
 cp .env.example .env
 ```
 
-Ensure your `.env` contains the required database connection variables for the online Neon DB:
+Ensure your `.env` contains the required database connection variables for your local PostgreSQL database:
 ```
-DB_HOST=your-neon-host
+DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=your-db
-DB_USER=your-user
+DB_NAME=daiict_db
+DB_USER=postgres
 DB_PASSWORD=your-password
-DB_SSLMODE=require
 ```
 
 ### 2. Install Dependencies
@@ -116,11 +116,27 @@ pip install -r requirements.txt
 
 ### 3. Initialize Database
 
-🎉 **Zero Local Setup Required!** 🎉
+Since we use a local PostgreSQL database, you will need to initialize the schema and populate the data locally.
 
-The database is hosted online securely via Neon DB and is already fully seeded with Faculty, Staff, Timetable, and Library data. 
+1. **Create the Database:**
+   Log into your local `psql` or pgAdmin and run:
+   ```sql
+   CREATE DATABASE daiict_db;
+   ```
 
-Once your `.env` file is set, you can jump straight into adding it to Claude Desktop.
+2. **Run Initialization Scripts:**
+   Run the schema setup script and then seed the tables with live DA-IICT data:
+   ```powershell
+   # Create tables
+   psql -U postgres -d daiict_db -f scripts/init_db.sql
+
+   # Seed Data
+   python scripts/seed_faculty.py
+   python scripts/seed_staff.py
+   python scripts/seed_library.py
+   python scripts/seed_timetable.py
+   python scripts/seed_calendar.py
+   ```
 
 ## Adding to Claude Desktop
 
@@ -144,7 +160,6 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
   }
 }
 ```
-*(Make sure to replace `C:\\path\\to\\MCP Project` with the actual absolute path to your project folder).*
 
 After saving the configuration, **fully restart Claude Desktop** to initialize the server.
 
@@ -193,7 +208,7 @@ Once configured, Claude can natively call the following tools. Try asking Claude
 
 ## Database Statistics
 
-The Neon PostgreSQL database is actively seeded with:
+The local PostgreSQL database is actively seeded with:
 - **Faculty Records**: ~116
 - **Staff Records**: ~92
 - **Library Catalog**: 28,000+ Books

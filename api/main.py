@@ -4,7 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from core import config
+from core.database import db_connection
 from api.routes import router as api_router
+import hashlib
+import secrets
+from pydantic import BaseModel
+from fastapi import HTTPException
 
 logger = config.get_logger("api.main")
 
@@ -35,6 +40,76 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    class KeyRequest(BaseModel):
+        email: str
+
+    @app.post("/api/me")
+    def get_me(req: KeyRequest):
+        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
+            raise HTTPException(status_code=403, detail="Invalid domain")
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT status, created_at, last_used FROM api_keys WHERE email = %s", (req.email,))
+                    row = cursor.fetchone()
+                    if row:
+                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2]}
+                    return {"has_key": False}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Database error")
+
+    @app.post("/api/generate-key")
+    def generate_api_key(req: KeyRequest):
+        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
+            raise HTTPException(status_code=403, detail="Invalid domain")
+            
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT email FROM api_keys WHERE email = %s", (req.email,))
+                    if cursor.fetchone():
+                        raise HTTPException(status_code=400, detail="Key already exists. Please regenerate if lost.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            pass
+
+        raw_key = f"dau_sk_{secrets.token_hex(16)}"
+        hashed_key = hashlib.sha256(raw_key.encode()).hexdigest()
+        
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO api_keys (email, hashed_key, role, status)
+                        VALUES (%s, %s, %s, %s)
+                    """, (req.email, hashed_key, 'Staff', 'Active'))
+            return {"api_key": raw_key}
+        except Exception as e:
+            logger.error(f"Error generating key: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
+    @app.post("/api/regenerate-key")
+    def regenerate_api_key(req: KeyRequest):
+        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
+            raise HTTPException(status_code=403, detail="Invalid domain")
+            
+        raw_key = f"dau_sk_{secrets.token_hex(16)}"
+        hashed_key = hashlib.sha256(raw_key.encode()).hexdigest()
+        
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE api_keys 
+                        SET hashed_key = %s, status = 'Active', created_at = CURRENT_TIMESTAMP
+                        WHERE email = %s
+                    """, (hashed_key, req.email))
+            return {"api_key": raw_key}
+        except Exception as e:
+            logger.error(f"Error regenerating key: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
 
     # ── API routes (prefixed /api) ────────────────────────────────────────────
     app.include_router(api_router, prefix="/api")
