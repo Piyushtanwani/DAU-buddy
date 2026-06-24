@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const configCode = document.getElementById("claude-config-code");
     const welcomeEmail = document.getElementById("welcome-email");
     const welcomeAvatar = document.getElementById("welcome-avatar");
+    const userRoleBadge = document.getElementById("user-role-badge");
 
     async function checkExistingKey(email) {
         try {
@@ -28,6 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.has_key) {
                     apiKeyInput.value = "dau_sk_•••••••••••••••• (Hidden for security)";
                     updateConfigSnippet("dau_sk_xxxxx");
+                    if (userRoleBadge) {
+                        userRoleBadge.textContent = "Role: " + (data.role || "User");
+                    }
                     return true;
                 }
             }
@@ -51,6 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const key = data.api_key;
                 apiKeyInput.value = key;
                 updateConfigSnippet(key);
+                if (userRoleBadge) {
+                    userRoleBadge.textContent = "Role: " + (data.role || "User");
+                }
             } else {
                 const err = await response.json();
                 apiKeyInput.value = err.detail || "Error generating key.";
@@ -61,8 +68,48 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    let pythonPath = "python";
+    let projectPath = "C:\\\\AFIF\\\\mcp-server";
+
+    // Fetch local paths dynamically on startup
+    fetch("/api/config-info")
+        .then(res => res.json())
+        .then(data => {
+            if (data.python_path) pythonPath = data.python_path;
+            if (data.project_path) projectPath = data.project_path;
+            // If there's an existing placeholder, update the snippet
+            if (apiKeyInput.value && !apiKeyInput.value.startsWith("Generating") && !apiKeyInput.value.startsWith("Error")) {
+                const isPlaceholder = apiKeyInput.value.includes("Hidden");
+                updateConfigSnippet(isPlaceholder ? "dau_sk_your_key_here" : apiKeyInput.value);
+            }
+        })
+        .catch(err => console.error("Error fetching config info:", err));
+
+    const cursorConfigCode = document.getElementById("cursor-config-code");
+
     function updateConfigSnippet(key) {
-        const configText = `{
+        // Escape backslashes for JSON representation
+        const escapedPythonPath = pythonPath.replace(/\\/g, "\\\\");
+        const escapedProjectPath = projectPath.replace(/\\/g, "\\\\");
+
+        // Claude Desktop (In-Memory HTTP/SSE Bridge)
+        const claudeText = `{
+  "mcpServers": {
+    "daiict": {
+      "command": "python",
+      "args": [
+        "-c",
+        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
+        "http://localhost:8001/mcp/sse",
+        "${key}"
+      ]
+    }
+  }
+}`;
+        configCode.textContent = claudeText;
+
+        // Cursor / Windsurf (HTTP/SSE)
+        const cursorText = `{
   "mcpServers": {
     "daiict": {
       "url": "http://localhost:8001/mcp/sse",
@@ -72,7 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 }`;
-        configCode.textContent = configText;
+        if (cursorConfigCode) {
+            cursorConfigCode.textContent = cursorText;
+        }
     }
 
     let currentEmail = null;
@@ -83,7 +132,10 @@ document.addEventListener("DOMContentLoaded", () => {
         appContainer.style.display = "block"; // Use block layout for robust scrolling
         
         if (name) {
-            welcomeName.textContent = `Welcome, ${name.split(" ")[0]}!`;
+            // If the display name is purely numeric (e.g. "2025 12063"), use the email local part instead
+            const firstName = name.split(" ")[0];
+            const displayName = /^\d+$/.test(firstName) ? email.split("@")[0] : firstName;
+            welcomeName.textContent = `Welcome, ${displayName}!`;
         }
         welcomeEmail.textContent = email;
         
@@ -181,6 +233,31 @@ document.addEventListener("DOMContentLoaded", () => {
             if (currentEmail && confirm("Are you sure you want to regenerate your API key? This will instantly revoke your current key and break any existing Claude Desktop connections.")) {
                 generateKey(currentEmail, true);
             }
+        });
+    }
+
+    // Tab Switching functionality for Claude vs Cursor config
+    const tabClaude = document.getElementById("tab-claude");
+    const tabCursor = document.getElementById("tab-cursor");
+    const contentClaude = document.getElementById("content-claude");
+    const contentCursor = document.getElementById("content-cursor");
+
+    if (tabClaude && tabCursor) {
+        tabClaude.addEventListener("click", () => {
+            tabClaude.style.background = "#3b82f6";
+            tabClaude.style.color = "white";
+            tabCursor.style.background = "transparent";
+            tabCursor.style.color = "#a0a0a0";
+            contentClaude.style.display = "block";
+            contentCursor.style.display = "none";
+        });
+        tabCursor.addEventListener("click", () => {
+            tabCursor.style.background = "#3b82f6";
+            tabCursor.style.color = "white";
+            tabClaude.style.background = "transparent";
+            tabClaude.style.color = "#a0a0a0";
+            contentClaude.style.display = "none";
+            contentCursor.style.display = "block";
         });
     }
 });

@@ -61,6 +61,7 @@
                     <div>
                         <h1 id="welcome-name" style="font-family: 'Outfit'; margin: 0; font-size: 24px;">Welcome!</h1>
                         <p id="welcome-email" style="color: #a0a0a0; margin: 0; font-size: 14px;">Authenticated via DA-IICT OAuth.</p>
+                        <span id="user-role-badge" style="font-size: 11px; padding: 2px 8px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; margin-top: 6px; display: inline-block; font-weight: 500; font-family: 'Outfit', sans-serif;">Loading Role...</span>
                     </div>
                 </div>
                 <button id="logout-btn" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">
@@ -86,15 +87,40 @@
             </div>
 
             <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
-                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 12px;">MCP Endpoint (SSE)</h3>
-                <code style="display: block; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333; color: #10b981; border-radius: 6px; font-family: monospace; font-size: 14px; margin-bottom: 0;">http://localhost:8001/mcp/sse</code>
-            </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin: 0; font-size: 16px; font-family: 'Outfit', sans-serif;">Integration Configuration</h3>
+                    <!-- Tab Buttons -->
+                    <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <button id="tab-claude" style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: #3b82f6; color: white; transition: all 0.2s; font-family: 'Outfit', sans-serif;">Claude Desktop (Stdio)</button>
+                        <button id="tab-cursor" style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: transparent; color: #a0a0a0; transition: all 0.2s; font-family: 'Outfit', sans-serif;">Cursor / Windsurf (HTTP/SSE)</button>
+                    </div>
+                </div>
+                
+                <!-- Claude Desktop Content -->
+                <div id="content-claude" style="display: block;">
+                    <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this to <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network via a memory-loaded proxy, with <strong>no local file paths or environment variables exposed</strong>.</p>
+                    <div style="position: relative;">
+                        <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
+  "mcpServers": {
+    "daiict": {
+      "command": "python",
+      "args": [
+        "-c",
+        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
+        "http://localhost:8001/mcp/sse",
+        "dau_sk_xxxxx"
+      ]
+    }
+  }
+}</code></pre>
+                    </div>
+                </div>
 
-            <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 12px;">Claude Desktop Configuration</h3>
-            <p style="font-size: 13px; color: #a0a0a0; margin-bottom: 12px;">Add this exactly to your <code>claude_desktop_config.json</code> file:</p>
-            
-            <div style="position: relative;">
-                <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 13px; color: #d4d4d4;">{
+                <!-- Cursor Content -->
+                <div id="content-cursor" style="display: none;">
+                    <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this block to your Cursor or Windsurf MCP settings to connect over the network using Server-Sent Events (SSE). <strong>Requires the backend server to be running.</strong></p>
+                    <div style="position: relative;">
+                        <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="cursor-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
   "mcpServers": {
     "daiict": {
       "url": "http://localhost:8001/mcp/sse",
@@ -104,6 +130,8 @@
     }
   }
 }</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

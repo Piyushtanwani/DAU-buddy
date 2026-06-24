@@ -137,30 +137,65 @@ Since we use a local PostgreSQL database, you will need to initialize the schema
    python scripts/seed_calendar.py
    ```
 
-## Adding to Claude Desktop
+## Starting the Portal & Hosting HTTP/SSE
 
-To allow Claude to use these tools, add the Unified Server to your Claude Desktop configuration file.
+The MCP server runs over secure HTTP/SSE. Start the FastAPI backend server to host the portal and authenticate MCP connections:
+
+```bash
+python -m uvicorn api.main:create_app --factory --host 0.0.0.0 --port 8001
+```
+
+Once running:
+1. Open **[http://localhost:8001/](http://localhost:8001/)** in your browser.
+2. Sign in with your DA-IICT Google account.
+3. The portal will verify your domain, show your user category (Student, Faculty, or Staff), and automatically generate your secure API key (`dau_sk_...`).
+
+---
+
+## Editor Configurations
+
+Choose the appropriate integration tab on the portal dashboard to copy your configuration:
+
+### 1. Claude Desktop (Pathless In-Memory HTTP/SSE Bridge)
+
+Claude Desktop only supports local `stdio` processes. To connect it securely without exposing your local workspace folder, Python path, or environment variables, you can configure it to fetch and execute a tiny proxy bridge script in memory.
 
 On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "daiict-unified": {
-      "command": "C:\\path\\to\\MCP Project\\venv\\Scripts\\python.exe",
+    "daiict": {
+      "command": "python",
       "args": [
-        "-m",
-        "dau_mcp.unified_mcp_server"
-      ],
-      "env": {
-        "PYTHONPATH": "C:\\path\\to\\MCP Project"
+        "-c",
+        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
+        "http://localhost:8001/mcp/sse",
+        "YOUR_DAU_API_KEY_HERE"
+      ]
+    }
+  }
+}
+```
+
+### 2. Cursor / Windsurf (Native HTTP/SSE)
+
+Cursor and Windsurf support direct network connections. You only need to supply the connection URL and header (no local pathways or commands needed):
+
+```json
+{
+  "mcpServers": {
+    "daiict": {
+      "url": "http://localhost:8001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_DAU_API_KEY_HERE"
       }
     }
   }
 }
 ```
 
-After saving the configuration, **fully restart Claude Desktop** to initialize the server.
+---
 
 ## Available Tools & Example Queries
 
