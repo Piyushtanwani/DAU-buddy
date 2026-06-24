@@ -76,7 +76,6 @@ MCP Project/
 │   ├── seed_library.py         # Seed library catalog from CSV
 │   ├── seed_timetable.py       # Seed lecture and lab schedules from Excel
 │   └── seed_calendar.py        # Seed academic calendar and holidays
-│   └── seed_calendar.py        # Seed academic calendar and holidays
 │
 ├── .env.example                # Template for .env
 ├── .gitignore
@@ -125,7 +124,7 @@ Since we use a local PostgreSQL database, you will need to initialize the schema
    ```
 
 2. **Run Initialization Scripts:**
-   Run the schema setup script and then seed the tables with live DA-IICT data:
+   Run the schema setup script (this will create tables for faculty, staff, library, calendar, and api_keys) and then seed the tables with live DA-IICT data:
    ```powershell
    # Create tables
    psql -U postgres -d daiict_db -f scripts/init_db.sql
@@ -214,6 +213,7 @@ The local PostgreSQL database is actively seeded with:
 - **Library Catalog**: 28,000+ Books
 - **Timetable Slots**: 1,200+ (Lectures, Labs, Tutorials)
 - **Academic Calendar**: 120+ Events & Holidays
+- **API Keys**: Managed via init_db.sql
 
 ## Sample Conversations
 
