@@ -29,6 +29,9 @@ from dau_mcp.timetable_mcp_server import (
 from dau_mcp.calendar_mcp_server import (
     get_next_holiday, get_upcoming_holidays, get_all_holidays, get_midsem_dates, get_endsem_dates, get_next_academic_event, search_calendar
 )
+from dau_mcp.scholar_mcp_server import (
+    list_scholars, search_scholars, get_scholar_details, sync_scholar_data
+)
 
 # ==============================================================================
 # Server Setup
@@ -69,6 +72,12 @@ mcp.add_tool(get_midsem_dates)
 mcp.add_tool(get_endsem_dates)
 mcp.add_tool(get_next_academic_event)
 mcp.add_tool(search_calendar)
+
+# Register Scholar Tools
+mcp.add_tool(list_scholars)
+mcp.add_tool(search_scholars)
+mcp.add_tool(get_scholar_details)
+mcp.add_tool(sync_scholar_data)
 
 # ==============================================================================
 # Entry Point

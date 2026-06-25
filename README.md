@@ -1,39 +1,44 @@
 # DA-IICT Unified MCP Server
 
-A unified MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, and academic calendar data through PostgreSQL-backed retrieval services.
+A unified MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.
 
 ## Features
 
 - **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
-- **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC for physical availability checking.
+- **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly from the DA-IICT directory.
+- **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC.
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
 - **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DA-IICT sources.
-- **Retrieval-Augmented Search**: Uses PostgreSQL Full-Text Search (TSVECTOR + GIN indexes) to efficiently retrieve relevant faculty, staff, library, and calendar records before serving results.
+- **Retrieval-Augmented Search**: Uses PostgreSQL Full-Text Search (TSVECTOR + GIN indexes) to efficiently retrieve relevant records before serving results.
+- **Secure Authentication**: All endpoints are secured by an ASGI authentication middleware that verifies API keys stored in the database.
 
 ## Architecture
 
 ```text
-Claude Desktop
+Claude / Cursor
         │
         ▼
-DA-IICT Unified MCP Server
+   Auth Middleware (Bearer Token)
         │
- ┌──────┼──────────┬──────────┬──────────┐
- │      │          │          │          │
-Faculty Staff   Library   Timetable  Calendar
-Service Service Service   Service    Service
- │      │          │          │          │
- └──────────── PostgreSQL (Local) ───────────┘
+        ▼
+   FastMCP SSE Application
+        │
+ ┌──────┼──────────┬──────────┬──────────┬─────────┐
+ │      │          │          │          │         │
+Faculty Staff   Library   Timetable  Calendar   Scholar
+Service Service Service   Service    Service    Service
+ │      │          │          │          │         │
+ └──────────── PostgreSQL (Local) ─────────────────┘
 ```
 
 ## Tech Stack
 - **Language**: Python 3.10+
 - **Database**: PostgreSQL (Local)
-- **Framework**: `mcp` (Model Context Protocol), `FastMCP`
+- **Framework**: FastAPI, `mcp` (Model Context Protocol), `FastMCP`
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
-- **Search**: PostgreSQL `tsvector` and GIN Indexes for Full-Text Search
-- **Unified Server**: Exposes all tools over standard `stdio` transport for seamless integration with Claude Desktop.
+- **Search**: PostgreSQL `tsvector` and GIN Indexes
+- **Integration**: SSE (Server-Sent Events) over HTTP with dynamic Stdio bridging via `mcp-remote`.
 
 ## Project Structure
 
@@ -46,133 +51,165 @@ MCP Project/
 │   └── schemas.py              # Shared Pydantic models
 │
 ├── data/                       # Seed data files
-│   ├── library_data.csv        # Extracted catalog for the library
-│   ├── Lecture Data.xlsx       # Faculty lecture schedules
-│   └── Lab Data.xlsx           # Faculty lab/tutorial schedules
 │
-├── api/services/               # Business Logic layer
-│   ├── faculty_service.py      # Faculty DB queries
-│   ├── staff_service.py        # Staff DB queries
-│   ├── library_service.py      # Local Library DB queries
-│   ├── timetable_service.py    # Timetable DB queries
-│   └── calendar_service.py     # Calendar DB queries
+├── api/                        # HTTP Server & Dashboard
+│   ├── main.py                 # FastAPI and FastMCP entry point
+│   ├── middleware/             # ASGI Middlewares
+│   │   └── mcp_auth.py         # Bearer token validation for MCP
+│   └── services/               # Database Business Logic layer
+│       ├── faculty_service.py
+│       ├── staff_service.py
+│       ├── scholar_service.py
+│       ├── library_service.py
+│       ├── timetable_service.py
+│       └── calendar_service.py
+│
+├── frontend/                   # Web Dashboard UI
+│   ├── index.html
+│   └── app.js                  # Login and key management logic
 │
 ├── scrapers/                   # Web scraping layer
-│   ├── faculty_scraper.py      # Scrapes all 5 faculty category pages
-│   └── staff_scraper.py        # Scrapes the staff directory page
+│   ├── faculty_scraper.py
+│   └── staff_scraper.py
 │
 ├── dau_mcp/                    # Model Context Protocol Servers
-│   ├── unified_mcp_server.py   # Exposes ALL tools (Recommended)
-│   ├── faculty_mcp_server.py   # Faculty-only MCP tools
-│   ├── staff_mcp_server.py     # Staff-only MCP tools
-│   ├── library_mcp_server.py   # Library MCP tools
-│   ├── timetable_mcp_server.py # Timetable MCP tools
-│   └── calendar_mcp_server.py  # Calendar MCP tools
+│   ├── unified_mcp_server.py   # Exposes ALL tools over FastMCP (Recommended)
+│   ├── faculty_mcp_server.py
+│   ├── staff_mcp_server.py
+│   ├── library_mcp_server.py
+│   ├── timetable_mcp_server.py
+│   ├── calendar_mcp_server.py
+│   └── scholar_mcp_server.py
 │
 ├── scripts/                    # Operational one-shot scripts
 │   ├── init_db.sql             # Database schema initialization
-│   ├── seed_faculty.py         # Seed faculty data from live website
-│   ├── seed_staff.py           # Seed staff data from live website
-│   ├── seed_library.py         # Seed library catalog from CSV
-│   ├── seed_timetable.py       # Seed lecture and lab schedules from Excel
-│   └── seed_calendar.py        # Seed academic calendar and holidays
+│   ├── seed_faculty.py
+│   ├── seed_staff.py
+│   ├── seed_library.py
+│   ├── seed_timetable.py
+│   └── seed_calendar.py
+│
+├── tests/                      # Unit and integration tests
 │
 ├── .env.example                # Template for .env
-├── .gitignore
-└── requirements.txt
+├── requirements.txt
+├── Makefile                    # Make commands
+├── Dockerfile                  # Docker containerization
+└── migrate_rag.py              # RAG migration script
 ```
 
 ## Setup & Installation
 
+### Prerequisites
+Before you begin, ensure you have the following installed on your machine:
+- **Python 3.10+** (For running the FastAPI and MCP server)
+- **PostgreSQL** (For storing all retrieval data and user API keys)
+- **Node.js / npm** (Required for the `npx mcp-remote` proxy bridge for Claude)
+
 ### 1. Configure Environment
 
-Copy the example file to set up your environment variables:
+First, create your environment variable file by copying the template:
 ```bash
 cp .env.example .env
 ```
 
-Ensure your `.env` contains the required database connection variables for your local PostgreSQL database:
-```
-DB_HOST=localhost
+Open `.env` and fill in your PostgreSQL connection details. Make sure they match your local PostgreSQL credentials:
+```ini
+DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_NAME=daiict_db
 DB_USER=postgres
-DB_PASSWORD=your-password
+DB_PASSWORD=your-postgresql-password
 ```
 
-### 2. Install Dependencies
+### 2. Install Python Dependencies
 
-You must install dependencies in your Python environment. For Windows, using a virtual environment (`venv`) is highly recommended.
+It is highly recommended to use a virtual environment (`venv`) to avoid conflicting with your system Python packages.
 
+**For Windows (PowerShell):**
 ```powershell
-# Create and activate a virtual environment
 python -m venv win_venv
 .\win_venv\Scripts\Activate.ps1
-
-# Install requirements
 pip install -r requirements.txt
 ```
 
-### 3. Initialize Database
+**For Mac/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-Since we use a local PostgreSQL database, you will need to initialize the schema and populate the data locally.
+### 3. Initialize & Seed Database
 
 1. **Create the Database:**
-   Log into your local `psql` or pgAdmin and run:
+   Open your local `psql` command line or a GUI like pgAdmin, and execute:
    ```sql
    CREATE DATABASE daiict_db;
    ```
 
 2. **Run Initialization Scripts:**
-   Run the schema setup script (this will create tables for faculty, staff, library, calendar, and api_keys) and then seed the tables with live DA-IICT data:
-   ```powershell
-   # Create tables
+   This sets up the required PostgreSQL schema (tables for faculty, staff, library, calendar, and api_keys):
+   ```bash
    psql -U postgres -d daiict_db -f scripts/init_db.sql
+   ```
 
-   # Seed Data
+3. **Seed the Data:**
+   Run the individual Python scripts provided in the `scripts/` folder to populate your database with real data:
+   ```bash
    python scripts/seed_faculty.py
    python scripts/seed_staff.py
    python scripts/seed_library.py
    python scripts/seed_timetable.py
    python scripts/seed_calendar.py
    ```
+   *(Wait for each script to finish before starting the next one. The library seeding might take a moment since there are 28,000+ books).*
 
-## Starting the Portal & Hosting HTTP/SSE
+## Starting the Server & Dashboard
 
-The MCP server runs over secure HTTP/SSE. Start the FastAPI backend server to host the portal and authenticate MCP connections:
+The MCP server runs over secure HTTP/SSE via FastAPI. Start the backend server to host the portal and authenticate MCP connections:
 
 ```bash
-python -m uvicorn api.main:create_app --factory --host 0.0.0.0 --port 8001
+python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8001
 ```
 
 Once running:
-1. Open **[http://localhost:8001/](http://localhost:8001/)** in your browser.
+1. Open **[http://127.0.0.1:8001/](http://127.0.0.1:8001/)** in your browser.
 2. Sign in with your DA-IICT Google account.
-3. The portal will verify your domain, show your user category (Student, Faculty, or Staff), and automatically generate your secure API key (`dau_sk_...`).
+3. Your secure API key will automatically be generated and saved.
 
 ---
 
 ## Editor Configurations
 
-Choose the appropriate integration tab on the portal dashboard to copy your configuration:
+Copy the configurations directly from your web dashboard to ensure your API keys are correctly injected.
 
-### 1. Claude Desktop (Pathless In-Memory HTTP/SSE Bridge)
+### 1. Claude Desktop (Stdio Proxy)
 
-Claude Desktop only supports local `stdio` processes. To connect it securely without exposing your local workspace folder, Python path, or environment variables, you can configure it to fetch and execute a tiny proxy bridge script in memory.
+Claude Desktop requires a local `stdio` executable. By utilizing `npx mcp-remote`, we can securely bridge the local HTTP SSE server directly into Claude's memory without exposing local paths.
 
-On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
+Add this to `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "daiict": {
-      "command": "python",
+      "command": "cmd",
       "args": [
-        "-c",
-        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
-        "http://localhost:8001/mcp/sse",
-        "YOUR_DAU_API_KEY_HERE"
-      ]
+        "/c",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:8001/mcp/sse",
+        "--allow-http",
+        "--transport",
+        "sse-only",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer dau_sk_YOUR_API_KEY_HERE"
+      }
     }
   }
 }
@@ -180,15 +217,16 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ### 2. Cursor / Windsurf (Native HTTP/SSE)
 
-Cursor and Windsurf support direct network connections. You only need to supply the connection URL and header (no local pathways or commands needed):
+Cursor and Windsurf support direct SSE network connections. You only need to supply the connection URL, the explicit type flag, and your API key header:
 
 ```json
 {
   "mcpServers": {
     "daiict": {
-      "url": "http://localhost:8001/mcp/sse",
+      "type": "sse",
+      "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
-        "Authorization": "Bearer YOUR_DAU_API_KEY_HERE"
+        "Authorization": "Bearer dau_sk_YOUR_API_KEY_HERE"
       }
     }
   }
@@ -199,64 +237,26 @@ Cursor and Windsurf support direct network connections. You only need to supply 
 
 ## Available Tools & Example Queries
 
-Once configured, Claude can natively call the following tools. Try asking Claude these example questions to see it in action!
-
 **Faculty:**
-- `list_faculty()`
-- `search_faculty(query)`
-- `get_faculty_details(name_or_email)`
-- `search_faculty_by_expertise(expertise)`
-- `sync_faculty_data()`
-*Example Query*: "Who is the faculty expert in Machine Learning?" or "Get the profile for Prof. Suman Mitra."
+- `list_faculty()`, `search_faculty(query)`, `get_faculty_details(name_or_email)`, `search_faculty_by_expertise(expertise)`, `sync_faculty_data()`
+*Example*: "Who is the faculty expert in Machine Learning?"
 
 **Staff:**
-- `list_staff()`
-- `search_staff(query)`
-- `get_staff_details(name_or_email)`
-- `sync_staff_data()`
-*Example Query*: "Who is the placement coordinator?"
+- `list_staff()`, `search_staff(query)`, `get_staff_details(name_or_email)`, `sync_staff_data()`
+*Example*: "Who is the placement coordinator?"
+
+**Scholars:**
+- `list_scholars()`, `search_scholars(query)`, `get_scholar_details(name_or_email)`, `sync_scholar_data()`
+*Example*: "Show me the research areas of Ph.D. scholars."
 
 **Library:**
-- `search_library_books(query, limit)`
-- `get_book_details(biblionumber)`
-*Example Query*: "Find books on Artificial Intelligence in the library."
+- `search_library_books(query, limit)`, `get_book_details(biblionumber)`
+*Example*: "Find books on Artificial Intelligence."
 
 **Timetables:**
-- `get_faculty_location(faculty_name, day, time)`
-- `get_faculty_schedule(faculty_name, day)`
-- `find_faculty_free_time(faculty_name, day)`
-- `get_course_schedule(course_code, day)`
-- `list_programs()`
-- `get_program_timetable(program_name, day)`
-*Example Query*: "When is Prof. Manish Khare free on Tuesday?" or "Where is the lecture for CS301 on Monday at 10 AM?"
+- `get_faculty_location(faculty_name, day, time)`, `get_faculty_schedule(faculty_name, day)`, `find_faculty_free_time(faculty_name, day)`, `get_course_schedule(course_code, day)`, `list_programs()`, `get_program_timetable(program_name, day)`
+*Example*: "When is Prof. Manish Khare free on Tuesday?"
 
 **Calendar:**
-- `get_next_holiday()`
-- `get_upcoming_holidays()`
-- `get_all_holidays()`
-- `get_midsem_dates()`
-- `get_endsem_dates()`
-- `get_next_academic_event()`
-- `search_calendar(query, semester=None)`
-*Example Query*: "When are the mid-semester exams for semester 3?" or "List all the DA-IICT holidays for the year."
-
-## Database Statistics
-
-The local PostgreSQL database is actively seeded with:
-- **Faculty Records**: ~116
-- **Staff Records**: ~92
-- **Library Catalog**: 28,000+ Books
-- **Timetable Slots**: 1,200+ (Lectures, Labs, Tutorials)
-- **Academic Calendar**: 120+ Events & Holidays
-- **API Keys**: Managed via init_db.sql
-
-## Sample Conversations
-
-- Who teaches Machine Learning at DA-IICT?
-- Show details of Prof. Aditya Tatu.
-- Find books on Artificial Intelligence.
-- Where is Prof. Abhishek Gupta currently teaching?
-- Show MSc IT timetable for Monday.
-- When are the Mid-Semester examinations?
-- When is the next public holiday?
-- List all Winter semester academic events.
+- `get_next_holiday()`, `get_upcoming_holidays()`, `get_all_holidays()`, `get_midsem_dates()`, `get_endsem_dates()`, `get_next_academic_event()`, `search_calendar(query, semester)`
+*Example*: "When are the mid-semester exams?"

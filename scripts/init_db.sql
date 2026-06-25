@@ -185,13 +185,47 @@ CREATE INDEX IF NOT EXISTS idx_holiday_calendar_search_vector
 CREATE TABLE IF NOT EXISTS api_keys (
     email VARCHAR(255) PRIMARY KEY,
     hashed_key VARCHAR(255) NOT NULL,
-    role VARCHAR(50) DEFAULT 'Staff',
+    role VARCHAR(50) DEFAULT 'User',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP,
     status VARCHAR(20) DEFAULT 'Active'
 );
 
+CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);
+
+-- =============================================================================
+-- Doctoral Scholars Table
+-- =============================================================================
+DROP TABLE IF EXISTS doctoral_scholars CASCADE;
+CREATE TABLE IF NOT EXISTS doctoral_scholars (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(255) NOT NULL,
+    image_url       TEXT,
+    year_of_joining VARCHAR(100),
+    year_of_graduation VARCHAR(100),
+    advisor         VARCHAR(255),
+    thesis_topic    TEXT,
+    areas_of_research TEXT,
+    publications    TEXT,
+    awards          TEXT,
+    post_phd_employment TEXT,
+    personal_webpage TEXT,
+    scraped_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE doctoral_scholars
+    ADD COLUMN IF NOT EXISTS search_vector tsvector
+    GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(advisor, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(thesis_topic, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(areas_of_research, '')), 'D')
+    ) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_doctoral_scholars_search_vector
+    ON doctoral_scholars USING GIN (search_vector);
+
 -- =============================================================================
 -- Done
 -- =============================================================================
-\echo '✅  daiict_db initialised successfully (faculty + staff + library + calendar + api_keys tables ready).'
+\echo '✅  daiict_db initialised successfully (faculty + staff + library + calendar + api_keys + doctoral_scholars tables ready).'

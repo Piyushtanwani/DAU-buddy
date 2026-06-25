@@ -80,9 +80,6 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <p style="font-size: 12px; color: #a0a0a0; margin: 0;">This key acts as your password. Do not share it.</p>
-                    <button id="regenerate-key-btn" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s;">
-                        <i class="fa-solid fa-rotate-right"></i> Regenerate
-                    </button>
                 </div>
             </div>
 
@@ -100,16 +97,26 @@
                 <div id="content-claude" style="display: block;">
                     <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this to <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network via a memory-loaded proxy, with <strong>no local file paths or environment variables exposed</strong>.</p>
                     <div style="position: relative;">
+                        <button id="copy-claude-btn" style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
                         <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
   "mcpServers": {
     "daiict": {
-      "command": "python",
+      "command": "cmd",
       "args": [
-        "-c",
-        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
-        "http://localhost:8001/mcp/sse",
-        "dau_sk_xxxxx"
-      ]
+        "/c",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:8001/mcp/sse",
+        "--allow-http",
+        "--transport",
+        "sse-only",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer dau_sk_your_api_key_here"
+      }
     }
   }
 }</code></pre>
@@ -120,12 +127,14 @@
                 <div id="content-cursor" style="display: none;">
                     <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this block to your Cursor or Windsurf MCP settings to connect over the network using Server-Sent Events (SSE). <strong>Requires the backend server to be running.</strong></p>
                     <div style="position: relative;">
+                        <button id="copy-cursor-btn" style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
                         <pre style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="cursor-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
   "mcpServers": {
     "daiict": {
-      "url": "http://localhost:8001/mcp/sse",
+      "type": "sse",
+      "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
-        "Authorization": "Bearer dau_sk_xxxxx"
+        "Authorization": "Bearer dau_sk_your_api_key_here"
       }
     }
   }
@@ -136,7 +145,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=206"></script>
+    <script src="app.js?v=209"></script>
 </body>
 
 </html>

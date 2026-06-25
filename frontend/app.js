@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyKeyBtn = document.getElementById("copy-key-btn");
     const regenerateBtn = document.getElementById("regenerate-key-btn");
     const configCode = document.getElementById("claude-config-code");
+    const cursorConfigCode = document.getElementById("cursor-config-code");
     const welcomeEmail = document.getElementById("welcome-email");
     const welcomeAvatar = document.getElementById("welcome-avatar");
     const userRoleBadge = document.getElementById("user-role-badge");
@@ -27,8 +28,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.has_key) {
-                    apiKeyInput.value = "dau_sk_•••••••••••••••• (Hidden for security)";
-                    updateConfigSnippet("dau_sk_xxxxx");
+                    const key = data.api_key;
+                    apiKeyInput.value = key;
+                    updateConfigSnippet(key);
                     if (userRoleBadge) {
                         userRoleBadge.textContent = "Role: " + (data.role || "User");
                     }
@@ -69,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let pythonPath = "python";
-    let projectPath = "C:\\\\AFIF\\\\mcp-server";
+    let projectPath = "E:\\\\MCP Project";
 
     // Fetch local paths dynamically on startup
     fetch("/api/config-info")
@@ -79,30 +81,37 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.project_path) projectPath = data.project_path;
             // If there's an existing placeholder, update the snippet
             if (apiKeyInput.value && !apiKeyInput.value.startsWith("Generating") && !apiKeyInput.value.startsWith("Error")) {
-                const isPlaceholder = apiKeyInput.value.includes("Hidden");
-                updateConfigSnippet(isPlaceholder ? "dau_sk_your_key_here" : apiKeyInput.value);
+                updateConfigSnippet(apiKeyInput.value);
             }
         })
         .catch(err => console.error("Error fetching config info:", err));
 
-    const cursorConfigCode = document.getElementById("cursor-config-code");
 
     function updateConfigSnippet(key) {
         // Escape backslashes for JSON representation
         const escapedPythonPath = pythonPath.replace(/\\/g, "\\\\");
         const escapedProjectPath = projectPath.replace(/\\/g, "\\\\");
 
-        // Claude Desktop (In-Memory HTTP/SSE Bridge)
+        // Claude Desktop (Stdio)
         const claudeText = `{
   "mcpServers": {
     "daiict": {
-      "command": "python",
+      "command": "cmd",
       "args": [
-        "-c",
-        "import urllib.request; exec(urllib.request.urlopen('http://localhost:8001/mcp_proxy.py').read().decode())",
-        "http://localhost:8001/mcp/sse",
-        "${key}"
-      ]
+        "/c",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:8001/mcp/sse",
+        "--allow-http",
+        "--transport",
+        "sse-only",
+        "--header",
+        "Authorization:\\\${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer ${key}"
+      }
     }
   }
 }`;
@@ -112,7 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const cursorText = `{
   "mcpServers": {
     "daiict": {
-      "url": "http://localhost:8001/mcp/sse",
+      "type": "sse",
+      "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
         "Authorization": "Bearer ${key}"
       }
@@ -227,14 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Regenerate Button functionality
-    if (regenerateBtn) {
-        regenerateBtn.addEventListener("click", () => {
-            if (currentEmail && confirm("Are you sure you want to regenerate your API key? This will instantly revoke your current key and break any existing Claude Desktop connections.")) {
-                generateKey(currentEmail, true);
-            }
-        });
-    }
 
     // Tab Switching functionality for Claude vs Cursor config
     const tabClaude = document.getElementById("tab-claude");
@@ -258,6 +260,39 @@ document.addEventListener("DOMContentLoaded", () => {
             tabClaude.style.color = "#a0a0a0";
             contentClaude.style.display = "none";
             contentCursor.style.display = "block";
+        });
+    }
+
+    // Config Copy Buttons
+    const copyClaudeBtn = document.getElementById("copy-claude-btn");
+    if (copyClaudeBtn) {
+        copyClaudeBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(configCode.textContent).then(() => {
+                copyClaudeBtn.textContent = "Copied!";
+                copyClaudeBtn.style.background = "#10b981";
+                copyClaudeBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyClaudeBtn.textContent = "Copy";
+                    copyClaudeBtn.style.background = "rgba(255,255,255,0.1)";
+                    copyClaudeBtn.style.borderColor = "#444";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyCursorBtn = document.getElementById("copy-cursor-btn");
+    if (copyCursorBtn && cursorConfigCode) {
+        copyCursorBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(cursorConfigCode.textContent).then(() => {
+                copyCursorBtn.textContent = "Copied!";
+                copyCursorBtn.style.background = "#10b981";
+                copyCursorBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyCursorBtn.textContent = "Copy";
+                    copyCursorBtn.style.background = "rgba(255,255,255,0.1)";
+                    copyCursorBtn.style.borderColor = "#444";
+                }, 2000);
+            });
         });
     }
 });
