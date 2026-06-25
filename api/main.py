@@ -52,10 +52,10 @@ def create_app() -> FastAPI:
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT status, created_at, last_used, hashed_key FROM api_keys WHERE email = %s", (req.email,))
+                    cursor.execute("SELECT status, created_at, last_used, hashed_key, role FROM api_keys WHERE email = %s", (req.email,))
                     row = cursor.fetchone()
                     if row:
-                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "api_key": row[3]}
+                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "api_key": row[3], "role": row[4]}
                     return {"has_key": False}
         except Exception as e:
             raise HTTPException(status_code=500, detail="Database error")
@@ -76,6 +76,26 @@ def create_app() -> FastAPI:
         except Exception as e:
             pass
 
+        # Determine role based on email
+        local_part = req.email.split('@')[0]
+        assigned_role = 'User'
+        
+        if local_part.isdigit():
+            assigned_role = 'Student'
+        else:
+            try:
+                with db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (req.email,))
+                        if cursor.fetchone():
+                            assigned_role = 'Faculty'
+                        else:
+                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (req.email,))
+                            if cursor.fetchone():
+                                assigned_role = 'Staff'
+            except Exception as e:
+                logger.error(f"Error checking directories for role assignment: {e}")
+
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
         
         try:
@@ -84,7 +104,7 @@ def create_app() -> FastAPI:
                     cursor.execute("""
                         INSERT INTO api_keys (email, hashed_key, role, status)
                         VALUES (%s, %s, %s, %s)
-                    """, (req.email, raw_key, 'Staff', 'Active'))
+                    """, (req.email, raw_key, assigned_role, 'Active'))
             return {"api_key": raw_key}
         except Exception as e:
             logger.error(f"Error generating key: {e}")
