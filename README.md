@@ -1,4 +1,4 @@
-# DA-IICT Unified MCP Server
+# DAU Buddy MCP Server
 
 A unified MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.
 
@@ -12,6 +12,7 @@ A unified MCP platform providing AI assistants with structured access to DA-IICT
 - **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DA-IICT sources.
 - **Retrieval-Augmented Search**: Uses PostgreSQL Full-Text Search (TSVECTOR + GIN indexes) to efficiently retrieve relevant records before serving results.
 - **Secure Authentication**: All endpoints are secured by an ASGI authentication middleware that verifies API keys stored in the database.
+- **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DA-IICT email upon Google Sign-In.
 
 ## Architecture
 

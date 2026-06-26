@@ -188,8 +188,13 @@ CREATE TABLE IF NOT EXISTS api_keys (
     role VARCHAR(50) DEFAULT 'User',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'Active'
+    status VARCHAR(20) DEFAULT 'Active',
+    expires_at TIMESTAMP
 );
+
+-- Add expires_at column if the table already existed without it
+ALTER TABLE api_keys
+    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);
 

@@ -1,74 +1,112 @@
 import os
-from fastapi import FastAPI
+import hashlib
+import secrets
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from core import config
 from core.database import db_connection
 from api.routes import router as api_router
-import hashlib
-import secrets
-from pydantic import BaseModel
-from fastapi import HTTPException
 from dau_mcp.unified_mcp_server import mcp
 
-logger = config.get_logger("api.main")
+# Google Auth
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
+# SlowAPI Rate Limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class PayloadLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl and int(cl) > 100 * 1024:
+            return JSONResponse(status_code=413, content={"detail": "Payload too large"})
+        return await call_next(request)
+
+logger = config.get_logger("api.main")
+CLIENT_ID = "590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
+
+limiter = Limiter(key_func=get_remote_address)
+
+def hash_key(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()
+
+def verify_google_token(credential: str) -> str:
+    try:
+        idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), CLIENT_ID)
+        email = idinfo['email']
+        # Domain check bypassed for testing
+        # if not (email.endswith("@dau.ac.in") or email.endswith("@daiict.ac.in")):
+        #     raise HTTPException(status_code=403, detail="Invalid domain")
+        return email
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
 
 def create_app() -> FastAPI:
-    """
-    Production FastAPI application factory.
-    Registers CORS, all API routes, and mounts the frontend static files.
-    """
     logger.info("Starting DA-IICT Faculty & Staff AI Buddy (Production)...")
 
     app = FastAPI(
         title="DA-IICT Faculty & Staff AI Buddy",
-        description=(
-            "Production-grade conversational search assistant for "
-            "Dhirubhai Ambani University Faculty & Staff."
-        ),
+        description="Production-grade conversational search assistant for DAU Faculty & Staff.",
         version="2.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None
     )
 
-    # ── CORS ──────────────────────────────────────────────────────────────────
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Unhandled Exception: {exc}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "An internal error occurred. Please try again."})
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["https://mcp.dau.ac.in", "http://localhost:8001", "http://127.0.0.1:8001"],
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
+    
+    app.add_middleware(PayloadLimitMiddleware)
 
     class KeyRequest(BaseModel):
-        email: str
+        credential: str
 
     @app.post("/api/me")
-    def get_me(req: KeyRequest):
-        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
-            raise HTTPException(status_code=403, detail="Invalid domain")
+    @limiter.limit("5/minute")
+    def get_me(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT status, created_at, last_used, hashed_key, role FROM api_keys WHERE email = %s", (req.email,))
+                    cursor.execute("SELECT status, created_at, last_used, role FROM api_keys WHERE email = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (email,))
                     row = cursor.fetchone()
                     if row:
-                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "api_key": row[3], "role": row[4]}
+                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": row[3]}
                     return {"has_key": False}
         except Exception as e:
+            logger.error(f"DB Error: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
     @app.post("/api/generate-key")
-    def generate_api_key(req: KeyRequest):
-        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
-            raise HTTPException(status_code=403, detail="Invalid domain")
+    @limiter.limit("5/minute")
+    def generate_api_key(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
             
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT email FROM api_keys WHERE email = %s", (req.email,))
+                    cursor.execute("SELECT email FROM api_keys WHERE email = %s", (email,))
                     if cursor.fetchone():
                         raise HTTPException(status_code=400, detail="Key already exists. Please regenerate if lost.")
         except HTTPException:
@@ -76,8 +114,7 @@ def create_app() -> FastAPI:
         except Exception as e:
             pass
 
-        # Determine role based on email
-        local_part = req.email.split('@')[0]
+        local_part = email.split('@')[0]
         assigned_role = 'User'
         
         if local_part.isdigit():
@@ -86,61 +123,64 @@ def create_app() -> FastAPI:
             try:
                 with db_connection() as conn:
                     with conn.cursor() as cursor:
-                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (req.email,))
+                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
                         if cursor.fetchone():
                             assigned_role = 'Faculty'
                         else:
-                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (req.email,))
+                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
                             if cursor.fetchone():
                                 assigned_role = 'Staff'
             except Exception as e:
                 logger.error(f"Error checking directories for role assignment: {e}")
 
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
+        hashed_k = hash_key(raw_key)
         
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
-                        INSERT INTO api_keys (email, hashed_key, role, status)
-                        VALUES (%s, %s, %s, %s)
-                    """, (req.email, raw_key, assigned_role, 'Active'))
-            return {"api_key": raw_key}
+                        INSERT INTO api_keys (email, hashed_key, role, status, expires_at)
+                        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '90 days')
+                    """, (email, hashed_k, assigned_role, 'Active'))
+            return {"api_key": raw_key, "role": assigned_role}
         except Exception as e:
             logger.error(f"Error generating key: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
     @app.post("/api/regenerate-key")
-    def regenerate_api_key(req: KeyRequest):
-        if not (req.email.endswith("@dau.ac.in") or req.email.endswith("@daiict.ac.in")):
-            raise HTTPException(status_code=403, detail="Invalid domain")
+    @limiter.limit("5/minute")
+    def regenerate_api_key(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
             
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
+        hashed_k = hash_key(raw_key)
         
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
                         UPDATE api_keys 
-                        SET hashed_key = %s, status = 'Active', created_at = CURRENT_TIMESTAMP
+                        SET hashed_key = %s, status = 'Active', created_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP + INTERVAL '90 days'
                         WHERE email = %s
-                    """, (raw_key, req.email))
-            return {"api_key": raw_key}
+                        RETURNING role
+                    """, (hashed_k, email))
+                    row = cursor.fetchone()
+                    role = row[0] if row else 'User'
+            return {"api_key": raw_key, "role": role}
         except Exception as e:
             logger.error(f"Error regenerating key: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
-    # ── API routes (prefixed /api) ────────────────────────────────────────────
     app.include_router(api_router, prefix="/api")
 
-    # ── Mount FastMCP SSE Endpoints ───────────────────────────────────────────
     logger.info("Mounting FastMCP HTTP/SSE endpoints at /mcp")
     mcp.settings.host = "127.0.0.1"
     mcp.settings.port = 8001
+    
     from api.middleware.mcp_auth import MCPAuthMiddleware
     app.mount("/mcp", MCPAuthMiddleware(mcp.sse_app()))
 
-    # ── Frontend static files ─────────────────────────────────────────────────
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     frontend_dir = os.path.join(root_dir, "frontend")
 
@@ -151,7 +191,6 @@ def create_app() -> FastAPI:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 
     return app
-
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,7 +1,9 @@
 import os
 import asyncio
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from core import config
+import hashlib
+from core.database import db_connection
 from core.schemas import ChatRequest, ChatResponse
 from api.services import (
     call_gemini_api,
@@ -192,20 +194,38 @@ async def handle_library_fallback(book_query: str) -> str:
         )
 
 
+def get_role_from_request(request: Request) -> str:
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        return "Student"
+    
+    raw_key = auth.split(" ", 1)[1].strip()
+    hashed_k = hashlib.sha256(raw_key.encode()).hexdigest()
+    try:
+        with db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT role FROM api_keys WHERE hashed_key = %s AND status = 'Active'", (hashed_k,))
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+    except Exception:
+        pass
+    return "Student"
+
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: Request, body: ChatRequest):
     """
     Main conversational endpoint.
     Routes between sync triggers, library search, Gemini RAG, and the local NLP fallback engine.
     """
     try:
-        cleaned = request.message.strip().lower()
+        cleaned = body.message.strip().lower()
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
         api_key = os.getenv("GEMINI_API_KEY")
-        if _is_library_query(request.message) and not (api_key and is_gemini_available()):
+        if _is_library_query(body.message) and not (api_key and is_gemini_available()):
             logger.info("Chat trigger: library search detected (Gemini unavailable).")
-            book_query = _extract_book_query(request.message)
+            book_query = _extract_book_query(body.message)
             return ChatResponse(response=await handle_library_fallback(book_query))
 
         # ── 1. Sync Triggers ──────────────────────────────────────────────────
@@ -280,7 +300,7 @@ async def chat_endpoint(request: ChatRequest):
             limit = config.get_retrieval_limit()
             
             # Query Expansion to ensure retriever fetches correct staff
-            search_query = request.message
+            search_query = body.message
             if any(k in cleaned for k in ["wifi", "internet", "network", "router"]):
                 search_query += " IT SYSTEMS"
                 
@@ -290,8 +310,17 @@ async def chat_endpoint(request: ChatRequest):
             faculty_records = retriever.retrieve_faculty(search_query, limit=limit)
             staff_records = retriever.retrieve_staff(search_query, limit=limit)
             
-            faculty_db = build_faculty_context(faculty_records)
-            staff_db = build_staff_context(staff_records)
+            user_role = get_role_from_request(request)
+            if user_role in ("Faculty", "Staff", "Admin"):
+                faculty_db = build_faculty_context(faculty_records)
+                staff_db = build_staff_context(staff_records)
+            else:
+                faculty_db = "Limited Directory Data (Students):\n"
+                staff_db = "Limited Directory Data (Students):\n"
+                for r in faculty_records:
+                    faculty_db += f"- {r.get('name', '')} (Specialization: {r.get('specialization', '')})\n"
+                for r in staff_records:
+                    staff_db += f"- {r.get('name', '')} (Designation: {r.get('designation', '')})\n"
             
             logger.info(f"Context Size - Faculty chars: {len(faculty_db)}, Staff chars: {len(staff_db)}")
 
@@ -300,20 +329,20 @@ async def chat_endpoint(request: ChatRequest):
                 staff_database=staff_db,
             )
             try:
-                response_text, token_usage = call_gemini_api(api_key, system_instruction, request.history)
+                response_text, token_usage = call_gemini_api(api_key, system_instruction, body.history)
                 return ChatResponse(response=response_text)
             except Exception:
                 logger.exception("Gemini RAG failed — falling back to local NLP engine/library.")
                 record_gemini_failure()
-                if _is_library_query(request.message):
-                    return ChatResponse(response=await handle_library_fallback(_extract_book_query(request.message)))
-                return ChatResponse(response=process_fallback_message(request.message))
+                if _is_library_query(body.message):
+                    return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
+                return ChatResponse(response=process_fallback_message(body.message))
 
         # ── 3. Local NLP Fallback ──────────────────────────────────────────────
         logger.info("Gemini unavailable or in cooldown — using local NLP engine.")
-        if _is_library_query(request.message):
-            return ChatResponse(response=await handle_library_fallback(_extract_book_query(request.message)))
-        return ChatResponse(response=process_fallback_message(request.message))
+        if _is_library_query(body.message):
+            return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
+        return ChatResponse(response=process_fallback_message(body.message))
 
     except Exception as e:
         logger.error(f"Unhandled error in chat endpoint: {e}")

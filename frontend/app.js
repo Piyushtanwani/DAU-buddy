@@ -18,21 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const welcomeAvatar = document.getElementById("welcome-avatar");
     const userRoleBadge = document.getElementById("user-role-badge");
 
-    async function checkExistingKey(email) {
+    async function checkExistingKey(credential) {
         try {
             const response = await fetch("/api/me", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ credential: credential })
             });
             if (response.ok) {
                 const data = await response.json();
                 if (data.has_key) {
                     const key = data.api_key;
-                    apiKeyInput.value = key;
-                    updateConfigSnippet(key);
+                    if (key) {
+                        apiKeyInput.value = key;
+                        // Store the key locally so it survives reloads
+                        const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                        authData.api_key = key;
+                        localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                        updateConfigSnippet(key);
+                    } else {
+                        apiKeyInput.value = "No API Key Generated";
+                        updateConfigSnippet("YOUR_API_KEY_HERE");
+                    }
+                    
                     if (userRoleBadge) {
-                        userRoleBadge.textContent = "Role: " + (data.role || "User");
+                        const role = data.role || "User";
+                        userRoleBadge.textContent = "Role: " + role;
+                        const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                        authData.role = role;
+                        localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
                     }
                     return true;
                 }
@@ -43,26 +57,30 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    async function generateKey(email, regenerate = false) {
+    async function generateKey(credential, regenerate = false) {
         try {
             apiKeyInput.value = "Generating...";
             const endpoint = regenerate ? "/api/regenerate-key" : "/api/generate-key";
             const response = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ credential: credential })
             });
             if (response.ok) {
                 const data = await response.json();
                 const key = data.api_key;
                 apiKeyInput.value = key;
+                // Store the key locally
+                const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                authData.api_key = key;
+                localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
                 updateConfigSnippet(key);
                 if (userRoleBadge) {
                     userRoleBadge.textContent = "Role: " + (data.role || "User");
                 }
             } else {
                 const err = await response.json();
-                apiKeyInput.value = err.detail || "Error generating key.";
+                apiKeyInput.value = (typeof err.detail === 'object') ? JSON.stringify(err.detail) : (err.detail || "Error generating key.");
             }
         } catch (e) {
             console.error(e);
@@ -132,14 +150,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (cursorConfigCode) {
             cursorConfigCode.textContent = cursorText;
         }
+
+        // OpenCode (HTTP/SSE) - Assumed identical to Cursor for now
+        const opencodeConfigCode = document.getElementById("opencode-config-code");
+        if (opencodeConfigCode) {
+            opencodeConfigCode.textContent = cursorText;
+        }
     }
 
+    let currentCredential = null;
     let currentEmail = null;
 
-    async function showWelcomeScreen(name, email, picture) {
+    async function showWelcomeScreen(name, email, picture, credential = null, cachedKey = null) {
         currentEmail = email;
+        if (credential) currentCredential = credential;
+        
+        // Hide landing page and login overlay
+        const landingView = document.getElementById("landing-view");
+        if (landingView) landingView.style.display = "none";
+        
+        loginOverlay.style.opacity = "0";
         loginOverlay.style.display = "none";
-        appContainer.style.display = "block"; // Use block layout for robust scrolling
+        appContainer.style.display = "block";
+        
+        welcomeName.textContent = name || "User"; // Use block layout for robust scrolling
         
         if (name) {
             // If the display name is purely numeric (e.g. "2025 12063"), use the email local part instead
@@ -155,9 +189,42 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("welcome-icon").style.display = "none";
         }
 
-        const hasKey = await checkExistingKey(email);
-        if (!hasKey) {
-            generateKey(email, false);
+        if (cachedKey) {
+            apiKeyInput.value = cachedKey;
+            updateConfigSnippet(cachedKey);
+            
+            // Restore role if saved
+            const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+            if (authData.role && userRoleBadge) {
+                userRoleBadge.textContent = "Role: " + authData.role;
+            }
+        } else if (currentCredential) {
+            const hasKey = await checkExistingKey(currentCredential);
+            if (!hasKey) {
+                apiKeyInput.value = "No API Key Generated";
+                if (regenerateBtn) regenerateBtn.textContent = "Create API Key";
+                updateConfigSnippet("YOUR_API_KEY_HERE");
+            } else {
+                if (regenerateBtn) {
+                    if (apiKeyInput.value === "No API Key Generated") {
+                        regenerateBtn.textContent = "Create New API Key";
+                    } else {
+                        regenerateBtn.textContent = "Regenerate Key";
+                    }
+                }
+            }
+        } else {
+            // Should not happen, but fallback
+            apiKeyInput.value = "Please Login Again";
+            if (userRoleBadge) userRoleBadge.textContent = "";
+        }
+        
+        if (regenerateBtn) {
+            regenerateBtn.onclick = async () => {
+                const actuallyHasKey = await checkExistingKey(currentCredential);
+                await generateKey(currentCredential, actuallyHasKey);
+                regenerateBtn.textContent = "Regenerate Key";
+            };
         }
     }
 
@@ -166,9 +233,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (storedSession) {
         try {
             const authData = JSON.parse(storedSession);
-            if (authData.email && (authData.email.endsWith("@dau.ac.in") || authData.email.endsWith("@daiict.ac.in"))) {
+            if (authData.email && authData.credential) {
                 // Valid session exists, bypass login
-                showWelcomeScreen(authData.name, authData.email, authData.picture);
+                showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, authData.api_key);
             }
         } catch (e) {
             console.error("Invalid auth session data", e);
@@ -185,19 +252,21 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const email = decodedPayload.email;
             
-            if (email && (email.endsWith("@dau.ac.in") || email.endsWith("@daiict.ac.in"))) {
-                // Successful DAU login
+            if (email) {
+                // Successful login
                 localStorage.setItem("dau_buddy_auth", JSON.stringify({ 
                     email: email, 
                     name: decodedPayload.name,
-                    picture: decodedPayload.picture 
+                    picture: decodedPayload.picture,
+                    credential: response.credential
                 }));
                 loginError.style.display = "none";
                 
                 // Fade out overlay
                 loginOverlay.style.opacity = "0";
                 setTimeout(() => {
-                    showWelcomeScreen(decodedPayload.name, email, decodedPayload.picture);
+                    loginOverlay.style.display = "none";
+                    showWelcomeScreen(decodedPayload.name, email, decodedPayload.picture, response.credential);
                 }, 400);
             } else {
                 // Unauthorized domain
@@ -215,6 +284,10 @@ document.addEventListener("DOMContentLoaded", () => {
         logoutBtn.addEventListener("click", () => {
             localStorage.removeItem("dau_buddy_auth");
             appContainer.style.display = "none";
+            
+            const landingView = document.getElementById("landing-view");
+            if (landingView) landingView.style.display = "block";
+            
             loginOverlay.style.opacity = "1";
             loginOverlay.style.display = "flex";
         });
@@ -237,29 +310,71 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Landing Page UI functionality
+    const btnGetStarted = document.getElementById("hero-get-started-btn");
+    const btnSignIn = document.getElementById("nav-signin-btn");
+    const btnCloseLogin = document.getElementById("close-login-btn");
 
-    // Tab Switching functionality for Claude vs Cursor config
+    function openLoginModal() {
+        loginOverlay.style.display = "flex";
+        setTimeout(() => loginOverlay.style.opacity = "1", 10);
+    }
+
+    function closeLoginModal() {
+        loginOverlay.style.opacity = "0";
+        setTimeout(() => loginOverlay.style.display = "none", 300);
+    }
+
+    if (btnGetStarted) btnGetStarted.addEventListener("click", openLoginModal);
+    if (btnSignIn) btnSignIn.addEventListener("click", openLoginModal);
+    if (btnCloseLogin) btnCloseLogin.addEventListener("click", closeLoginModal);
+
+
+    // Tab Switching functionality
     const tabClaude = document.getElementById("tab-claude");
     const tabCursor = document.getElementById("tab-cursor");
+    const tabOpenCode = document.getElementById("tab-opencode");
+    
     const contentClaude = document.getElementById("content-claude");
     const contentCursor = document.getElementById("content-cursor");
+    const contentOpenCode = document.getElementById("content-opencode");
 
-    if (tabClaude && tabCursor) {
+    function resetTabs() {
+        [tabClaude, tabCursor, tabOpenCode].forEach(tab => {
+            if (tab) {
+                tab.style.background = "transparent";
+                tab.style.color = "#a0a0a0";
+            }
+        });
+        [contentClaude, contentCursor, contentOpenCode].forEach(content => {
+            if (content) content.style.display = "none";
+        });
+    }
+
+    if (tabClaude) {
         tabClaude.addEventListener("click", () => {
+            resetTabs();
             tabClaude.style.background = "#3b82f6";
             tabClaude.style.color = "white";
-            tabCursor.style.background = "transparent";
-            tabCursor.style.color = "#a0a0a0";
             contentClaude.style.display = "block";
-            contentCursor.style.display = "none";
         });
+    }
+    
+    if (tabCursor) {
         tabCursor.addEventListener("click", () => {
+            resetTabs();
             tabCursor.style.background = "#3b82f6";
             tabCursor.style.color = "white";
-            tabClaude.style.background = "transparent";
-            tabClaude.style.color = "#a0a0a0";
-            contentClaude.style.display = "none";
             contentCursor.style.display = "block";
+        });
+    }
+    
+    if (tabOpenCode) {
+        tabOpenCode.addEventListener("click", () => {
+            resetTabs();
+            tabOpenCode.style.background = "#3b82f6";
+            tabOpenCode.style.color = "white";
+            contentOpenCode.style.display = "block";
         });
     }
 
@@ -291,6 +406,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     copyCursorBtn.textContent = "Copy";
                     copyCursorBtn.style.background = "rgba(255,255,255,0.1)";
                     copyCursorBtn.style.borderColor = "#444";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyOpenCodeBtn = document.getElementById("copy-opencode-btn");
+    const opencodeConfigCode = document.getElementById("opencode-config-code");
+    if (copyOpenCodeBtn && opencodeConfigCode) {
+        copyOpenCodeBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(opencodeConfigCode.textContent).then(() => {
+                copyOpenCodeBtn.textContent = "Copied!";
+                copyOpenCodeBtn.style.background = "#10b981";
+                copyOpenCodeBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyOpenCodeBtn.textContent = "Copy";
+                    copyOpenCodeBtn.style.background = "rgba(255,255,255,0.1)";
+                    copyOpenCodeBtn.style.borderColor = "#444";
                 }, 2000);
             });
         });

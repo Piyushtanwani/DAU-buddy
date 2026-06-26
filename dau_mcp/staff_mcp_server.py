@@ -16,6 +16,7 @@ from mcp.server.fastmcp import FastMCP
 from core import config
 from core.database import db_connection
 from scrapers import staff_scraper
+from api.context import user_role_var
 
 # ==============================================================================
 # Server Setup
@@ -140,6 +141,11 @@ def sync_staff_data() -> str:
     Trigger a live scrape of the DA-IICT staff website and reload the database.
     """
     logger.info("Tool 'sync_staff_data' invoked.")
+    
+    role = user_role_var.get()
+    if role not in ("Staff", "Faculty", "Admin"):
+        return f"Unauthorized: Role '{role}' is not allowed to sync staff data."
+
     try:
         data = staff_scraper.scrape_staff_data()
         if not data:

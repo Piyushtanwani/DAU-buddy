@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - DAU Buddy</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="landing-view" style="display: flex; flex-direction: column; height: 100vh;">
+        <nav class="landing-nav" style="flex-shrink: 0;">
+            <a href="/" class="nav-brand" style="text-decoration: none;">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>DAU Buddy</span>
+            </a>
+            <a href="/" class="nav-signin-btn" style="text-decoration: none;">Back to Home</a>
+        </nav>
+
+        <div class="docs-layout">
+            <aside class="docs-sidebar glass-panel">
+                <h3>Contents</h3>
+                <ul class="docs-nav">
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#editor-configs">Editor Configurations</a></li>
+                    <li><a href="#available-tools">Available Tools</a></li>
+                </ul>
+            </aside>
+            
+            <main class="docs-content glass-panel">
+                <section id="overview">
+                    <div class="hero-badge" style="margin-bottom: 1rem;">Official Documentation</div>
+                    <h2>DAU Buddy Server</h2>
+                    <p>An MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.</p>
+                </section>
+
+                <hr class="docs-divider">
+
+                <section id="features">
+                    <h3><i class="fa-solid fa-star" style="color: var(--brand);"></i> Features</h3>
+                    <ul class="docs-list">
+                        <li><strong>Faculty Tools:</strong> List faculty, search by name or expertise, view full profiles, and trigger live website syncing.</li>
+                        <li><strong>Staff Tools:</strong> List staff, search by name or designation, view full profiles, and trigger live website syncing.</li>
+                        <li><strong>Scholars Tools:</strong> List Ph.D. scholars, search by name or research area, view detailed profiles.</li>
+                        <li><strong>Library OPAC Tools:</strong> Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search.</li>
+                        <li><strong>Timetable Tools:</strong> Query faculty schedules, course timings, free time slots, and full program batch timetables.</li>
+                        <li><strong>Calendar Tools:</strong> Query academic calendar events, examination schedules, semester activities, and holidays.</li>
+                        <li><strong>Secure Authentication:</strong> All endpoints are secured by an ASGI authentication middleware that verifies API keys.</li>
+                    </ul>
+                </section>
+
+                <hr class="docs-divider">
+
+                <section id="architecture">
+                    <h3><i class="fa-solid fa-sitemap" style="color: var(--brand);"></i> Architecture</h3>
+                    <div class="code-block-wrapper">
+<pre><code>Claude / Cursor
+        │
+        ▼
+   Auth Middleware (Bearer Token)
+        │
+        ▼
+   FastMCP SSE Application
+        │
+ ┌──────┼──────────┬──────────┬──────────┬─────────┐
+ │      │          │          │          │         │
+Faculty Staff   Library   Timetable  Calendar   Scholar
+Service Service Service   Service    Service    Service
+ │      │          │          │          │         │
+ └──────────── PostgreSQL (Local) ─────────────────┘</code></pre>
+                    </div>
+                </section>
+
+                <hr class="docs-divider">
+
+                <section id="editor-configs">
+                    <h3><i class="fa-solid fa-code" style="color: var(--brand);"></i> Editor Configurations</h3>
+                    <p>Copy the configurations directly from your web dashboard to ensure your API keys are correctly injected.</p>
+                    
+                    <h4>1. Claude Desktop (Stdio Proxy)</h4>
+                    <p>Claude Desktop requires a local <code>stdio</code> executable. By utilizing <code>npx mcp-remote</code>, we can securely bridge the local HTTP SSE server directly into Claude's memory without exposing local paths.</p>
+                    <div class="code-block-wrapper">
+<pre><code>{
+  "mcpServers": {
+    "daiict": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:8001/mcp/sse",
+        "--allow-http",
+        "--transport",
+        "sse-only",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer dau_sk_YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}</code></pre>
+                    </div>
+
+                    <h4 style="margin-top: 2rem;">2. Cursor / Windsurf (Native HTTP/SSE)</h4>
+                    <p>Cursor and Windsurf support direct SSE network connections. You only need to supply the connection URL, the explicit type flag, and your API key header:</p>
+                    <div class="code-block-wrapper">
+<pre><code>{
+  "mcpServers": {
+    "daiict": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer dau_sk_YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}</code></pre>
+                    </div>
+                </section>
+
+                <hr class="docs-divider">
+
+                <section id="available-tools">
+                    <h3><i class="fa-solid fa-toolbox" style="color: var(--brand);"></i> Available Tools & Queries</h3>
+                    
+                    <div class="tool-card">
+                        <h5>Faculty</h5>
+                        <p><code>list_faculty()</code>, <code>search_faculty(query)</code>, <code>get_faculty_details(name_or_email)</code></p>
+                        <div class="example">Example: "Who is the faculty expert in Machine Learning?"</div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h5>Staff</h5>
+                        <p><code>list_staff()</code>, <code>search_staff(query)</code>, <code>get_staff_details(name_or_email)</code></p>
+                        <div class="example">Example: "Who is the placement coordinator?"</div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h5>Library</h5>
+                        <p><code>search_library_books(query, limit)</code>, <code>get_book_details(biblionumber)</code></p>
+                        <div class="example">Example: "Find books on Artificial Intelligence."</div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h5>Timetables</h5>
+                        <p><code>get_faculty_schedule(name, day)</code>, <code>find_faculty_free_time(name, day)</code>, <code>get_program_timetable(program, day)</code></p>
+                        <div class="example">Example: "When is Prof. Manish Khare free on Tuesday?"</div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h5>Calendar</h5>
+                        <p><code>get_next_holiday()</code>, <code>get_midsem_dates()</code>, <code>search_calendar(query, semester)</code></p>
+                        <div class="example">Example: "When are the mid-semester exams?"</div>
+                    </div>
+                </section>
+                
+                <footer style="margin-top: 4rem; text-align: center; color: var(--txt-tertiary); font-size: 13px;">
+                    &copy; 2026 DA-IICT. All rights reserved.
+                </footer>
+            </main>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.docs-content section');
+            const navLinks = document.querySelectorAll('.docs-nav a');
+
+            const observerOptions = {
+                root: document.querySelector('.docs-content'),
+                rootMargin: '0px 0px -50% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === '#' + id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+        });
+    </script>
+</body>
+</html>
