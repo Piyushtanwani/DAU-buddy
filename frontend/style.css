@@ -1761,3 +1761,61 @@ a {
     color: var(--txt-tertiary);
     font-style: italic;
 }
+
+/* Custom button states */
+.key-btn {
+    padding: 0 16px;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.key-btn-danger {
+    background: #ef4444;
+}
+
+.key-btn-danger:hover {
+    background: #dc2626;
+}
+
+.key-btn-danger:active {
+    transform: scale(0.95);
+}
+
+.key-btn-primary {
+    background: #3b82f6;
+}
+
+.key-btn-primary:hover {
+    background: #2563eb;
+}
+
+.key-btn-primary:active {
+    transform: scale(0.95);
+}
+
+.key-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .landing-nav { padding: 16px 20px; }
+    .landing-hero { flex-direction: column; text-align: center; padding: 40px 20px 80px; gap: 40px; }
+    .hero-actions { justify-content: center; }
+    .hero-graphic { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .login-card { padding: 24px 20px; width: 95%; }
+    .welcome-card { padding: 24px !important; margin: 10px !important; }
+    .welcome-card > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 16px; }
+    #logout-btn { align-self: flex-start; }
+    .setup-steps { grid-template-columns: 1fr; }
+}

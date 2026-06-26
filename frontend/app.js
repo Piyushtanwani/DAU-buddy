@@ -30,17 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.has_key) {
                     const key = data.api_key;
                     if (key) {
-                        apiKeyInput.value = key;
-                        // Store the key locally so it survives reloads
+                        if (apiKeyInput.value === "Loading..." || apiKeyInput.value.includes("Please")) {
+                            apiKeyInput.value = key;
+                            updateConfigSnippet(key);
+                        }
                         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                         authData.api_key = key;
                         localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
-                        updateConfigSnippet(key);
-                    } else {
-                        apiKeyInput.value = "No API Key Generated";
-                        updateConfigSnippet("YOUR_API_KEY_HERE");
                     }
-                    
                     if (userRoleBadge) {
                         const role = data.role || "User";
                         userRoleBadge.textContent = "Role: " + role;
@@ -60,6 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
     async function generateKey(credential, regenerate = false) {
         try {
             apiKeyInput.value = "Generating...";
+            if (regenerateBtn) {
+                regenerateBtn.disabled = true;
+                regenerateBtn.textContent = "Generating...";
+            }
             const endpoint = regenerate ? "/api/regenerate-key" : "/api/generate-key";
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -70,13 +71,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 const key = data.api_key;
                 apiKeyInput.value = key;
-                // Store the key locally
                 const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                 authData.api_key = key;
                 localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                
+                const allKeys = JSON.parse(localStorage.getItem("dau_buddy_keys") || "{}");
+                if (currentEmail) {
+                    allKeys[currentEmail] = key;
+                    localStorage.setItem("dau_buddy_keys", JSON.stringify(allKeys));
+                }
+                
                 updateConfigSnippet(key);
                 if (userRoleBadge) {
-                    userRoleBadge.textContent = "Role: " + (data.role || "User");
+                    const role = data.role || "User";
+                    userRoleBadge.textContent = "Role: " + role;
+                    
+                    const updatedAuth = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                    updatedAuth.role = role;
+                    localStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
                 }
             } else {
                 const err = await response.json();
@@ -85,6 +97,11 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             console.error(e);
             apiKeyInput.value = "Error generating key.";
+        } finally {
+            if (regenerateBtn) {
+                regenerateBtn.disabled = false;
+                regenerateBtn.textContent = "Regenerate Key";
+            }
         }
     }
 
@@ -189,29 +206,47 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("welcome-icon").style.display = "none";
         }
 
-        if (cachedKey) {
-            apiKeyInput.value = cachedKey;
-            updateConfigSnippet(cachedKey);
+        // Try to recover key from persistent key storage if not in session cache
+        let activeKey = cachedKey;
+        if (!activeKey) {
+            const allKeys = JSON.parse(localStorage.getItem("dau_buddy_keys") || "{}");
+            if (allKeys[currentEmail]) {
+                activeKey = allKeys[currentEmail];
+                // Restore to session
+                const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                authData.api_key = activeKey;
+                localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+            }
+        }
+
+        // Only use activeKey if it's an actual hex key
+        if (activeKey && activeKey !== "Loading..." && activeKey !== "No API Key Generated" && activeKey !== "No key exists. Please generate.") {
+            apiKeyInput.value = activeKey;
+            updateConfigSnippet(activeKey);
+            if (regenerateBtn) regenerateBtn.textContent = "Regenerate Key";
             
             // Restore role if saved
             const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
             if (authData.role && userRoleBadge) {
                 userRoleBadge.textContent = "Role: " + authData.role;
             }
+            
+            // Sync status/role in background if we have credential
+            if (currentCredential) {
+                checkExistingKey(currentCredential);
+            }
         } else if (currentCredential) {
             const hasKey = await checkExistingKey(currentCredential);
             if (!hasKey) {
                 apiKeyInput.value = "No API Key Generated";
-                if (regenerateBtn) regenerateBtn.textContent = "Create API Key";
+                if (regenerateBtn) regenerateBtn.textContent = "Generate Key";
                 updateConfigSnippet("YOUR_API_KEY_HERE");
             } else {
                 if (regenerateBtn) {
-                    if (apiKeyInput.value === "No API Key Generated") {
-                        regenerateBtn.textContent = "Create New API Key";
-                    } else {
-                        regenerateBtn.textContent = "Regenerate Key";
-                    }
+                    regenerateBtn.textContent = "Generate Key";
                 }
+                apiKeyInput.value = "No key exists. Please generate.";
+                updateConfigSnippet("YOUR_API_KEY_HERE");
             }
         } else {
             // Should not happen, but fallback
@@ -221,9 +256,8 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (regenerateBtn) {
             regenerateBtn.onclick = async () => {
-                const actuallyHasKey = await checkExistingKey(currentCredential);
-                await generateKey(currentCredential, actuallyHasKey);
-                regenerateBtn.textContent = "Regenerate Key";
+                const isRegenerating = regenerateBtn.textContent.includes("Regenerate") || regenerateBtn.textContent.includes("Generating");
+                await generateKey(currentCredential, isRegenerating);
             };
         }
     }

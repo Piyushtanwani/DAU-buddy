@@ -15,6 +15,10 @@ from dau_mcp.unified_mcp_server import mcp
 # Google Auth
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+import requests
+
+global_session = requests.Session()
+cached_google_request = google_requests.Request(session=global_session)
 
 # SlowAPI Rate Limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -40,7 +44,7 @@ def hash_key(key: str) -> str:
 
 def verify_google_token(credential: str) -> str:
     try:
-        idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), CLIENT_ID)
+        idinfo = id_token.verify_oauth2_token(credential, cached_google_request, CLIENT_ID)
         email = idinfo['email']
         # Domain check bypassed for testing
         # if not (email.endswith("@dau.ac.in") or email.endswith("@daiict.ac.in")):
@@ -60,6 +64,16 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url=None
     )
+    
+    @app.on_event("startup")
+    def startup_event():
+        from core.database import init_pool
+        init_pool()
+
+    @app.on_event("shutdown")
+    def shutdown_event():
+        from core.database import _shutdown_pool
+        _shutdown_pool()
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -102,18 +116,7 @@ def create_app() -> FastAPI:
     @limiter.limit("5/minute")
     def generate_api_key(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
-            
-        try:
-            with db_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT email FROM api_keys WHERE email = %s", (email,))
-                    if cursor.fetchone():
-                        raise HTTPException(status_code=400, detail="Key already exists. Please regenerate if lost.")
-        except HTTPException:
-            raise
-        except Exception as e:
-            pass
-
+        
         local_part = email.split('@')[0]
         assigned_role = 'User'
         
@@ -142,6 +145,11 @@ def create_app() -> FastAPI:
                     cursor.execute("""
                         INSERT INTO api_keys (email, hashed_key, role, status, expires_at)
                         VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '90 days')
+                        ON CONFLICT (email) DO UPDATE 
+                        SET hashed_key = EXCLUDED.hashed_key,
+                            status = 'Active',
+                            created_at = CURRENT_TIMESTAMP,
+                            expires_at = CURRENT_TIMESTAMP + INTERVAL '90 days'
                     """, (email, hashed_k, assigned_role, 'Active'))
             return {"api_key": raw_key, "role": assigned_role}
         except Exception as e:

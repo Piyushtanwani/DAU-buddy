@@ -13,7 +13,7 @@ logger = config.get_logger("core.database")
 # ==============================================================================
 _connection_pool = None
 
-def _get_pool():
+def init_pool():
     global _connection_pool
     if _connection_pool is None:
         try:
@@ -33,7 +33,7 @@ def db_connection() -> Generator[psycopg2.extensions.connection, None, None]:
     Context manager that safely leases a connection from the pool and
     returns it automatically after use. Rolls back on error, commits on success.
     """
-    pool = _get_pool()
+    pool = init_pool()
     conn = pool.getconn()
     try:
         yield conn
