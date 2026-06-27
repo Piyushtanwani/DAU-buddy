@@ -6,11 +6,11 @@ A unified MCP platform providing AI assistants with structured access to DA-IICT
 
 - **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
-- **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly from the DA-IICT directory.
+- **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly with the official DA-IICT directory.
 - **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC.
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
 - **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DA-IICT sources.
-- **Retrieval-Augmented Search**: Uses PostgreSQL Full-Text Search (TSVECTOR + GIN indexes) to efficiently retrieve relevant records before serving results.
+- **Full-Text Search**: Powered by PostgreSQL tsvector, `websearch_to_tsquery`, and GIN indexes for fast, relevance-ranked retrieval across institutional datasets.
 - **Secure Authentication**: All endpoints are secured by an ASGI authentication middleware that verifies API keys stored in the database.
 - **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DA-IICT email upon Google Sign-In.
 
@@ -71,7 +71,8 @@ MCP Project/
 │
 ├── scrapers/                   # Web scraping layer
 │   ├── faculty_scraper.py
-│   └── staff_scraper.py
+│   ├── staff_scraper.py
+│   └── scholars_scraper.py
 │
 ├── dau_mcp/                    # Model Context Protocol Servers
 │   ├── unified_mcp_server.py   # Exposes ALL tools over FastMCP (Recommended)
@@ -88,15 +89,15 @@ MCP Project/
 │   ├── seed_staff.py
 │   ├── seed_library.py
 │   ├── seed_timetable.py
-│   └── seed_calendar.py
+│   ├── seed_calendar.py
+│   └── seed_scholars.py
 │
 ├── tests/                      # Unit and integration tests
 │
 ├── .env.example                # Template for .env
 ├── requirements.txt
 ├── Makefile                    # Make commands
-├── Dockerfile                  # Docker containerization
-└── migrate_rag.py              # RAG migration script
+└── Dockerfile                  # Docker containerization
 ```
 
 ## Setup & Installation
@@ -160,6 +161,7 @@ pip install -r requirements.txt
    ```bash
    python scripts/seed_faculty.py
    python scripts/seed_staff.py
+   python scripts/seed_scholars.py
    python scripts/seed_library.py
    python scripts/seed_timetable.py
    python scripts/seed_calendar.py
@@ -168,7 +170,7 @@ pip install -r requirements.txt
 
 ## Starting the Server & Dashboard
 
-The MCP server runs over secure HTTP/SSE via FastAPI and includes a beautiful, responsive web portal for managing your access. Start the backend server:
+The MCP server runs over secure HTTP/SSE via FastAPI and includes a responsive web portal for managing your access. Start the backend server:
 
 ```bash
 python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8001
@@ -178,7 +180,7 @@ Once running:
 1. Open **[http://127.0.0.1:8001/](http://127.0.0.1:8001/)** in your browser.
 2. Sign in securely using your DA-IICT Google account.
 3. The dashboard will automatically assign your role (Student, Faculty, or Staff) and generate your personal API key.
-4. Use the 1-click copy feature to grab your dynamically generated configuration snippet.
+4. Use the 1-click copy feature to grab your ready-to-use configuration snippet.
 
 ---
 
@@ -262,3 +264,19 @@ Cursor, Windsurf, and OpenCode support direct SSE network connections. You only 
 **Calendar:**
 - `get_next_holiday()`, `get_upcoming_holidays()`, `get_all_holidays()`, `get_midsem_dates()`, `get_endsem_dates()`, `get_next_academic_event()`, `search_calendar(query, semester)`
 *Example*: "When are the mid-semester exams?"
+
+---
+
+## Database Statistics
+
+The local PostgreSQL database is actively seeded with:
+
+| Dataset | Record Count | Details |
+|---------|--------------|---------|
+| **Faculty Records** | ~116 | Includes expertise & contact information |
+| **Staff Records** | ~92 | Includes administrative designations |
+| **Scholars Records**| ~60 | Ph.D. scholars and research areas |
+| **Library Catalog** | 28,000+ | Books searchable via OPAC |
+| **Timetable Slots** | 1,200+ | Daily Lectures, Labs, and Tutorials |
+| **Academic Calendar**| 120+ | Semester events and public holidays |
+| **API Keys** | N/A | Securely managed via `init_db.sql` |

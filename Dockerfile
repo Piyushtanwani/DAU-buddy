@@ -24,6 +24,7 @@ COPY api/        /app/api/
 COPY scrapers/   /app/scrapers/
 COPY dau_mcp/        /app/dau_mcp/
 COPY frontend/   /app/frontend/
+COPY scripts/    /app/scripts/
 COPY .env.example /app/
 
 # Expose port
@@ -31,7 +32,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/api/health || exit 1
+  CMD curl -f http://localhost:8080/ || exit 1
 
 # Start the FastAPI application
 CMD ["python", "-m", "uvicorn", "api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
