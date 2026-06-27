@@ -27,6 +27,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (response.ok) {
                 const data = await response.json();
+                
+                // ALWAYS update the role if the API provides it
+                if (userRoleBadge) {
+                    const role = data.role || "User";
+                    userRoleBadge.textContent = "Role: " + role;
+                    const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+                    authData.role = role;
+                    localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                }
+
                 if (data.has_key) {
                     const key = data.api_key;
                     if (key) {
@@ -36,13 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                         authData.api_key = key;
-                        localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
-                    }
-                    if (userRoleBadge) {
-                        const role = data.role || "User";
-                        userRoleBadge.textContent = "Role: " + role;
-                        const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
-                        authData.role = role;
                         localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
                     }
                     return true;
@@ -130,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Claude Desktop (Stdio)
         const claudeText = `{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "command": "cmd",
       "args": [
         "/c",
@@ -155,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Cursor / Windsurf (HTTP/SSE)
         const cursorText = `{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
@@ -204,6 +207,20 @@ document.addEventListener("DOMContentLoaded", () => {
             welcomeAvatar.src = picture;
             welcomeAvatar.style.display = "block";
             document.getElementById("welcome-icon").style.display = "none";
+        }
+
+        // Determine role synchronously from email
+        if (userRoleBadge && email) {
+            let role = "User";
+            if (email.endsWith("@dau.ac.in")) {
+                const localPart = email.split("@")[0];
+                if (/^\d+$/.test(localPart)) {
+                    role = "Student";
+                } else {
+                    role = "Faculty/Staff";
+                }
+            }
+            userRoleBadge.textContent = "Role: " + role;
         }
 
         // Try to recover key from persistent key storage if not in session cache
@@ -337,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     copyKeyBtn.style.background = "#10b981";
                     setTimeout(() => {
                         copyKeyBtn.textContent = "Copy";
-                        copyKeyBtn.style.background = "#3b82f6";
+                        copyKeyBtn.style.background = "#0f3b73";
                     }, 2000);
                 });
             }
@@ -388,7 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tabClaude) {
         tabClaude.addEventListener("click", () => {
             resetTabs();
-            tabClaude.style.background = "#3b82f6";
+            tabClaude.style.background = "#0f3b73";
             tabClaude.style.color = "white";
             contentClaude.style.display = "block";
         });
@@ -397,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tabCursor) {
         tabCursor.addEventListener("click", () => {
             resetTabs();
-            tabCursor.style.background = "#3b82f6";
+            tabCursor.style.background = "#0f3b73";
             tabCursor.style.color = "white";
             contentCursor.style.display = "block";
         });
@@ -406,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tabOpenCode) {
         tabOpenCode.addEventListener("click", () => {
             resetTabs();
-            tabOpenCode.style.background = "#3b82f6";
+            tabOpenCode.style.background = "#0f3b73";
             tabOpenCode.style.color = "white";
             contentOpenCode.style.display = "block";
         });

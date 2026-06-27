@@ -27,65 +27,60 @@
 <body>
     <!-- ── Landing View ──────────────────────────────────────────────── -->
     <div class="landing-view" id="landing-view">
+        <div class="top-accent-bar"></div>
         <nav class="landing-nav">
             <div class="nav-brand">
-                <i class="fa-solid fa-graduation-cap"></i>
+                <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy</span>
             </div>
-            <button class="nav-signin-btn" id="nav-signin-btn">Sign In</button>
+            <div class="nav-links">
+                <a href="https://www.daiict.ac.in" target="_blank">Main Website</a>
+                <button class="nav-signin-btn" id="nav-signin-btn">Sign In</button>
+            </div>
         </nav>
 
         <header class="landing-hero">
             <div class="hero-content">
-                <div class="hero-badge">Next-Gen Faculty & Staff Tools</div>
                 <h1>DAU Buddy <br><span class="hero-highlight">MCP Server</span></h1>
-                <p>Securely query the university databases right from your favorite AI IDEs like Cursor, Windsurf, or
+                <p>Securely query the university databases right from your favorite AI IDEs like Cursor, Windsurf, OpenCode, or
                     Claude Desktop. Role-based access ensures data privacy.</p>
                 <div class="hero-actions">
-                    <button class="hero-btn primary" id="hero-get-started-btn">Get Started</button>
-                    <a href="docs.html" class="hero-btn secondary">View Docs</a>
+                    <button class="hero-btn primary" id="hero-get-started-btn">Access MCP Server</button>
+                    <a href="docs.html" class="hero-btn secondary">View Documentation</a>
                 </div>
-            </div>
-            <div class="hero-graphic">
-                <!-- Decorative Graphic -->
-                <div class="glass-card decor-card-1">
-                    <i class="fa-solid fa-database"></i>
-                    <div>
-                        <h4>Faculty DB</h4>
-                        <span>Connected</span>
-                    </div>
-                </div>
-                <div class="glass-card decor-card-2">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <div>
-                        <h4>Secure Access</h4>
-                        <span>Active</span>
-                    </div>
-                </div>
-                <div class="glow-orb"></div>
             </div>
         </header>
 
         <section class="landing-features">
             <div class="feature-card">
-                <div class="feat-icon"><i class="fa-solid fa-bolt"></i></div>
-                <h3>Lightning Fast</h3>
-                <p>Connect instantly over local network or SSE directly into your AI context window.</p>
+                <div class="feat-icon"><i class="fa-solid fa-database"></i></div>
+                <h3>Centralized Data</h3>
+                <p>Connect to the faculty and student DB instantly over your local network.</p>
             </div>
             <div class="feature-card">
-                <div class="feat-icon"><i class="fa-solid fa-lock"></i></div>
+                <div class="feat-icon"><i class="fa-solid fa-shield-halved"></i></div>
                 <h3>Role-Based Security</h3>
-                <p>Strict RBAC ensures students, faculty, and staff only access permitted endpoints.</p>
+                <p>Strict RBAC ensures users only access permitted institutional endpoints.</p>
             </div>
             <div class="feature-card">
                 <div class="feat-icon"><i class="fa-solid fa-plug"></i></div>
-                <h3>Plug & Play</h3>
+                <h3>Plug & Play Integration</h3>
                 <p>No complex setup. Just copy the JSON snippet into your MCP client config.</p>
             </div>
         </section>
 
         <footer class="landing-footer">
-            <p>&copy; 2026 DA-IICT. All rights reserved.</p>
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h4>DA-IICT</h4>
+                    <p>Dhirubhai Ambani Institute of Information and Communication Technology</p>
+                    <p>Gandhinagar, Gujarat</p>
+                </div>
+
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Dhirubhai Ambani Institute of Information and Communication Technology. All rights reserved.</p>
+            </div>
         </footer>
     </div>
 
@@ -101,7 +96,7 @@
 
             <div class="login-error" id="login-error" style="display: none;">
                 <i class="fa-solid fa-circle-exclamation"></i>
-                <span>Access Restricted: Please use a valid @dau.ac.in email address.</span>
+                <span>Access Restricted: Please use a valid @daiict.ac.in email address.</span>
             </div>
 
             <div id="g_id_onload"
@@ -117,84 +112,95 @@
 
     <!-- Main App hidden initially -->
     <div class="app-container" id="app-container"
-        style="display: none; background: var(--bg-app); min-height: 100vh; overflow-y: auto; padding: 10vh 20px 40px; box-sizing: border-box; text-align: left; color: white;">
+        style="display: none; background-color: #0f3b73; min-height: 100vh; overflow-y: auto; box-sizing: border-box; text-align: left; color: #333; font-family: 'Open Sans', sans-serif;">
+        <div class="top-accent-bar"></div>
+        
+        <!-- Dashboard Navigation -->
+        <nav style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;">
+            <div style="display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;">
+                <i class="fa-solid fa-building-columns"></i>
+                <span>DAU Buddy Portal</span>
+            </div>
+            <div>
+                <button id="logout-btn" class="nav-signout-btn">
+                    Sign Out
+                </button>
+            </div>
+        </nav>
+
         <div class="welcome-card"
-            style="margin: 0 auto; padding: 40px; background: rgba(30,30,30,0.6); border-radius: 22px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 24px 48px rgba(0,0,0,0.5); max-width: 600px; width: 100%;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 16px;">
+            style="margin: 0 auto; padding: 40px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 800px; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 20px;">
                     <img id="welcome-avatar" src=""
-                        style="width: 48px; height: 48px; border-radius: 50%; display: none;">
-                    <i id="welcome-icon" class="fa-solid fa-circle-check" style="font-size: 36px; color: #10b981;"></i>
+                        style="width: 64px; height: 64px; border-radius: 50%; display: none; border: 2px solid #0f3b73;">
+                    <i id="welcome-icon" class="fa-solid fa-circle-check" style="font-size: 48px; color: #10b981;"></i>
                     <div>
-                        <h1 id="welcome-name" style="font-family: 'Outfit'; margin: 0; font-size: 24px;">Welcome!</h1>
-                        <p id="welcome-email" style="color: #a0a0a0; margin: 0; font-size: 14px;">Authenticated via
+                        <h1 id="welcome-name" style="font-family: 'Open Sans', sans-serif; margin: 0 0 4px 0; font-size: 28px; color: #111;">Welcome!</h1>
+                        <p id="welcome-email" style="color: #555; margin: 0; font-size: 15px;">Authenticated via
                             DA-IICT OAuth.</p>
                         <span id="user-role-badge"
-                            style="font-size: 11px; padding: 2px 8px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; margin-top: 6px; display: inline-block; font-weight: 500; font-family: 'Outfit', sans-serif;">Loading
+                            style="font-size: 12px; padding: 4px 10px; background: rgba(15, 59, 115, 0.1); color: #0f3b73; border: 1px solid rgba(15, 59, 115, 0.2); border-radius: 12px; margin-top: 8px; display: inline-block; font-weight: 600; font-family: 'Open Sans', sans-serif;">Loading
                             Role...</span>
                     </div>
                 </div>
-                <button id="logout-btn"
-                    style="padding: 8px 16px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">
-                    Logout
-                </button>
             </div>
 
             <div
-                style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
                 <h3
-                    style="margin-top: 0; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    style="margin-top: 0; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #111;">
                     Your Personal MCP API Key
                     <span id="key-status"
                         style="font-size: 11px; padding: 2px 6px; background: #10b981; color: white; border-radius: 10px;">Active</span>
                 </h3>
                 <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                     <input type="text" id="api-key-input" readonly value="Loading..."
-                        style="flex: 1; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; outline: none;">
-                    <button id="regenerate-key-btn" class="key-btn key-btn-danger">Generate Key</button>
-                    <button id="copy-key-btn" class="key-btn key-btn-primary">Copy</button>
+                        style="flex: 1; padding: 12px 16px; background: #ffffff; border: 1px solid #ccc; color: #333; border-radius: 4px; font-family: monospace; font-size: 14px; outline: none;">
+                    <button id="regenerate-key-btn" class="key-btn key-btn-danger" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Key</button>
+                    <button id="copy-key-btn" class="key-btn key-btn-primary" style="padding: 10px 16px; background: #0f3b73; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy</button>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="font-size: 12px; color: #a0a0a0; margin: 0;">This key acts as your password. Do not share
+                    <p style="font-size: 12px; color: #666; margin: 0;">This key acts as your password. Do not share
                         it.</p>
                 </div>
             </div>
 
             <div
-                style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
                 <div
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="margin: 0; font-size: 16px; font-family: 'Outfit', sans-serif;">Integration Configuration
+                    <h3 style="margin: 0; font-size: 16px; font-family: 'Open Sans', sans-serif; color: #111;">Integration Configuration
                     </h3>
                     <!-- Tab Buttons -->
                     <div
-                        style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        style="display: flex; gap: 4px; background: #eef2f6; padding: 4px; border-radius: 6px; border: 1px solid #d0d7de;">
                         <button id="tab-claude"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: #3b82f6; color: white; transition: all 0.2s; font-family: 'Outfit', sans-serif;">Claude
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
                             Desktop (HTTP/SSE)</button>
                         <button id="tab-cursor"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: transparent; color: #a0a0a0; transition: all 0.2s; font-family: 'Outfit', sans-serif;">Cursor
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Cursor
                             / Windsurf (HTTP/SSE)</button>
                         <button id="tab-opencode"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: transparent; color: #a0a0a0; transition: all 0.2s; font-family: 'Outfit', sans-serif;">OpenCode
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">OpenCode
                             (HTTP/SSE)</button>
                     </div>
                 </div>
 
                 <!-- Claude Desktop Content -->
                 <div id="content-claude" style="display: block;">
-                    <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this to
+                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this to
                         <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network
                         via a memory-loaded proxy, with <strong>no local file paths or environment variables
                             exposed</strong>.
                     </p>
                     <div style="position: relative;">
                         <button id="copy-claude-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
                         <pre
-                            style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
+                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "command": "cmd",
       "args": [
         "/c",
@@ -219,17 +225,17 @@
 
                 <!-- Cursor Content -->
                 <div id="content-cursor" style="display: none;">
-                    <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this block to your
-                        Cursor or Windsurf MCP settings to connect over the network using Server-Sent Events (SSE).
+                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
+                        Cursor, Windsurf, or OpenCode MCP settings to connect over the network using Server-Sent Events (SSE).
                         <strong>Requires the backend server to be running.</strong>
                     </p>
                     <div style="position: relative;">
                         <button id="copy-cursor-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
                         <pre
-                            style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="cursor-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
+                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="cursor-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
@@ -243,17 +249,17 @@
 
                 <!-- OpenCode Content -->
                 <div id="content-opencode" style="display: none;">
-                    <p style="font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.4;">Add this block to your
+                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
                         OpenCode MCP settings to connect over the network using Server-Sent Events (SSE).
                         <strong>Requires the backend server to be running.</strong>
                     </p>
                     <div style="position: relative;">
                         <button id="copy-opencode-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
                         <pre
-                            style="background: #1a1a1a; padding: 16px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 0;"><code id="opencode-config-code" style="font-family: monospace; font-size: 12px; color: #d4d4d4;">{
+                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="opencode-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {

@@ -107,7 +107,22 @@ def create_app() -> FastAPI:
                     row = cursor.fetchone()
                     if row:
                         return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": row[3]}
-                    return {"has_key": False}
+                    
+                    # Calculate role if no key exists
+                    local_part = email.split('@')[0]
+                    assigned_role = 'User'
+                    if local_part.isdigit():
+                        assigned_role = 'Student'
+                    else:
+                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
+                        if cursor.fetchone():
+                            assigned_role = 'Faculty'
+                        else:
+                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+                            if cursor.fetchone():
+                                assigned_role = 'Staff'
+                                
+                    return {"has_key": False, "role": assigned_role}
         except Exception as e:
             logger.error(f"DB Error: {e}")
             raise HTTPException(status_code=500, detail="Database error")

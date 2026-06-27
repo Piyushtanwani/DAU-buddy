@@ -1,67 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentation - DAU Buddy</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="landing-view" style="display: flex; flex-direction: column; height: 100vh;">
-        <nav class="landing-nav" style="flex-shrink: 0;">
-            <a href="/" class="nav-brand" style="text-decoration: none;">
-                <i class="fa-solid fa-graduation-cap"></i>
+    <div class="landing-view">
+        <div class="top-accent-bar"></div>
+        <nav class="landing-nav">
+            <div class="nav-brand">
+                <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy</span>
-            </a>
-            <a href="/" class="nav-signin-btn" style="text-decoration: none;">Back to Home</a>
+            </div>
+            <div class="nav-links">
+                <a href="/">Back to Home</a>
+            </div>
         </nav>
 
-        <div class="docs-layout">
-            <aside class="docs-sidebar glass-panel">
-                <h3>Contents</h3>
-                <ul class="docs-nav">
-                    <li><a href="#overview">Overview</a></li>
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#architecture">Architecture</a></li>
-                    <li><a href="#editor-configs">Editor Configurations</a></li>
-                    <li><a href="#available-tools">Available Tools</a></li>
-                </ul>
-            </aside>
-            
-            <main class="docs-content glass-panel">
-                <section id="overview">
-                    <div class="hero-badge" style="margin-bottom: 1rem;">Official Documentation</div>
-                    <h2>DAU Buddy Server</h2>
-                    <p>An MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.</p>
-                </section>
+        <header class="landing-hero" style="padding: 60px 20px; text-align: center;">
+            <div class="hero-content">
+                <h1>Official <span class="hero-highlight">Documentation</span></h1>
+                <p>Learn how to connect Claude Desktop, Cursor, Windsurf, and OpenCode to the DAU Buddy Server.</p>
+            </div>
+        </header>
 
-                <hr class="docs-divider">
-
-                <section id="features">
-                    <h3><i class="fa-solid fa-star" style="color: var(--brand);"></i> Features</h3>
-                    <ul class="docs-list">
-                        <li><strong>Faculty Tools:</strong> List faculty, search by name or expertise, view full profiles, and trigger live website syncing.</li>
-                        <li><strong>Staff Tools:</strong> List staff, search by name or designation, view full profiles, and trigger live website syncing.</li>
-                        <li><strong>Scholars Tools:</strong> List Ph.D. scholars, search by name or research area, view detailed profiles.</li>
-                        <li><strong>Library OPAC Tools:</strong> Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search.</li>
-                        <li><strong>Timetable Tools:</strong> Query faculty schedules, course timings, free time slots, and full program batch timetables.</li>
-                        <li><strong>Calendar Tools:</strong> Query academic calendar events, examination schedules, semester activities, and holidays.</li>
-                        <li><strong>Secure Authentication:</strong> All endpoints are secured by an ASGI authentication middleware that verifies API keys.</li>
+        <div style="background: #f4f6f9; padding: 60px 20px; min-height: 80vh;">
+            <div class="docs-layout"
+                style="display: flex; max-width: 1200px; margin: 0 auto; gap: 40px; width: 100%; box-sizing: border-box; align-items: flex-start;">
+                <aside class="docs-sidebar">
+                    <h3>Contents</h3>
+                    <ul class="docs-nav">
+                        <li><a href="#overview">Overview</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#architecture">Architecture</a></li>
+                        <li><a href="#editor-configs">Editor Configurations</a></li>
+                        <li><a href="#available-tools">Available Tools</a></li>
                     </ul>
-                </section>
+                </aside>
 
-                <hr class="docs-divider">
+                <main class="docs-content" style="background: #ffffff; padding: 40px 48px; flex: 1; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+                    <section id="overview">
+                        <h2 style="color: #0f3b73; margin-top: 0; font-size: 32px;">DAU Buddy Server</h2>
+                        <p style="color: #555; line-height: 1.8; font-size: 16px;">An MCP platform providing AI
+                            assistants with structured access to DA-IICT faculty, staff, library, timetable, academic
+                            calendar, and scholars data through PostgreSQL-backed retrieval services.</p>
+                    </section>
 
-                <section id="architecture">
-                    <h3><i class="fa-solid fa-sitemap" style="color: var(--brand);"></i> Architecture</h3>
-                    <div class="code-block-wrapper">
-<pre><code>Claude / Cursor
+                    <hr class="docs-divider" style="border: none; border-top: 1px solid #e0e0e0; margin: 40px 0;">
+
+                    <section id="features">
+                        <h3 style="color: #111; border-bottom: 2px solid #eef2f6; padding-bottom: 8px;"><i
+                                class="fa-solid fa-star" style="color: #0f3b73; margin-right: 8px;"></i> Features</h3>
+                        <ul class="docs-list" style="color: #555; line-height: 1.8;">
+                            <li><strong>Faculty Tools:</strong> List faculty, search by name or expertise, view full
+                                profiles, and trigger live website syncing.</li>
+                            <li><strong>Staff Tools:</strong> List staff, search by name or designation, view full
+                                profiles, and trigger live website syncing.</li>
+                            <li><strong>Scholars Tools:</strong> List Ph.D. scholars, search by name or research area,
+                                view detailed profiles.</li>
+                            <li><strong>Library OPAC Tools:</strong> Instantly search the DA-IICT library catalog (over
+                                28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search.
+                            </li>
+                            <li><strong>Timetable Tools:</strong> Query faculty schedules, course timings, free time
+                                slots, and full program batch timetables.</li>
+                            <li><strong>Calendar Tools:</strong> Query academic calendar events, examination schedules,
+                                semester activities, and holidays.</li>
+                            <li><strong>Secure Authentication:</strong> All endpoints are secured by an ASGI
+                                authentication middleware that verifies API keys.</li>
+                        </ul>
+                    </section>
+
+                    <hr class="docs-divider" style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+                    <section id="architecture">
+                        <h3 style="color: #111; border-bottom: 2px solid #eef2f6; padding-bottom: 8px;"><i
+                                class="fa-solid fa-sitemap" style="color: #0f3b73; margin-right: 8px;"></i> Architecture
+                        </h3>
+                        <div class="code-block-wrapper"
+                            style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
+                            <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">Claude / Cursor / OpenCode
         │
         ▼
    Auth Middleware (Bearer Token)
@@ -75,21 +104,26 @@ Faculty Staff   Library   Timetable  Calendar   Scholar
 Service Service Service   Service    Service    Service
  │      │          │          │          │         │
  └──────────── PostgreSQL (Local) ─────────────────┘</code></pre>
-                    </div>
-                </section>
+                        </div>
+                    </section>
 
-                <hr class="docs-divider">
+                    <hr class="docs-divider" style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 
-                <section id="editor-configs">
-                    <h3><i class="fa-solid fa-code" style="color: var(--brand);"></i> Editor Configurations</h3>
-                    <p>Copy the configurations directly from your web dashboard to ensure your API keys are correctly injected.</p>
-                    
-                    <h4>1. Claude Desktop (Stdio Proxy)</h4>
-                    <p>Claude Desktop requires a local <code>stdio</code> executable. By utilizing <code>npx mcp-remote</code>, we can securely bridge the local HTTP SSE server directly into Claude's memory without exposing local paths.</p>
-                    <div class="code-block-wrapper">
-<pre><code>{
+                    <section id="editor-configs">
+                        <h3 style="color: #111; border-bottom: 2px solid #eef2f6; padding-bottom: 8px;"><i
+                                class="fa-solid fa-code" style="color: #0f3b73; margin-right: 8px;"></i> Editor
+                            Configurations</h3>
+                        <p style="color: #555; line-height: 1.6;">Copy the configurations directly from your web
+                            dashboard to ensure your API keys are correctly injected.</p>
+
+                        <h4 style="color: #222; margin-top: 24px;">1. Claude Desktop (HTTP/SSE via Proxy)</h4>
+                        <p style="color: #555; line-height: 1.6;">Claude Desktop connects to our HTTP/SSE server using a local <code
+                                style="background: #eef2f6; padding: 2px 6px; border-radius: 4px; color: #d90429;">npx mcp-remote</code> bridge to securely pass the Server-Sent Events stream into Claude's memory.</p>
+                        <div class="code-block-wrapper"
+                            style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
+                            <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "command": "cmd",
       "args": [
         "/c",
@@ -109,14 +143,17 @@ Service Service Service   Service    Service    Service
     }
   }
 }</code></pre>
-                    </div>
+                        </div>
 
-                    <h4 style="margin-top: 2rem;">2. Cursor / Windsurf (Native HTTP/SSE)</h4>
-                    <p>Cursor and Windsurf support direct SSE network connections. You only need to supply the connection URL, the explicit type flag, and your API key header:</p>
-                    <div class="code-block-wrapper">
-<pre><code>{
+                        <h4 style="color: #222; margin-top: 32px;">2. Cursor / Windsurf / OpenCode (Native HTTP/SSE)</h4>
+                        <p style="color: #555; line-height: 1.6;">Cursor, Windsurf, and OpenCode support direct SSE network
+                            connections. You only need to supply the connection URL, the explicit type flag, and your
+                            API key header:</p>
+                        <div class="code-block-wrapper"
+                            style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
+                            <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
@@ -125,78 +162,120 @@ Service Service Service   Service    Service    Service
     }
   }
 }</code></pre>
-                    </div>
-                </section>
+                        </div>
+                    </section>
 
-                <hr class="docs-divider">
+                    <hr class="docs-divider" style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 
-                <section id="available-tools">
-                    <h3><i class="fa-solid fa-toolbox" style="color: var(--brand);"></i> Available Tools & Queries</h3>
-                    
-                    <div class="tool-card">
-                        <h5>Faculty</h5>
-                        <p><code>list_faculty()</code>, <code>search_faculty(query)</code>, <code>get_faculty_details(name_or_email)</code></p>
-                        <div class="example">Example: "Who is the faculty expert in Machine Learning?"</div>
-                    </div>
+                    <section id="available-tools">
+                        <h3 style="color: #111; border-bottom: 2px solid #eef2f6; padding-bottom: 8px;"><i
+                                class="fa-solid fa-toolbox" style="color: #0f3b73; margin-right: 8px;"></i> Available
+                            Tools & Queries</h3>
 
-                    <div class="tool-card">
-                        <h5>Staff</h5>
-                        <p><code>list_staff()</code>, <code>search_staff(query)</code>, <code>get_staff_details(name_or_email)</code></p>
-                        <div class="example">Example: "Who is the placement coordinator?"</div>
-                    </div>
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Faculty</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">list_faculty()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">search_faculty(query)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_faculty_details(name_or_email)</code>
+                            </p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Who
+                                is the faculty expert in Machine Learning?"</div>
+                        </div>
 
-                    <div class="tool-card">
-                        <h5>Library</h5>
-                        <p><code>search_library_books(query, limit)</code>, <code>get_book_details(biblionumber)</code></p>
-                        <div class="example">Example: "Find books on Artificial Intelligence."</div>
-                    </div>
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Staff</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">list_staff()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">search_staff(query)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_staff_details(name_or_email)</code></p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Who
+                                is the placement coordinator?"</div>
+                        </div>
 
-                    <div class="tool-card">
-                        <h5>Timetables</h5>
-                        <p><code>get_faculty_schedule(name, day)</code>, <code>find_faculty_free_time(name, day)</code>, <code>get_program_timetable(program, day)</code></p>
-                        <div class="example">Example: "When is Prof. Manish Khare free on Tuesday?"</div>
-                    </div>
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Scholars</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">list_scholars()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">search_scholars(query)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_scholar_details(name)</code></p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Find Ph.D. scholars researching Machine Learning."</div>
+                        </div>
 
-                    <div class="tool-card">
-                        <h5>Calendar</h5>
-                        <p><code>get_next_holiday()</code>, <code>get_midsem_dates()</code>, <code>search_calendar(query, semester)</code></p>
-                        <div class="example">Example: "When are the mid-semester exams?"</div>
-                    </div>
-                </section>
-                
-                <footer style="margin-top: 4rem; text-align: center; color: var(--txt-tertiary); font-size: 13px;">
-                    &copy; 2026 DA-IICT. All rights reserved.
-                </footer>
-            </main>
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Library</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">search_library_books(query, limit)</code>,
+                                <code style="color: #d90429; font-size: 13px;">get_book_details(biblionumber)</code>
+                            </p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
+                                "Find books on Artificial Intelligence."</div>
+                        </div>
+
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Timetables</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">get_faculty_schedule(name, day)</code>,
+                                <code style="color: #d90429; font-size: 13px;">find_faculty_free_time(name, day)</code>,
+                                <code
+                                    style="color: #d90429; font-size: 13px;">get_program_timetable(program, day)</code>
+                            </p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
+                                "When is Prof. Manish Khare free on Tuesday?"</div>
+                        </div>
+
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Calendar</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">get_next_holiday()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_midsem_dates()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">search_calendar(query, semester)</code></p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
+                                "When are the mid-semester exams?"</div>
+                        </div>
+                    </section>
+
+                    <footer
+                        style="margin-top: 4rem; text-align: center; color: #888; font-size: 13px; border-top: 1px solid #eee; padding-top: 20px;">
+                        &copy; 2026 DA-IICT. All rights reserved.
+                    </footer>
+                </main>
+            </div>
         </div>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const sections = document.querySelectorAll('.docs-content section');
-            const navLinks = document.querySelectorAll('.docs-nav a');
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const sections = document.querySelectorAll('.docs-content section');
+                const navLinks = document.querySelectorAll('.docs-nav a');
 
-            const observerOptions = {
-                root: document.querySelector('.docs-content'),
-                rootMargin: '0px 0px -50% 0px',
-                threshold: 0
-            };
+                const observerOptions = {
+                    root: null, // Default to browser viewport
+                    rootMargin: '-10% 0px -70% 0px', // Trigger when section is in the top part of the screen
+                    threshold: 0
+                };
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const id = entry.target.getAttribute('id');
-                        navLinks.forEach(link => {
-                            link.classList.remove('active');
-                            if (link.getAttribute('href') === '#' + id) {
-                                link.classList.add('active');
-                            }
-                        });
-                    }
-                });
-            }, observerOptions);
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const id = entry.target.getAttribute('id');
+                            navLinks.forEach(link => {
+                                link.classList.remove('active');
+                                if (link.getAttribute('href') === '#' + id) {
+                                    link.classList.add('active');
+                                }
+                            });
+                        }
+                    });
+                }, observerOptions);
 
-            sections.forEach(section => observer.observe(section));
-        });
-    </script>
+                sections.forEach(section => observer.observe(section));
+            });
+        </script>
 </body>
+
 </html>

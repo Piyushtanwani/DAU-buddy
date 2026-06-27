@@ -34,9 +34,9 @@ Service Service Service   Service    Service    Service
 ```
 
 ## Tech Stack
-- **Language**: Python 3.10+
+- **Backend**: Python 3.10+, FastAPI, `mcp` (Model Context Protocol), `FastMCP`
 - **Database**: PostgreSQL (Local)
-- **Framework**: FastAPI, `mcp` (Model Context Protocol), `FastMCP`
+- **Frontend**: HTML5, Vanilla CSS3, JavaScript, Google Identity Services (OAuth 2.0)
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
 - **Search**: PostgreSQL `tsvector` and GIN Indexes
 - **Integration**: SSE (Server-Sent Events) over HTTP with dynamic Stdio bridging via `mcp-remote`.
@@ -168,7 +168,7 @@ pip install -r requirements.txt
 
 ## Starting the Server & Dashboard
 
-The MCP server runs over secure HTTP/SSE via FastAPI. Start the backend server to host the portal and authenticate MCP connections:
+The MCP server runs over secure HTTP/SSE via FastAPI and includes a beautiful, responsive web portal for managing your access. Start the backend server:
 
 ```bash
 python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8001
@@ -176,8 +176,9 @@ python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8001
 
 Once running:
 1. Open **[http://127.0.0.1:8001/](http://127.0.0.1:8001/)** in your browser.
-2. Sign in with your DA-IICT Google account.
-3. Your secure API key will automatically be generated and saved.
+2. Sign in securely using your DA-IICT Google account.
+3. The dashboard will automatically assign your role (Student, Faculty, or Staff) and generate your personal API key.
+4. Use the 1-click copy feature to grab your dynamically generated configuration snippet.
 
 ---
 
@@ -194,7 +195,7 @@ Add this to `%APPDATA%\Claude\claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "command": "cmd",
       "args": [
         "/c",
@@ -216,14 +217,14 @@ Add this to `%APPDATA%\Claude\claude_desktop_config.json`:
 }
 ```
 
-### 2. Cursor / Windsurf (Native HTTP/SSE)
+### 2. Cursor / Windsurf / OpenCode (Native HTTP/SSE)
 
-Cursor and Windsurf support direct SSE network connections. You only need to supply the connection URL, the explicit type flag, and your API key header:
+Cursor, Windsurf, and OpenCode support direct SSE network connections. You only need to supply the connection URL, the explicit type flag, and your API key header:
 
 ```json
 {
   "mcpServers": {
-    "daiict": {
+    "DAU Buddy": {
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
