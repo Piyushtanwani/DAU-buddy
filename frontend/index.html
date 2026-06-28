@@ -21,7 +21,7 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 
 <body>
@@ -51,7 +51,7 @@
             </div>
         </header>
 
-        <section class="landing-features">
+        <section class="landing-features" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 40px 20px;">
             <div class="feature-card">
                 <div class="feat-icon"><i class="fa-solid fa-database"></i></div>
                 <h3>Centralized Data</h3>
@@ -116,7 +116,7 @@
         <div class="top-accent-bar"></div>
         
         <!-- Dashboard Navigation -->
-        <nav style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;">
+        <nav class="app-nav" style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;">
             <div style="display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;">
                 <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy Portal</span>
@@ -128,7 +128,7 @@
             </div>
         </nav>
 
-        <div class="welcome-card"
+        <div class="welcome-card api-welcome-card"
             style="margin: 0 auto; padding: 40px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 800px; width: 100%;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 24px;">
                 <div style="display: flex; align-items: center; gap: 20px;">
@@ -154,7 +154,7 @@
                     <span id="key-status"
                         style="font-size: 11px; padding: 2px 6px; background: #10b981; color: white; border-radius: 10px;">Active</span>
                 </h3>
-                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <div class="api-key-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
                     <input type="text" id="api-key-input" readonly value="Loading..."
                         style="flex: 1; padding: 12px 16px; background: #ffffff; border: 1px solid #ccc; color: #333; border-radius: 4px; font-family: monospace; font-size: 14px; outline: none;">
                     <button id="regenerate-key-btn" class="key-btn key-btn-danger" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Key</button>
@@ -168,12 +168,12 @@
 
             <div
                 style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
-                <div
+                <div class="api-tabs-header"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <h3 style="margin: 0; font-size: 16px; font-family: 'Open Sans', sans-serif; color: #111;">Integration Configuration
                     </h3>
                     <!-- Tab Buttons -->
-                    <div
+                    <div class="api-tabs-container"
                         style="display: flex; gap: 4px; background: #eef2f6; padding: 4px; border-radius: 6px; border: 1px solid #d0d7de;">
                         <button id="tab-claude"
                             style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude

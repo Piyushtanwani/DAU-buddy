@@ -1866,3 +1866,91 @@ a {
         grid-template-columns: 1fr;
     }
 }
+
+/* Responsive overrides for docs and api key page */
+@media (max-width: 768px) {
+    /* Dashboard / API Key Page */
+    .app-nav {
+        flex-direction: column !important;
+        gap: 15px !important;
+        padding: 15px 20px !important;
+    }
+    .api-welcome-card {
+        padding: 24px !important;
+        margin: 10px auto !important;
+        width: calc(100% - 20px) !important;
+        box-sizing: border-box !important;
+    }
+    .api-welcome-card > div:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    .api-key-row {
+        display: block !important;
+    }
+    .api-key-row > * {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 10px !important;
+        box-sizing: border-box !important;
+    }
+    .api-tabs-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    .api-tabs-container {
+        flex-direction: column !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .api-tabs-container button {
+        width: 100% !important;
+        text-align: left !important;
+    }
+    #api-key-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .key-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Docs Page */
+    .docs-layout {
+        flex-direction: column !important;
+        padding: 10px !important;
+        gap: 20px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .docs-sidebar {
+        width: 100% !important;
+        position: static !important;
+        padding: 15px !important;
+        box-sizing: border-box !important;
+    }
+    .docs-content {
+        padding: 20px 15px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+    .docs-content pre {
+        max-width: 100% !important;
+    }
+    .landing-hero {
+        padding: 40px 15px !important;
+    }
+    
+    /* Landing Features */
+    .landing-features {
+        flex-direction: column !important;
+    }
+    .feature-card {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-bottom: 20px !important;
+    }
+}
