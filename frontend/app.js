@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:\\${AUTH_HEADER}"
+        "Authorization:\${AUTH_HEADER}"
       ],
       "env": {
         "AUTH_HEADER": "Bearer ${key}"
