@@ -35,17 +35,32 @@ def db_connection() -> Generator[psycopg2.extensions.connection, None, None]:
     """
     pool = init_pool()
     conn = pool.getconn()
+    
+    # Perform a quick health check to handle connections closed by the server/proxy
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+    except psycopg2.OperationalError:
+        logger.warning("Pooled connection was dead, leasing a new one.")
+        pool.putconn(conn, close=True)
+        conn = pool.getconn()
+        
     try:
         yield conn
     except Exception as e:
         logger.error(f"DB transaction error — rolling back: {e}")
-        conn.rollback()
+        if not conn.closed:
+            try:
+                conn.rollback()
+            except Exception as re:
+                logger.error(f"Failed to rollback: {re}")
         raise
     else:
-        conn.commit()
+        if not conn.closed:
+            conn.commit()
     finally:
         if '_connection_pool' in globals() and _connection_pool is not None:
-            _connection_pool.putconn(conn)
+            _connection_pool.putconn(conn, close=bool(conn.closed))
 
 
 @atexit.register

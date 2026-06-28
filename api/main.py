@@ -4,7 +4,9 @@ import secrets
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+import base64
+import urllib.parse
 from pydantic import BaseModel
 
 from core import config
@@ -19,6 +21,8 @@ import requests
 
 global_session = requests.Session()
 cached_google_request = google_requests.Request(session=global_session)
+
+oauth_codes = {}
 
 # SlowAPI Rate Limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -195,11 +199,75 @@ def create_app() -> FastAPI:
             logger.error(f"Error regenerating key: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
+    @app.get("/authorize")
+    def authorize(
+        response_type: str,
+        client_id: str,
+        redirect_uri: str,
+        state: str,
+        code_challenge: str = None,
+        code_challenge_method: str = None
+    ):
+        if response_type != "code":
+            raise HTTPException(status_code=400, detail="Unsupported response_type")
+            
+        code = secrets.token_urlsafe(32)
+        oauth_codes[code] = {
+            "client_id": client_id,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+            "redirect_uri": redirect_uri
+        }
+        
+        params = {"code": code, "state": state}
+        url = f"{redirect_uri}?{urllib.parse.urlencode(params)}"
+        return RedirectResponse(url=url)
+
+    @app.post("/token")
+    async def token(request: Request):
+        body = await request.body()
+        form = dict(urllib.parse.parse_qsl(body.decode("utf-8")))
+        
+        grant_type = form.get("grant_type")
+        code = form.get("code")
+        client_id = form.get("client_id")
+        code_verifier = form.get("code_verifier")
+        redirect_uri = form.get("redirect_uri")
+        
+        if grant_type != "authorization_code":
+            raise HTTPException(status_code=400, detail="Unsupported grant_type")
+            
+        if code not in oauth_codes:
+            raise HTTPException(status_code=400, detail="Invalid code")
+            
+        session = oauth_codes.pop(code)
+        
+        if session["client_id"] != client_id:
+            raise HTTPException(status_code=400, detail="Client ID mismatch")
+            
+        if session["redirect_uri"] != redirect_uri:
+            raise HTTPException(status_code=400, detail="Redirect URI mismatch")
+            
+        if session["code_challenge"] and code_verifier:
+            if session["code_challenge_method"] == "S256":
+                digest = hashlib.sha256(code_verifier.encode()).digest()
+                b64_challenge = base64.urlsafe_b64encode(digest).decode().rstrip("=")
+                if b64_challenge != session["code_challenge"]:
+                    raise HTTPException(status_code=400, detail="Code challenge failed")
+                    
+        return {
+            "access_token": client_id,
+            "token_type": "bearer",
+            "expires_in": 31536000,
+            "refresh_token": client_id
+        }
+
     app.include_router(api_router, prefix="/api")
 
     logger.info("Mounting FastMCP HTTP/SSE endpoints at /mcp")
-    mcp.settings.host = "127.0.0.1"
+    mcp.settings.host = "0.0.0.0"
     mcp.settings.port = 8001
+    mcp.settings.transport_security = None
     
     from api.middleware.mcp_auth import MCPAuthMiddleware
     app.mount("/mcp", MCPAuthMiddleware(mcp.sse_app()))

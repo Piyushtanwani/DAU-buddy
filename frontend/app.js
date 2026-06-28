@@ -1,6 +1,14 @@
-/* ==============================================================================
-   DA-IICT Faculty AI Buddy - Frontend Login Logic (app.js)
-   ============================================================================== */
+// Global callback for Google Sign-In, declared outside DOMContentLoaded to ensure it's available for GSI
+window.handleCredentialResponse = (response) => {
+    if (window.processLogin) {
+        window.processLogin(response);
+    } else {
+        // Fallback in case the callback fires before DOMContentLoaded completes
+        document.addEventListener("DOMContentLoaded", () => {
+            if (window.processLogin) window.processLogin(response);
+        });
+    }
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     // ── Google OAuth & Session Management ─────────────────────────────────────
@@ -19,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const userRoleBadge = document.getElementById("user-role-badge");
 
     async function checkExistingKey(credential) {
+        // [Lines truncated for replace block; we will replace from the start of the file down to the old handleCredentialResponse]
         try {
             const response = await fetch("/api/me", {
                 method: "POST",
@@ -27,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                
+
                 // ALWAYS update the role if the API provides it
                 if (userRoleBadge) {
                     const role = data.role || "User";
@@ -77,18 +86,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                 authData.api_key = key;
                 localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
-                
+
                 const allKeys = JSON.parse(localStorage.getItem("dau_buddy_keys") || "{}");
                 if (currentEmail) {
                     allKeys[currentEmail] = key;
                     localStorage.setItem("dau_buddy_keys", JSON.stringify(allKeys));
                 }
-                
+
                 updateConfigSnippet(key);
                 if (userRoleBadge) {
                     const role = data.role || "User";
                     userRoleBadge.textContent = "Role: " + role;
-                    
+
                     const updatedAuth = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                     updatedAuth.role = role;
                     localStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
@@ -129,6 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Escape backslashes for JSON representation
         const escapedPythonPath = pythonPath.replace(/\\/g, "\\\\");
         const escapedProjectPath = projectPath.replace(/\\/g, "\\\\");
+        const baseUrl = window.location.origin + "/mcp/sse";
 
         // Claude Desktop (Stdio)
         const claudeText = `{
@@ -140,12 +150,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "npx",
         "-y",
         "mcp-remote",
-        "http://127.0.0.1:8001/mcp/sse",
+        "${baseUrl}",
         "--allow-http",
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:\\\${AUTH_HEADER}"
+        "Authorization:\\${AUTH_HEADER}"
       ],
       "env": {
         "AUTH_HEADER": "Bearer ${key}"
@@ -160,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
   "mcpServers": {
     "DAU Buddy": {
       "type": "sse",
-      "url": "http://127.0.0.1:8001/mcp/sse",
+      "url": "${baseUrl}",
       "headers": {
         "Authorization": "Bearer ${key}"
       }
@@ -184,17 +194,17 @@ document.addEventListener("DOMContentLoaded", () => {
     async function showWelcomeScreen(name, email, picture, credential = null, cachedKey = null) {
         currentEmail = email;
         if (credential) currentCredential = credential;
-        
+
         // Hide landing page and login overlay
         const landingView = document.getElementById("landing-view");
         if (landingView) landingView.style.display = "none";
-        
+
         loginOverlay.style.opacity = "0";
         loginOverlay.style.display = "none";
         appContainer.style.display = "block";
-        
+
         welcomeName.textContent = name || "User"; // Use block layout for robust scrolling
-        
+
         if (name) {
             // If the display name is purely numeric (e.g. "2025 12063"), use the email local part instead
             const firstName = name.split(" ")[0];
@@ -202,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
             welcomeName.textContent = `Welcome, ${displayName}!`;
         }
         welcomeEmail.textContent = email;
-        
+
         if (picture) {
             welcomeAvatar.src = picture;
             welcomeAvatar.style.display = "block";
@@ -241,13 +251,13 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyInput.value = activeKey;
             updateConfigSnippet(activeKey);
             if (regenerateBtn) regenerateBtn.textContent = "Regenerate Key";
-            
+
             // Restore role if saved
             const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
             if (authData.role && userRoleBadge) {
                 userRoleBadge.textContent = "Role: " + authData.role;
             }
-            
+
             // Sync status/role in background if we have credential
             if (currentCredential) {
                 checkExistingKey(currentCredential);
@@ -270,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyInput.value = "Please Login Again";
             if (userRoleBadge) userRoleBadge.textContent = "";
         }
-        
+
         if (regenerateBtn) {
             regenerateBtn.onclick = async () => {
                 const isRegenerating = regenerateBtn.textContent.includes("Regenerate") || regenerateBtn.textContent.includes("Generating");
@@ -295,24 +305,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Global callback for Google Sign-In
-    window.handleCredentialResponse = (response) => {
+    window.processLogin = (response) => {
         try {
             // Decode JWT token payload (middle part)
             const payloadBase64 = response.credential.split('.')[1];
             const decodedPayload = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
-            
+
             const email = decodedPayload.email;
-            
+
             if (email) {
                 // Successful login
-                localStorage.setItem("dau_buddy_auth", JSON.stringify({ 
-                    email: email, 
+                localStorage.setItem("dau_buddy_auth", JSON.stringify({
+                    email: email,
                     name: decodedPayload.name,
                     picture: decodedPayload.picture,
                     credential: response.credential
                 }));
                 loginError.style.display = "none";
-                
+
                 // Fade out overlay
                 loginOverlay.style.opacity = "0";
                 setTimeout(() => {
@@ -335,10 +345,10 @@ document.addEventListener("DOMContentLoaded", () => {
         logoutBtn.addEventListener("click", () => {
             localStorage.removeItem("dau_buddy_auth");
             appContainer.style.display = "none";
-            
+
             const landingView = document.getElementById("landing-view");
             if (landingView) landingView.style.display = "block";
-            
+
             loginOverlay.style.opacity = "1";
             loginOverlay.style.display = "flex";
         });
@@ -385,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabClaude = document.getElementById("tab-claude");
     const tabCursor = document.getElementById("tab-cursor");
     const tabOpenCode = document.getElementById("tab-opencode");
-    
+
     const contentClaude = document.getElementById("content-claude");
     const contentCursor = document.getElementById("content-cursor");
     const contentOpenCode = document.getElementById("content-opencode");
@@ -410,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
             contentClaude.style.display = "block";
         });
     }
-    
+
     if (tabCursor) {
         tabCursor.addEventListener("click", () => {
             resetTabs();
@@ -419,7 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
             contentCursor.style.display = "block";
         });
     }
-    
+
     if (tabOpenCode) {
         tabOpenCode.addEventListener("click", () => {
             resetTabs();
