@@ -175,8 +175,11 @@
                     <!-- Tab Buttons -->
                     <div class="api-tabs-container"
                         style="display: flex; gap: 4px; background: #eef2f6; padding: 4px; border-radius: 6px; border: 1px solid #d0d7de;">
+                        <button id="tab-connectors"
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Connectors
+                            (Global)</button>
                         <button id="tab-claude"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
                             Desktop (HTTP/SSE)</button>
                         <button id="tab-cursor"
                             style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Cursor
@@ -188,7 +191,7 @@
                 </div>
 
                 <!-- Claude Desktop Content -->
-                <div id="content-claude" style="display: block;">
+                <div id="content-claude" style="display: none;">
                     <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this to
                         <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network
                         via a memory-loaded proxy, with <strong>no local file paths or environment variables
@@ -268,6 +271,35 @@
     }
   }
 }</code></pre>
+                    </div>
+                </div>
+
+                <!-- Connectors Content -->
+                <div id="content-connectors" style="display: block;">
+                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Claude has a feature to connect MCP server with connectors. You can connect globally using these details:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Name of MCP server</div>
+                                <div>DAU Buddy</div>
+                            </div>
+                            <button id="copy-conn-name" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                        </div>
+                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">URL of MCP server</div>
+                                <div>https://dau-buddy.onrender.com/mcp/sse</div>
+                            </div>
+                            <button id="copy-conn-url" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                        </div>
+                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">API Key Token</div>
+                                <div id="connectors-api-key-display" style="word-break: break-all;">Loading...</div>
+                            </div>
+                            <button id="copy-conn-key" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                        </div>
                     </div>
                 </div>
             </div>

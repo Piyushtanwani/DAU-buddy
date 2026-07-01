@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:\${AUTH_HEADER}"
+        "Authorization:${AUTH_HEADER}"
       ],
       "env": {
         "AUTH_HEADER": "Bearer ${key}"
@@ -185,6 +185,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const opencodeConfigCode = document.getElementById("opencode-config-code");
         if (opencodeConfigCode) {
             opencodeConfigCode.textContent = cursorText;
+        }
+
+        const connectorsApiKeyDisplay = document.getElementById("connectors-api-key-display");
+        if (connectorsApiKeyDisplay) {
+            connectorsApiKeyDisplay.textContent = key;
         }
     }
 
@@ -395,19 +400,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabClaude = document.getElementById("tab-claude");
     const tabCursor = document.getElementById("tab-cursor");
     const tabOpenCode = document.getElementById("tab-opencode");
+    const tabConnectors = document.getElementById("tab-connectors");
 
     const contentClaude = document.getElementById("content-claude");
     const contentCursor = document.getElementById("content-cursor");
     const contentOpenCode = document.getElementById("content-opencode");
+    const contentConnectors = document.getElementById("content-connectors");
 
     function resetTabs() {
-        [tabClaude, tabCursor, tabOpenCode].forEach(tab => {
+        [tabClaude, tabCursor, tabOpenCode, tabConnectors].forEach(tab => {
             if (tab) {
                 tab.style.background = "transparent";
                 tab.style.color = "#a0a0a0";
             }
         });
-        [contentClaude, contentCursor, contentOpenCode].forEach(content => {
+        [contentClaude, contentCursor, contentOpenCode, contentConnectors].forEach(content => {
             if (content) content.style.display = "none";
         });
     }
@@ -436,6 +443,15 @@ document.addEventListener("DOMContentLoaded", () => {
             tabOpenCode.style.background = "#0f3b73";
             tabOpenCode.style.color = "white";
             contentOpenCode.style.display = "block";
+        });
+    }
+
+    if (tabConnectors) {
+        tabConnectors.addEventListener("click", () => {
+            resetTabs();
+            tabConnectors.style.background = "#0f3b73";
+            tabConnectors.style.color = "white";
+            contentConnectors.style.display = "block";
         });
     }
 
@@ -484,6 +500,62 @@ document.addEventListener("DOMContentLoaded", () => {
                     copyOpenCodeBtn.textContent = "Copy";
                     copyOpenCodeBtn.style.background = "rgba(255,255,255,0.1)";
                     copyOpenCodeBtn.style.borderColor = "#444";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyConnNameBtn = document.getElementById("copy-conn-name");
+    if (copyConnNameBtn) {
+        copyConnNameBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText("DAU Buddy").then(() => {
+                copyConnNameBtn.textContent = "Copied!";
+                copyConnNameBtn.style.background = "#10b981";
+                copyConnNameBtn.style.color = "white";
+                copyConnNameBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyConnNameBtn.textContent = "Copy";
+                    copyConnNameBtn.style.background = "#f0f0f0";
+                    copyConnNameBtn.style.color = "#333";
+                    copyConnNameBtn.style.borderColor = "#ccc";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyConnUrlBtn = document.getElementById("copy-conn-url");
+    if (copyConnUrlBtn) {
+        copyConnUrlBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText("https://dau-buddy.onrender.com/mcp/sse").then(() => {
+                copyConnUrlBtn.textContent = "Copied!";
+                copyConnUrlBtn.style.background = "#10b981";
+                copyConnUrlBtn.style.color = "white";
+                copyConnUrlBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyConnUrlBtn.textContent = "Copy";
+                    copyConnUrlBtn.style.background = "#f0f0f0";
+                    copyConnUrlBtn.style.color = "#333";
+                    copyConnUrlBtn.style.borderColor = "#ccc";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyConnKeyBtn = document.getElementById("copy-conn-key");
+    const connApiKeyDisplay = document.getElementById("connectors-api-key-display");
+    if (copyConnKeyBtn && connApiKeyDisplay) {
+        copyConnKeyBtn.addEventListener("click", () => {
+            const keyToCopy = connApiKeyDisplay.textContent;
+            navigator.clipboard.writeText(keyToCopy).then(() => {
+                copyConnKeyBtn.textContent = "Copied!";
+                copyConnKeyBtn.style.background = "#10b981";
+                copyConnKeyBtn.style.color = "white";
+                copyConnKeyBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyConnKeyBtn.textContent = "Copy";
+                    copyConnKeyBtn.style.background = "#f0f0f0";
+                    copyConnKeyBtn.style.color = "#333";
+                    copyConnKeyBtn.style.borderColor = "#ccc";
                 }, 2000);
             });
         });
