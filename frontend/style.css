@@ -1946,7 +1946,10 @@ a {
     
     /* Landing Features */
     .landing-features {
+        display: flex !important;
         flex-direction: column !important;
+        margin-top: 0 !important;
+        padding: 20px !important;
     }
     .feature-card {
         width: 100% !important;
