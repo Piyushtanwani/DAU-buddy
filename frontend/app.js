@@ -210,6 +210,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (connectorsApiKeyDisplay) {
             connectorsApiKeyDisplay.textContent = key;
         }
+
+        const connectorsUrlDisplay = document.getElementById("connectors-url-display");
+        if (connectorsUrlDisplay) {
+            connectorsUrlDisplay.textContent = baseUrl;
+        }
     }
 
     let currentCredential = null;
@@ -543,9 +548,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const copyConnUrlBtn = document.getElementById("copy-conn-url");
-    if (copyConnUrlBtn) {
+    const connectorsUrlDisplay = document.getElementById("connectors-url-display");
+    if (copyConnUrlBtn && connectorsUrlDisplay) {
         copyConnUrlBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText("https://dau-buddy.onrender.com/mcp/sse").then(() => {
+            const urlToCopy = connectorsUrlDisplay.textContent;
+            navigator.clipboard.writeText(urlToCopy).then(() => {
                 copyConnUrlBtn.textContent = "Copied!";
                 copyConnUrlBtn.style.background = "#10b981";
                 copyConnUrlBtn.style.color = "white";
