@@ -21,7 +21,7 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 
 <body>
@@ -121,7 +121,10 @@
                 <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy Portal</span>
             </div>
-            <div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="feedback-btn" class="nav-feedback-btn" style="padding: 10px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                    <i class="fa-regular fa-comment-dots"></i> Feedback
+                </button>
                 <button id="logout-btn" class="nav-signout-btn">
                     Sign Out
                 </button>
@@ -306,7 +309,51 @@
         </div>
     </div>
 
-    <script src="app.js?v=11"></script>
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="feedback-modal-overlay" style="display: none;">
+        <div class="feedback-modal-content">
+            <div class="feedback-modal-header">
+                <h2>Share Your Feedback</h2>
+                <button id="close-feedback-btn" class="close-feedback-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="feedback-modal-body">
+                <p style="font-size: 14px; color: #475569; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">Help us improve DAU Buddy by reporting bugs, requesting features, or sharing suggestions.</p>
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-category">Category <span style="color: red;">*</span></label>
+                        <select id="feedback-category" required>
+                            <option value="" disabled selected>Select a category</option>
+                            <option value="Bug Report">🐞 Bug Report</option>
+                            <option value="Feature Request">✨ Feature Request</option>
+                            <option value="Improvement Suggestion">💡 Improvement Suggestion</option>
+                            <option value="General Feedback">💬 General Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-subject">Subject <span style="color: red;">*</span></label>
+                        <input type="text" id="feedback-subject" placeholder="Brief summary of your feedback" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-description">Description <span style="color: red;">*</span></label>
+                        <textarea id="feedback-description" rows="5" placeholder="Please provide detailed information..." required maxlength="1000"></textarea>
+                        <div class="char-counter"><span id="char-count">0</span>/1000</div>
+                    </div>
+                    <div class="feedback-modal-footer">
+                        <button type="button" id="cancel-feedback-btn" class="btn-cancel">Cancel</button>
+                        <button type="submit" id="submit-feedback-btn" class="btn-submit">
+                            <span class="submit-text">Submit Feedback</span>
+                            <div class="loader" style="display: none;"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js?v=14"></script>
 </body>
 
 </html>

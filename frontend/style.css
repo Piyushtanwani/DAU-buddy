@@ -1617,8 +1617,9 @@ a {
 
 .docs-sidebar {
     background: #ffffff;
-    border-top: 4px solid #f97316; /* DA-IICT Orange Accent */
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border-top: 4px solid #f97316;
+    /* DA-IICT Orange Accent */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     padding: 24px;
     border-radius: 8px;
     width: 280px;
@@ -1869,48 +1870,58 @@ a {
 
 /* Responsive overrides for docs and api key page */
 @media (max-width: 768px) {
+
     /* Dashboard / API Key Page */
     .app-nav {
         flex-direction: column !important;
         gap: 15px !important;
         padding: 15px 20px !important;
     }
+
     .api-welcome-card {
         padding: 24px !important;
         margin: 10px auto !important;
         width: calc(100% - 20px) !important;
         box-sizing: border-box !important;
     }
-    .api-welcome-card > div:first-child {
+
+    .api-welcome-card>div:first-child {
         flex-direction: column !important;
         align-items: flex-start !important;
     }
+
     .api-key-row {
         display: block !important;
     }
-    .api-key-row > * {
+
+    .api-key-row>* {
         display: block !important;
         width: 100% !important;
         margin-bottom: 10px !important;
         box-sizing: border-box !important;
     }
+
     .api-tabs-header {
         flex-direction: column !important;
         align-items: flex-start !important;
     }
+
     .api-tabs-container {
         flex-direction: column !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
+
     .api-tabs-container button {
         width: 100% !important;
         text-align: left !important;
     }
+
     #api-key-input {
         width: 100% !important;
         box-sizing: border-box !important;
     }
+
     .key-btn {
         width: 100% !important;
         justify-content: center !important;
@@ -1925,25 +1936,29 @@ a {
         width: 100% !important;
         box-sizing: border-box !important;
     }
+
     .docs-sidebar {
         width: 100% !important;
         position: static !important;
         padding: 15px !important;
         box-sizing: border-box !important;
     }
+
     .docs-content {
         padding: 20px 15px !important;
         width: 100% !important;
         box-sizing: border-box !important;
         overflow-x: hidden !important;
     }
+
     .docs-content pre {
         max-width: 100% !important;
     }
+
     .landing-hero {
         padding: 40px 15px !important;
     }
-    
+
     /* Landing Features */
     .landing-features {
         display: flex !important;
@@ -1951,9 +1966,283 @@ a {
         margin-top: 0 !important;
         padding: 20px !important;
     }
+
     .feature-card {
         width: 100% !important;
         box-sizing: border-box !important;
         margin-bottom: 20px !important;
+    }
+}
+
+/* ── Feedback Modal & Toast Styles ───────────────────────────────────────── */
+.nav-feedback-btn:hover {
+    background: rgba(15, 59, 115, 0.05) !important;
+}
+
+.feedback-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.4); /* Darker, slightly blue tint */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px); /* Stronger glassmorphism */
+    -webkit-backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feedback-modal-content {
+    background: #ffffff;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px; /* Rounder corners */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* Deeper, softer shadow */
+    overflow: hidden;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: 'Inter', 'Open Sans', sans-serif;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.feedback-modal-header {
+    background: linear-gradient(135deg, #0f3b73 0%, #1e4b85 100%);
+    color: #fff;
+    padding: 24px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.feedback-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.close-feedback-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-feedback-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: rotate(90deg);
+}
+
+.feedback-modal-body {
+    padding: 24px;
+    background: #fcfcfd;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.01em;
+}
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #0f172a;
+    background-color: #ffffff;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.form-group select:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.char-counter {
+    font-size: 12px;
+    color: #64748b;
+    text-align: right;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.char-counter.limit-reached {
+    color: #ef4444;
+}
+
+.feedback-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.btn-cancel,
+.btn-submit {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #0f3b73 0%, #1e4b85 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(15, 59, 115, 0.25);
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e4b85 0%, #0f3b73 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(15, 59, 115, 0.35);
+}
+
+.btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.loader {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 2px solid #fff;
+    width: 14px;
+    height: 14px;
+    animation: spin 1s linear infinite;
+}
+
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast.error {
+    background: #ef4444;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
     }
 }

@@ -59,6 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     return true;
                 }
+            } else if (response.status === 401) {
+                // Token expired or invalid
+                localStorage.removeItem("dau_buddy_auth");
+                window.location.reload();
             }
         } catch (e) {
             console.error("Error checking key", e);
@@ -73,6 +77,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 regenerateBtn.disabled = true;
                 regenerateBtn.textContent = "Generating...";
             }
+            
+            if (!credential) {
+                alert("Error: Missing Google credential in frontend. Please login again.");
+                return;
+            }
+
             const endpoint = regenerate ? "/api/regenerate-key" : "/api/generate-key";
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -103,12 +113,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     localStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
                 }
             } else {
+                if (response.status === 401) {
+                    alert("Session expired. Please login again.");
+                    localStorage.removeItem("dau_buddy_auth");
+                    window.location.reload();
+                    return;
+                }
                 const err = await response.json();
-                apiKeyInput.value = (typeof err.detail === 'object') ? JSON.stringify(err.detail) : (err.detail || "Error generating key.");
+                const errMsg = (typeof err.detail === 'object') ? JSON.stringify(err.detail) : (err.detail || "Error generating key.");
+                apiKeyInput.value = errMsg;
+                alert("API Error: " + errMsg);
             }
         } catch (e) {
             console.error(e);
             apiKeyInput.value = "Error generating key.";
+            alert("Frontend Error: " + e.message);
         } finally {
             if (regenerateBtn) {
                 regenerateBtn.disabled = false;
@@ -155,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:${AUTH_HEADER}"
+        "Authorization:${"${AUTH_HEADER}"}"
       ],
       "env": {
         "AUTH_HEADER": "Bearer ${key}"
@@ -559,5 +578,118 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 2000);
             });
         });
+    }
+
+    // ── Feedback System ────────────────────────────────────────────────────────
+    const feedbackBtn = document.getElementById("feedback-btn");
+    const feedbackModal = document.getElementById("feedback-modal");
+    const closeFeedbackBtn = document.getElementById("close-feedback-btn");
+    const cancelFeedbackBtn = document.getElementById("cancel-feedback-btn");
+    const feedbackForm = document.getElementById("feedback-form");
+    const feedbackDesc = document.getElementById("feedback-description");
+    const charCount = document.getElementById("char-count");
+    const submitFeedbackBtn = document.getElementById("submit-feedback-btn");
+    const submitText = submitFeedbackBtn?.querySelector(".submit-text");
+    const loader = submitFeedbackBtn?.querySelector(".loader");
+    const toastContainer = document.getElementById("toast-container");
+
+    function showToast(message, type = "success") {
+        if (!toastContainer) return;
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = type === "success" 
+            ? `<i class="fa-solid fa-circle-check"></i> <span>${message}</span>`
+            : `<i class="fa-solid fa-circle-exclamation"></i> <span>${message}</span>`;
+        
+        toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = "slideInRight 0.3s ease-in reverse forwards";
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    if (feedbackBtn && feedbackModal) {
+        feedbackBtn.addEventListener("click", () => {
+            feedbackModal.style.display = "flex";
+            document.body.style.overflow = "hidden";
+        });
+
+        const closeModal = () => {
+            feedbackModal.style.display = "none";
+            document.body.style.overflow = "";
+            feedbackForm.reset();
+            charCount.textContent = "0";
+            charCount.parentElement.classList.remove("limit-reached");
+        };
+
+        closeFeedbackBtn.addEventListener("click", closeModal);
+        cancelFeedbackBtn.addEventListener("click", closeModal);
+        feedbackModal.addEventListener("click", (e) => {
+            if (e.target === feedbackModal) closeModal();
+        });
+
+        if (feedbackDesc && charCount) {
+            feedbackDesc.addEventListener("input", (e) => {
+                const len = e.target.value.length;
+                charCount.textContent = len;
+                if (len >= 1000) {
+                    charCount.parentElement.classList.add("limit-reached");
+                } else {
+                    charCount.parentElement.classList.remove("limit-reached");
+                }
+            });
+        }
+
+        if (feedbackForm) {
+            feedbackForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const category = document.getElementById("feedback-category").value;
+                const subject = document.getElementById("feedback-subject").value.trim();
+                const description = feedbackDesc.value.trim();
+
+                if (!category || !subject || !description) {
+                    showToast("Please fill in all required fields.", "error");
+                    return;
+                }
+
+                // Get current API key
+                const currentKey = apiKeyInput ? apiKeyInput.value : null;
+                if (!currentKey || currentKey === "Loading..." || currentKey.includes("Please")) {
+                    showToast("API Key not found. Please log in again.", "error");
+                    return;
+                }
+
+                submitFeedbackBtn.disabled = true;
+                if (submitText) submitText.style.display = "none";
+                if (loader) loader.style.display = "block";
+
+                try {
+                    const response = await fetch("/api/feedback", {
+                        method: "POST",
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${currentKey}`
+                        },
+                        body: JSON.stringify({ category, subject, description })
+                    });
+
+                    if (response.ok) {
+                        closeModal();
+                        showToast("Thank you! Your feedback has been submitted.");
+                    } else {
+                        const errorData = await response.json();
+                        showToast(errorData.detail || "Failed to submit feedback.", "error");
+                    }
+                } catch (error) {
+                    console.error("Feedback error:", error);
+                    showToast("An error occurred. Please try again.", "error");
+                } finally {
+                    submitFeedbackBtn.disabled = false;
+                    if (submitText) submitText.style.display = "block";
+                    if (loader) loader.style.display = "none";
+                }
+            });
+        }
     }
 });

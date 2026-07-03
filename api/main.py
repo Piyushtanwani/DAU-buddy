@@ -1,13 +1,14 @@
 import os
 import hashlib
 import secrets
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 import base64
 import urllib.parse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core import config
 from core.database import db_connection
@@ -173,7 +174,7 @@ def create_app() -> FastAPI:
             return {"api_key": raw_key, "role": assigned_role}
         except Exception as e:
             logger.error(f"Error generating key: {e}")
-            raise HTTPException(status_code=500, detail="Database error")
+            raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
     @app.post("/api/regenerate-key")
     @limiter.limit("5/minute")
@@ -197,6 +198,56 @@ def create_app() -> FastAPI:
             return {"api_key": raw_key, "role": role}
         except Exception as e:
             logger.error(f"Error regenerating key: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
+    security = HTTPBearer()
+
+    def get_current_user_from_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+        api_key = credentials.credentials
+        hashed_k = hash_key(api_key)
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (hashed_k,))
+                    row = cursor.fetchone()
+                    if row and row[0] == "Active":
+                        cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE hashed_key = %s", (hashed_k,))
+                        return {"role": row[1], "email": row[2]}
+        except Exception as e:
+            logger.error(f"Auth Error: {e}")
+        
+        raise HTTPException(status_code=401, detail="Invalid, inactive, or expired API key")
+
+    class FeedbackRequest(BaseModel):
+        category: str = Field(..., max_length=100)
+        subject: str = Field(..., max_length=200)
+        description: str = Field(..., max_length=2000)
+        priority: str = Field(default="Medium", max_length=20)
+
+    @app.post("/api/feedback")
+    @limiter.limit("5/minute")
+    def submit_feedback(request: Request, req: FeedbackRequest, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user_from_api_key)):
+        from core.email_service import send_feedback_email_async
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO feedback (user_email, role, category, subject, description, priority, status)
+                        VALUES (%s, %s, %s, %s, %s, %s, 'Open')
+                    """, (user["email"], user["role"], req.category, req.subject, req.description, req.priority))
+            
+            # Send Email Asynchronously
+            background_tasks.add_task(
+                send_feedback_email_async,
+                user_email=user["email"],
+                role=user["role"],
+                category=req.category,
+                subject=req.subject,
+                description=req.description
+            )
+            return {"status": "success", "message": "Feedback submitted successfully."}
+        except Exception as e:
+            logger.error(f"Feedback Error: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
     @app.get("/authorize")

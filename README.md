@@ -1,18 +1,19 @@
 # DAU Buddy MCP Server
 
-A unified MCP platform providing AI assistants with structured access to DA-IICT faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.
+A unified MCP platform providing AI assistants with structured access to DAU faculty, staff, library, timetable, academic calendar, and scholars data through PostgreSQL-backed retrieval services.
 
 ## Features
 
 - **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
-- **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly with the official DA-IICT directory.
-- **Library OPAC Tools**: Instantly search the DA-IICT library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC.
+- **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly with the official DAU directory.
+- **Library OPAC Tools**: Instantly search the DAU library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC.
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
-- **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DA-IICT sources.
+- **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DAU sources.
+- **User Feedback System**: Built-in feedback form allowing users to submit bug reports, feature requests, and suggestions. Automatically sends beautifully formatted HTML emails to administrators asynchronously.
 - **Full-Text Search**: Powered by PostgreSQL tsvector, `websearch_to_tsquery`, and GIN indexes for fast, relevance-ranked retrieval across institutional datasets.
-- **Secure Authentication**: All endpoints are secured by an ASGI authentication middleware that verifies API keys stored in the database.
-- **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DA-IICT email upon Google Sign-In.
+- **Secure Authentication**: All endpoints (including the Feedback API) are secured by an ASGI authentication middleware that verifies API keys and enforces rate limits.
+- **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DAU email upon Google Sign-In.
 
 ## Architecture
 
@@ -25,12 +26,12 @@ Claude / Cursor
         ▼
    FastMCP SSE Application
         │
- ┌──────┼──────────┬──────────┬──────────┬─────────┐
- │      │          │          │          │         │
-Faculty Staff   Library   Timetable  Calendar   Scholar
-Service Service Service   Service    Service    Service
- │      │          │          │          │         │
- └──────────── PostgreSQL (Local) ─────────────────┘
+  ┌──────┼──────────┬──────────┬──────────┬─────────┬─────────┐
+  │      │          │          │          │         │         │
+Faculty Staff   Library   Timetable  Calendar  Scholar   Feedback
+Service Service Service   Service    Service   Service   Service
+  │      │          │          │          │         │         │
+  └──────────── PostgreSQL (Local) ───────────────────────────┘
 ```
 
 ## Tech Stack
@@ -49,7 +50,8 @@ MCP Project/
 ├── core/                       # Shared infrastructure layer
 │   ├── config.py               # Environment loading, logging factory
 │   ├── database.py             # Thread-safe PostgreSQL connection pool
-│   └── schemas.py              # Shared Pydantic models
+│   ├── schemas.py              # Shared Pydantic models
+│   └── email_service.py        # Asynchronous HTML email dispatch
 │
 ├── data/                       # Seed data files
 │
@@ -115,13 +117,20 @@ First, create your environment variable file by copying the template:
 cp .env.example .env
 ```
 
-Open `.env` and fill in your PostgreSQL connection details. Make sure they match your local PostgreSQL credentials:
+Open `.env` and fill in your PostgreSQL connection details and SMTP configurations for the Feedback system:
 ```ini
 DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_NAME=daiict_db
 DB_USER=postgres
 DB_PASSWORD=your-postgresql-password
+
+# Email Configuration (Feedback System)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_sender_email@gmail.com
+SMTP_PASSWORD=your_app_password
+FEEDBACK_RECIPIENT_EMAILS=admin1@domain.com,admin2@domain.com
 ```
 
 ### 2. Install Python Dependencies
@@ -155,6 +164,9 @@ pip install -r requirements.txt
    ```bash
    psql -U postgres -d daiict_db -f scripts/init_db.sql
    ```
+   > **Note for Windows Users:** If you get a `'psql' is not recognized` error, you can either:
+   > 1. Open **pgAdmin**, connect to `daiict_db`, open the Query Tool, paste the contents of `scripts/init_db.sql`, and execute it.
+   > 2. Or, add your PostgreSQL `bin` folder (e.g., `C:\Program Files\PostgreSQL\15\bin`) to your system's PATH.
 
 3. **Seed the Data:**
    Run the individual Python scripts provided in the `scripts/` folder to populate your database with real data:
@@ -178,7 +190,7 @@ python -m uvicorn api.main:create_app --factory --host 127.0.0.1 --port 8001
 
 Once running:
 1. Open **[http://127.0.0.1:8001/](http://127.0.0.1:8001/)** in your browser.
-2. Sign in securely using your DA-IICT Google account.
+2. Sign in securely using your DAU Google account.
 3. The dashboard will automatically assign your role (Student, Faculty, or Staff) and generate your personal API key.
 4. Use the 1-click copy feature to grab your ready-to-use configuration snippet.
 

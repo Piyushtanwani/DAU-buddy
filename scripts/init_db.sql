@@ -231,6 +231,21 @@ CREATE INDEX IF NOT EXISTS idx_doctoral_scholars_search_vector
     ON doctoral_scholars USING GIN (search_vector);
 
 -- =============================================================================
+-- Feedback Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS feedback (
+    id SERIAL PRIMARY KEY,
+    user_email VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    priority VARCHAR(20) DEFAULT 'Medium',
+    subject TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(30) DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================================================
 -- Done
 -- =============================================================================
-\echo '✅  daiict_db initialised successfully (faculty + staff + library + calendar + api_keys + doctoral_scholars tables ready).'
+\echo '✅  daiict_db initialised successfully (faculty + staff + library + calendar + api_keys + doctoral_scholars + feedback tables ready).'

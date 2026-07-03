@@ -40,21 +40,23 @@ class MCPAuthMiddleware:
             try:
                 with db_connection() as conn:
                     with conn.cursor() as cursor:
-                        cursor.execute("SELECT status, role FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (h_key,))
+                        cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (h_key,))
                         row = cursor.fetchone()
                         if row and row[0] == "Active":
                             cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE hashed_key = %s", (h_key,))
-                            return row[1]
+                            return row[1], row[2]
             except Exception:
                 pass
             return None
 
-        role = await run_in_threadpool(get_valid_role, hashed_k)
+        auth_data = await run_in_threadpool(get_valid_role, hashed_k)
 
-        if not role:
+        if not auth_data:
             return await send_unauthorized("Invalid, inactive, or expired API key")
 
+        role, email = auth_data
         scope["user_role"] = role
+        scope["user_email"] = email
         user_role_var.set(role)
 
         return await self.app(scope, receive, send)
