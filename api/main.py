@@ -234,11 +234,14 @@ def create_app() -> FastAPI:
                     cursor.execute("""
                         INSERT INTO feedback (user_email, role, category, subject, description, priority, status)
                         VALUES (%s, %s, %s, %s, %s, %s, 'Open')
+                        RETURNING id
                     """, (user["email"], user["role"], req.category, req.subject, req.description, req.priority))
+                    feedback_id = cursor.fetchone()[0]
             
             # Send Email Asynchronously
             background_tasks.add_task(
                 send_feedback_email_async,
+                feedback_id=feedback_id,
                 user_email=user["email"],
                 role=user["role"],
                 category=req.category,

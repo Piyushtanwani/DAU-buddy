@@ -19,7 +19,7 @@ if SMTP_PASSWORD:
     SMTP_PASSWORD = SMTP_PASSWORD.replace(" ", "")
 FEEDBACK_RECIPIENT_EMAILS = os.getenv("FEEDBACK_RECIPIENT_EMAILS", "")
 
-def _send_feedback_email_sync(user_email: str, role: str, category: str, subject: str, description: str):
+def _send_feedback_email_sync(feedback_id: int, user_email: str, role: str, category: str, subject: str, description: str):
     if not SMTP_USERNAME or not SMTP_PASSWORD or not FEEDBACK_RECIPIENT_EMAILS:
         logger.warning("SMTP credentials or recipients not set. Skipping email notification.")
         return
@@ -54,8 +54,8 @@ Submitted At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     safe_subject = html.escape(subject)
     safe_description = html.escape(description)
 
-    # Generate random feedback ID
-    feedback_id = f"#{random.randint(1000, 9999)}"
+    # Format feedback ID
+    feedback_id_str = f"#{feedback_id}"
     submission_time = datetime.now().strftime('%d %b %Y, %I:%M %p')
 
     # Determine category badge color
@@ -86,7 +86,7 @@ Submitted At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; width: 30%; color: #6b7280; font-weight: 600; font-size: 14px;">Feedback ID</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 15px; font-weight: 600;">{feedback_id}</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 15px; font-weight: 600;">{feedback_id_str}</td>
               </tr>
               <tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6b7280; font-weight: 600; font-size: 14px;">Submitted At</td>
@@ -142,6 +142,6 @@ Submitted At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     except Exception as e:
         logger.error(f"Failed to send feedback email: {e}")
 
-async def send_feedback_email_async(user_email: str, role: str, category: str, subject: str, description: str):
+async def send_feedback_email_async(feedback_id: int, user_email: str, role: str, category: str, subject: str, description: str):
     """Sends the feedback email in a background thread to prevent blocking the API request."""
-    await run_in_threadpool(_send_feedback_email_sync, user_email, role, category, subject, description)
+    await run_in_threadpool(_send_feedback_email_sync, feedback_id, user_email, role, category, subject, description)
