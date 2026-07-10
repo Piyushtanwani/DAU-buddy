@@ -1885,9 +1885,11 @@ a {
         box-sizing: border-box !important;
     }
 
-    .api-welcome-card>div:first-child {
+    .api-welcome-card>div:first-child,
+    .api-welcome-card>div:first-child>div {
         flex-direction: column !important;
         align-items: flex-start !important;
+        gap: 10px !important;
     }
 
     .api-key-row {
@@ -1975,7 +1977,8 @@ a {
 }
 
 /* ── Feedback Modal & Toast Styles ───────────────────────────────────────── */
-.nav-feedback-btn:hover {
+.nav-feedback-btn:hover,
+.nav-docs-btn:hover {
     background: rgba(15, 59, 115, 0.05) !important;
 }
 

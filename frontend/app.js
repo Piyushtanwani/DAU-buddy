@@ -231,17 +231,20 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentCredential = null;
     let currentEmail = null;
 
-    async function showWelcomeScreen(name, email, picture, credential = null, cachedKey = null) {
+    async function showWelcomeScreen(name, email, picture, credential = null, cachedKey = null, autoShowDashboard = true) {
         currentEmail = email;
         if (credential) currentCredential = credential;
 
-        // Hide landing page and login overlay
-        const landingView = document.getElementById("landing-view");
-        if (landingView) landingView.style.display = "none";
+        if (autoShowDashboard) {
+            // Hide landing page and login overlay
+            const landingView = document.getElementById("landing-view");
+            if (landingView) landingView.style.display = "none";
 
-        loginOverlay.style.opacity = "0";
-        loginOverlay.style.display = "none";
-        appContainer.style.display = "block";
+            loginOverlay.style.opacity = "0";
+            loginOverlay.style.display = "none";
+            appContainer.style.display = "block";
+            sessionStorage.setItem("dau_buddy_view", "dashboard");
+        }
 
         welcomeName.textContent = name || "User"; // Use block layout for robust scrolling
 
@@ -328,6 +331,25 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         }
     }
+    // Handle URL parameters for view routing from external pages (like docs.html)
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    if (viewParam === 'landing' || viewParam === 'dashboard') {
+        sessionStorage.setItem("dau_buddy_view", viewParam);
+        // Clean up the URL so refresh works normally
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (viewParam === 'login') {
+        sessionStorage.setItem("dau_buddy_view", "landing");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Wait just a tiny bit for the UI to be ready
+        setTimeout(() => {
+            const loginOverlay = document.getElementById("login-overlay");
+            if (loginOverlay) {
+                loginOverlay.style.display = "flex";
+                setTimeout(() => loginOverlay.style.opacity = "1", 10);
+            }
+        }, 100);
+    }
 
     // Check if user is already logged in
     const storedSession = localStorage.getItem("dau_buddy_auth");
@@ -335,8 +357,18 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const authData = JSON.parse(storedSession);
             if (authData.email && authData.credential) {
-                // Valid session exists, bypass login
-                showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, authData.api_key);
+                // Determine which view to show based on last state
+                const currentView = sessionStorage.getItem("dau_buddy_view");
+                const shouldShowDashboard = (currentView === "dashboard");
+
+                // Valid session exists, configure UI
+                showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, authData.api_key, shouldShowDashboard);
+                
+                // Update landing page buttons to indicate they lead to the dashboard
+                const btnSignIn = document.getElementById("nav-signin-btn");
+                const btnGetStarted = document.getElementById("hero-get-started-btn");
+                if (btnSignIn) btnSignIn.textContent = "Dashboard";
+                if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
             }
         } catch (e) {
             console.error("Invalid auth session data", e);
@@ -362,6 +394,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     credential: response.credential
                 }));
                 loginError.style.display = "none";
+                
+                // Update landing page buttons immediately
+                const btnSignIn = document.getElementById("nav-signin-btn");
+                const btnGetStarted = document.getElementById("hero-get-started-btn");
+                if (btnSignIn) btnSignIn.textContent = "Dashboard";
+                if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
 
                 // Fade out overlay
                 loginOverlay.style.opacity = "0";
@@ -384,10 +422,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
             localStorage.removeItem("dau_buddy_auth");
+            sessionStorage.removeItem("dau_buddy_view");
             appContainer.style.display = "none";
 
             const landingView = document.getElementById("landing-view");
             if (landingView) landingView.style.display = "block";
+
+            // Revert landing page buttons back to original text
+            const btnSignIn = document.getElementById("nav-signin-btn");
+            const btnGetStarted = document.getElementById("hero-get-started-btn");
+            if (btnSignIn) btnSignIn.textContent = "Sign In";
+            if (btnGetStarted) btnGetStarted.textContent = "Access MCP Server";
 
             loginOverlay.style.opacity = "1";
             loginOverlay.style.display = "flex";
@@ -398,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (copyKeyBtn) {
         copyKeyBtn.addEventListener("click", () => {
             const key = apiKeyInput.value;
-            if (key && key !== "Generating..." && key !== "Error generating key.") {
+            if (key && !key.includes("Please") && !key.includes("Loading")) {
                 navigator.clipboard.writeText(key).then(() => {
                     copyKeyBtn.textContent = "Copied!";
                     copyKeyBtn.style.background = "#10b981";
@@ -415,8 +460,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnGetStarted = document.getElementById("hero-get-started-btn");
     const btnSignIn = document.getElementById("nav-signin-btn");
     const btnCloseLogin = document.getElementById("close-login-btn");
+    const homeBtn = document.getElementById("home-btn");
+
+    if (homeBtn) {
+        homeBtn.addEventListener("click", () => {
+            appContainer.style.display = "none";
+            const landingView = document.getElementById("landing-view");
+            if (landingView) landingView.style.display = "block";
+            sessionStorage.setItem("dau_buddy_view", "landing");
+        });
+    }
 
     function openLoginModal() {
+        const storedSession = localStorage.getItem("dau_buddy_auth");
+        if (storedSession) {
+            try {
+                const authData = JSON.parse(storedSession);
+                if (authData.email && authData.credential) {
+                    // Already logged in, just switch back to dashboard
+                    const landingView = document.getElementById("landing-view");
+                    if (landingView) landingView.style.display = "none";
+                    appContainer.style.display = "block";
+                    sessionStorage.setItem("dau_buddy_view", "dashboard");
+                    return;
+                }
+            } catch (e) {}
+        }
+
         loginOverlay.style.display = "flex";
         setTimeout(() => loginOverlay.style.opacity = "1", 10);
     }

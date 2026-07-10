@@ -24,8 +24,9 @@
                 <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy</span>
             </div>
-            <div class="nav-links">
-                <a href="/">Back to Home</a>
+            <div class="nav-links" style="display: flex; gap: 16px; align-items: center;">
+                <a href="/?view=landing">Back to Home</a>
+                <a href="/?view=login" id="docs-login-btn" class="nav-signin-btn" style="text-decoration: none; color: white !important;">Access MCP Server</a>
             </div>
         </nav>
 
@@ -302,6 +303,23 @@ Service Service Service   Service    Service    Service
                 });
             });
         </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const btn = document.getElementById("docs-login-btn");
+            if (btn) {
+                const storedSession = localStorage.getItem("dau_buddy_auth");
+                if (storedSession) {
+                    try {
+                        const authData = JSON.parse(storedSession);
+                        if (authData.email && authData.credential) {
+                            btn.textContent = "Go to Dashboard";
+                            btn.href = "/?view=dashboard";
+                        }
+                    } catch(e) {}
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
