@@ -200,10 +200,21 @@ document.addEventListener("DOMContentLoaded", () => {
             cursorConfigCode.textContent = cursorText;
         }
 
-        // OpenCode (HTTP/SSE) - Assumed identical to Cursor for now
+        // OpenCode (HTTP/SSE) - Uses "remote" type
+        const opencodeText = `{
+  "mcpServers": {
+    "DAU Buddy": {
+      "type": "remote",
+      "url": "${baseUrl}",
+      "headers": {
+        "Authorization": "Bearer ${key}"
+      }
+    }
+  }
+}`;
         const opencodeConfigCode = document.getElementById("opencode-config-code");
         if (opencodeConfigCode) {
-            opencodeConfigCode.textContent = cursorText;
+            opencodeConfigCode.textContent = opencodeText;
         }
 
         const connectorsApiKeyDisplay = document.getElementById("connectors-api-key-display");

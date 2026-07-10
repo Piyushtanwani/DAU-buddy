@@ -68,5 +68,9 @@ def _shutdown_pool() -> None:
     """Close all pooled connections cleanly on process exit."""
     logger.info("Shutting down PostgreSQL Connection Pool...")
     if "_connection_pool" in globals() and _connection_pool is not None:
-        _connection_pool.closeall()
-        logger.info("PostgreSQL Connection Pool shut down cleanly.")
+        try:
+            if not getattr(_connection_pool, 'closed', False):
+                _connection_pool.closeall()
+                logger.info("PostgreSQL Connection Pool shut down cleanly.")
+        except Exception as e:
+            logger.warning(f"Error shutting down PostgreSQL Connection Pool: {e}")

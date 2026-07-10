@@ -145,8 +145,8 @@ Service Service Service   Service    Service    Service
 }</code></pre>
                         </div>
 
-                        <h4 style="color: #222; margin-top: 32px;">2. Cursor / Windsurf / OpenCode (Native HTTP/SSE)</h4>
-                        <p style="color: #555; line-height: 1.6;">Cursor, Windsurf, and OpenCode support direct SSE network
+                        <h4 style="color: #222; margin-top: 32px;">2. Cursor / Windsurf (Native HTTP/SSE)</h4>
+                        <p style="color: #555; line-height: 1.6;">Cursor and Windsurf support direct SSE network
                             connections. You only need to supply the connection URL, the explicit type flag, and your
                             API key header:</p>
                         <div class="code-block-wrapper"
@@ -155,6 +155,23 @@ Service Service Service   Service    Service    Service
   "mcpServers": {
     "DAU Buddy": {
       "type": "sse",
+      "url": "http://127.0.0.1:8001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer dau_sk_YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}</code></pre>
+                        </div>
+                        
+                        <h4 style="color: #222; margin-top: 32px;">3. OpenCode (Remote HTTP/SSE)</h4>
+                        <p style="color: #555; line-height: 1.6;">OpenCode connects using the <strong>remote</strong> type flag:</p>
+                        <div class="code-block-wrapper"
+                            style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
+                            <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
+  "mcpServers": {
+    "DAU Buddy": {
+      "type": "remote",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
         "Authorization": "Bearer dau_sk_YOUR_API_KEY_HERE"
@@ -243,7 +260,7 @@ Service Service Service   Service    Service    Service
 
                     <footer
                         style="margin-top: 4rem; text-align: center; color: #888; font-size: 13px; border-top: 1px solid #eee; padding-top: 20px;">
-                        &copy; 2026 DA-IICT. All rights reserved.
+                        Made with ❤️ by DAU Students
                     </footer>
                 </main>
             </div>
@@ -274,6 +291,15 @@ Service Service Service   Service    Service    Service
                 }, observerOptions);
 
                 sections.forEach(section => observer.observe(section));
+                
+                // Dynamically update the SSE URL to match the current domain
+                const codes = document.querySelectorAll('code');
+                const dynamicUrl = window.location.origin + "/mcp/sse";
+                codes.forEach(code => {
+                    if (code.innerHTML.includes("127.0.0.1:8001")) {
+                        code.innerHTML = code.innerHTML.replace(/http:\/\/127\.0\.0\.1:8001\/mcp\/sse/g, dynamicUrl);
+                    }
+                });
             });
         </script>
 </body>

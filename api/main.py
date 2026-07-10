@@ -32,12 +32,22 @@ from slowapi.errors import RateLimitExceeded
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
-class PayloadLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        cl = request.headers.get("content-length")
+class PayloadLimitMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        headers = dict(scope.get("headers", []))
+        cl = headers.get(b"content-length")
+        
         if cl and int(cl) > 100 * 1024:
-            return JSONResponse(status_code=413, content={"detail": "Payload too large"})
-        return await call_next(request)
+            response = JSONResponse(status_code=413, content={"detail": "Payload too large"})
+            return await response(scope, receive, send)
+            
+        await self.app(scope, receive, send)
 
 logger = config.get_logger("api.main")
 CLIENT_ID = "590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
