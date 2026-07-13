@@ -163,10 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const claudeText = `{
   "mcpServers": {
     "DAU Buddy": {
-      "command": "cmd",
+      "command": "npx",
       "args": [
-        "/c",
-        "npx",
         "-y",
         "mcp-remote",
         "${baseUrl}",

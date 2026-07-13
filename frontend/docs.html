@@ -125,10 +125,8 @@ Service Service Service   Service    Service    Service
                             <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
   "mcpServers": {
     "DAU Buddy": {
-      "command": "cmd",
+      "command": "npx",
       "args": [
-        "/c",
-        "npx",
         "-y",
         "mcp-remote",
         "http://127.0.0.1:8001/mcp/sse",
@@ -139,7 +137,7 @@ Service Service Service   Service    Service    Service
         "Authorization:${AUTH_HEADER}"
       ],
       "env": {
-        "AUTH_HEADER": "Bearer dau_sk_YOUR_API_KEY_HERE"
+        "AUTH_HEADER": "Bearer dau_sk_2494b7668f981ee1d9015eaeea53fb7d"
       }
     }
   }

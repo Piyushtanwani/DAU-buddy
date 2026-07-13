@@ -213,10 +213,8 @@
                             style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
   "mcpServers": {
     "DAU Buddy": {
-      "command": "cmd",
+      "command": "npx",
       "args": [
-        "/c",
-        "npx",
         "-y",
         "mcp-remote",
         "http://127.0.0.1:8001/mcp/sse",
@@ -227,7 +225,7 @@
         "Authorization:${AUTH_HEADER}"
       ],
       "env": {
-        "AUTH_HEADER": "Bearer dau_sk_your_api_key_here"
+        "AUTH_HEADER": "Bearer dau_sk_2494b7668f981ee1d9015eaeea53fb7d"
       }
     }
   }
