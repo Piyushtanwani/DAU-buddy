@@ -5,14 +5,7 @@
 --   psql -U postgres -f scripts/init_db.sql
 -- =============================================================================
 
--- 1. Create the database (idempotent via DO block)
-SELECT 'CREATE DATABASE daiict_db'
-WHERE NOT EXISTS (
-    SELECT FROM pg_database WHERE datname = 'daiict_db'
-)\gexec
 
--- 2. Connect to the new database
-\connect daiict_db
 
 -- =============================================================================
 -- Faculty Table
@@ -184,6 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_holiday_calendar_search_vector
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS api_keys (
     email VARCHAR(255) PRIMARY KEY,
+    key_prefix VARCHAR(14),
     hashed_key VARCHAR(255) NOT NULL,
     role VARCHAR(50) DEFAULT 'User',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -196,6 +190,10 @@ CREATE TABLE IF NOT EXISTS api_keys (
 ALTER TABLE api_keys
     ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
 
+ALTER TABLE api_keys 
+    ADD COLUMN IF NOT EXISTS key_prefix VARCHAR(14);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);
 
 -- =============================================================================
@@ -245,7 +243,3 @@ CREATE TABLE IF NOT EXISTS feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =============================================================================
--- Done
--- =============================================================================
-\echo '✅  daiict_db initialised successfully (faculty + staff + library + calendar + api_keys + doctoral_scholars + feedback tables ready).'

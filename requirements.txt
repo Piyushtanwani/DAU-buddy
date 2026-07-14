@@ -16,3 +16,7 @@ pandas>=2.0.0
 openpyxl>=3.1.0
 google-auth
 slowapi
+node
+npx
+
+# Note: Node.js (with npx) is required on the system for Claude Desktop configurations.
