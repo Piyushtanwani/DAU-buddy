@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_library_books_acc_no
 -- =============================================================================
 -- Academic Calendar Table
 -- =============================================================================
-DROP TABLE IF EXISTS academic_calendar CASCADE;
+
 CREATE TABLE IF NOT EXISTS academic_calendar (
     id              SERIAL PRIMARY KEY,
     event_name      TEXT NOT NULL,
@@ -152,7 +152,7 @@ CREATE INDEX IF NOT EXISTS idx_academic_calendar_search_vector
 -- =============================================================================
 -- Holiday Calendar Table
 -- =============================================================================
-DROP TABLE IF EXISTS holiday_calendar CASCADE;
+
 CREATE TABLE IF NOT EXISTS holiday_calendar (
     id              SERIAL PRIMARY KEY,
     holiday_date    DATE,
@@ -199,7 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);
 -- =============================================================================
 -- Doctoral Scholars Table
 -- =============================================================================
-DROP TABLE IF EXISTS doctoral_scholars CASCADE;
+
 CREATE TABLE IF NOT EXISTS doctoral_scholars (
     id              SERIAL PRIMARY KEY,
     name            VARCHAR(255) NOT NULL,
