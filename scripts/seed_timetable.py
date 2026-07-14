@@ -46,9 +46,14 @@ def resolve_faculty(faculty_str, mapping):
 def parse_time(time_str):
     if not isinstance(time_str, str):
         return None, None
-    parts = time_str.replace(' ', '').split('-')
+    parts = time_str.split('-')
     if len(parts) == 2:
-        return parts[0] + ':00', parts[1] + ':00'
+        try:
+            start = pd.to_datetime(parts[0].strip()).strftime('%H:%M:%S')
+            end = pd.to_datetime(parts[1].strip()).strftime('%H:%M:%S')
+            return start, end
+        except Exception:
+            return None, None
     return None, None
 
 def seed_lectures(conn, faculty_mapping):
@@ -98,7 +103,10 @@ def seed_lectures(conn, faculty_mapping):
         batch = current_batch
         
         for day, offset in day_offsets.items():
-            course_code = row[offset]
+            if offset >= len(row):
+                continue
+                
+            course_code = row.get(offset)
             if pd.notna(course_code) and isinstance(course_code, str):
                 course_code = course_code.strip()
                 if course_code in invalid_codes:

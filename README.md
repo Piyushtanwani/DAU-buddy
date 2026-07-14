@@ -292,3 +292,8 @@ The local PostgreSQL database is actively seeded with:
 | **Timetable Slots** | 1,200+ | Daily Lectures, Labs, and Tutorials |
 | **Academic Calendar**| 120+ | Semester events and public holidays |
 | **API Keys** | N/A | Securely managed via `init_db.sql` |
+
+## Prerequisites
+- Python 3.10+
+- PostgreSQL
+- Node.js (required for Claude Desktop configuration via npx)

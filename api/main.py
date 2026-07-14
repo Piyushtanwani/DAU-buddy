@@ -57,6 +57,10 @@ limiter = Limiter(key_func=get_remote_address)
 def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
+def split_key(raw_key: str) -> tuple[str, str]:
+    prefix = raw_key[:14]
+    return prefix, hash_key(raw_key)
+
 def verify_google_token(credential: str) -> str:
     try:
         idinfo = id_token.verify_oauth2_token(credential, cached_google_request, CLIENT_ID)
@@ -118,10 +122,10 @@ def create_app() -> FastAPI:
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT status, created_at, last_used, role FROM api_keys WHERE email = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (email,))
+                    cursor.execute("SELECT status, created_at, last_used, role, key_prefix FROM api_keys WHERE email = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (email,))
                     row = cursor.fetchone()
                     if row:
-                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": row[3]}
+                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": row[3], "key_prefix": row[4]}
                     
                     # Calculate role if no key exists
                     local_part = email.split('@')[0]
@@ -167,20 +171,21 @@ def create_app() -> FastAPI:
                 logger.error(f"Error checking directories for role assignment: {e}")
 
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
-        hashed_k = hash_key(raw_key)
+        key_prefix, hashed_k = split_key(raw_key)
         
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
-                        INSERT INTO api_keys (email, hashed_key, role, status, expires_at)
-                        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '90 days')
+                        INSERT INTO api_keys (email, key_prefix, hashed_key, role, status, expires_at)
+                        VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '90 days')
                         ON CONFLICT (email) DO UPDATE 
-                        SET hashed_key = EXCLUDED.hashed_key,
+                        SET key_prefix = EXCLUDED.key_prefix,
+                            hashed_key = EXCLUDED.hashed_key,
                             status = 'Active',
                             created_at = CURRENT_TIMESTAMP,
                             expires_at = CURRENT_TIMESTAMP + INTERVAL '90 days'
-                    """, (email, hashed_k, assigned_role, 'Active'))
+                    """, (email, key_prefix, hashed_k, assigned_role, 'Active'))
             return {"api_key": raw_key, "role": assigned_role}
         except Exception as e:
             logger.error(f"Error generating key: {e}")
@@ -192,17 +197,17 @@ def create_app() -> FastAPI:
         email = verify_google_token(req.credential)
             
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
-        hashed_k = hash_key(raw_key)
+        key_prefix, hashed_k = split_key(raw_key)
         
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
                         UPDATE api_keys 
-                        SET hashed_key = %s, status = 'Active', created_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP + INTERVAL '90 days'
+                        SET key_prefix = %s, hashed_key = %s, status = 'Active', created_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP + INTERVAL '90 days'
                         WHERE email = %s
                         RETURNING role
-                    """, (hashed_k, email))
+                    """, (key_prefix, hashed_k, email))
                     row = cursor.fetchone()
                     role = row[0] if row else 'User'
             return {"api_key": raw_key, "role": role}
@@ -214,13 +219,19 @@ def create_app() -> FastAPI:
 
     def get_current_user_from_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
         api_key = credentials.credentials
+        key_prefix = api_key[:14]
         hashed_k = hash_key(api_key)
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (hashed_k,))
+                    cursor.execute(
+                        "SELECT status, role, email, hashed_key FROM api_keys "
+                        "WHERE (key_prefix = %s OR (key_prefix IS NULL AND hashed_key = %s)) "
+                        "AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", 
+                        (key_prefix, hashed_k)
+                    )
                     row = cursor.fetchone()
-                    if row and row[0] == "Active":
+                    if row and row[0] == "Active" and secrets.compare_digest(row[3], hashed_k):
                         cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE hashed_key = %s", (hashed_k,))
                         return {"role": row[1], "email": row[2]}
         except Exception as e:

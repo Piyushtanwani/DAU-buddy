@@ -42,7 +42,8 @@
         <header class="landing-hero">
             <div class="hero-content">
                 <h1>DAU Buddy <br><span class="hero-highlight">MCP Server</span></h1>
-                <p>Securely query the university information right from your favorite AI portals like Cursor, Windsurf, OpenCode, or
+                <p>Securely query the university information right from your favorite AI portals like Cursor, Windsurf,
+                    OpenCode, or
                     Claude Desktop. Role-based access ensures data privacy.</p>
                 <div class="hero-actions">
                     <button class="hero-btn primary" id="hero-get-started-btn">Access MCP Server</button>
@@ -114,21 +115,26 @@
     <div class="app-container" id="app-container"
         style="display: none; background-color: #0f3b73; min-height: 100vh; overflow-y: auto; box-sizing: border-box; text-align: left; color: #333; font-family: 'Open Sans', sans-serif;">
         <div class="top-accent-bar"></div>
-        
+
         <!-- Dashboard Navigation -->
-        <nav class="app-nav" style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;">
-            <div style="display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;">
+        <nav class="app-nav"
+            style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;">
+            <div
+                style="display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;">
                 <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy Portal</span>
             </div>
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
-                <button id="home-btn" class="nav-docs-btn" style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                <button id="home-btn" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-house"></i> Home
                 </button>
-                <button onclick="window.location.href='docs.html'" class="nav-docs-btn" style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                <button onclick="window.location.href='docs.html'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-book"></i> Docs
                 </button>
-                <button id="feedback-btn" class="nav-feedback-btn" style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                <button id="feedback-btn" class="nav-feedback-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                     <i class="fa-regular fa-comment-dots"></i> Feedback
                 </button>
                 <button id="logout-btn" class="nav-signout-btn">
@@ -139,13 +145,16 @@
 
         <div class="welcome-card api-welcome-card"
             style="margin: 0 auto; padding: 40px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 800px; width: 100%;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 24px;">
+            <div
+                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 24px;">
                 <div style="display: flex; align-items: center; gap: 20px;">
                     <img id="welcome-avatar" src="" referrerpolicy="no-referrer"
                         style="width: 64px; height: 64px; border-radius: 50%; display: none; border: 2px solid #0f3b73;">
                     <i id="welcome-icon" class="fa-solid fa-circle-check" style="font-size: 48px; color: #10b981;"></i>
                     <div>
-                        <h1 id="welcome-name" style="font-family: 'Open Sans', sans-serif; margin: 0 0 4px 0; font-size: 28px; color: #111;">Welcome!</h1>
+                        <h1 id="welcome-name"
+                            style="font-family: 'Open Sans', sans-serif; margin: 0 0 4px 0; font-size: 28px; color: #111;">
+                            Welcome!</h1>
                         <p id="welcome-email" style="color: #555; margin: 0; font-size: 15px;">Authenticated via
                             DA-IICT OAuth.</p>
                         <span id="user-role-badge"
@@ -166,8 +175,9 @@
                 <div class="api-key-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
                     <input type="text" id="api-key-input" readonly value="Loading..."
                         style="flex: 1; padding: 12px 16px; background: #ffffff; border: 1px solid #ccc; color: #333; border-radius: 4px; font-family: monospace; font-size: 14px; outline: none;">
-                    <button id="regenerate-key-btn" class="key-btn key-btn-danger" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Key</button>
-                    <button id="copy-key-btn" class="key-btn key-btn-primary" style="padding: 10px 16px; background: #0f3b73; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy</button>
+                    <button id="regenerate-key-btn" class="key-btn key-btn-danger"
+                        style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate
+                        Key</button>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <p style="font-size: 12px; color: #666; margin: 0;">This key acts as your password. Do not share
@@ -179,16 +189,14 @@
                 style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
                 <div class="api-tabs-header"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="margin: 0; font-size: 16px; font-family: 'Open Sans', sans-serif; color: #111;">Integration Configuration
+                    <h3 style="margin: 0; font-size: 16px; font-family: 'Open Sans', sans-serif; color: #111;">
+                        Integration Configuration
                     </h3>
                     <!-- Tab Buttons -->
                     <div class="api-tabs-container"
                         style="display: flex; gap: 4px; background: #eef2f6; padding: 4px; border-radius: 6px; border: 1px solid #d0d7de;">
-                        <button id="tab-connectors"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Connectors
-                            (Global)</button>
                         <button id="tab-claude"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
                             Desktop (HTTP/SSE)</button>
                         <button id="tab-cursor"
                             style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Cursor
@@ -200,7 +208,7 @@
                 </div>
 
                 <!-- Claude Desktop Content -->
-                <div id="content-claude" style="display: none;">
+                <div id="content-claude" style="display: block;">
                     <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this to
                         <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network
                         via a memory-loaded proxy, with <strong>no local file paths or environment variables
@@ -236,7 +244,8 @@
                 <!-- Cursor Content -->
                 <div id="content-cursor" style="display: none;">
                     <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
-                        Cursor, Windsurf, or OpenCode MCP settings to connect over the network using Server-Sent Events (SSE).
+                        Cursor, Windsurf, or OpenCode MCP settings to connect over the network using Server-Sent Events
+                        (SSE).
                         <strong>Requires the backend server to be running.</strong>
                     </p>
                     <div style="position: relative;">
@@ -280,35 +289,6 @@
 }</code></pre>
                     </div>
                 </div>
-
-                <!-- Connectors Content -->
-                <div id="content-connectors" style="display: block;">
-                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Claude has a feature to connect MCP server with connectors. You can connect globally using these details:
-                    </p>
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Name of MCP server</div>
-                                <div>DAU Buddy</div>
-                            </div>
-                            <button id="copy-conn-name" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        </div>
-                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">URL of MCP server</div>
-                                <div id="connectors-url-display">https://dau-buddy.onrender.com/mcp/sse</div>
-                            </div>
-                            <button id="copy-conn-url" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        </div>
-                        <div style="background: #ffffff; padding: 12px 16px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 13px; color: #333; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">API Key Token</div>
-                                <div id="connectors-api-key-display" style="word-break: break-all;">Loading...</div>
-                            </div>
-                            <button id="copy-conn-key" style="padding: 4px 8px; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -321,7 +301,8 @@
                 <button id="close-feedback-btn" class="close-feedback-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="feedback-modal-body">
-                <p style="font-size: 14px; color: #475569; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">Help us improve DAU Buddy by reporting bugs, requesting features, or sharing suggestions.</p>
+                <p style="font-size: 14px; color: #475569; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">Help
+                    us improve DAU Buddy by reporting bugs, requesting features, or sharing suggestions.</p>
                 <form id="feedback-form">
                     <div class="form-group">
                         <label for="feedback-category">Category <span style="color: red;">*</span></label>
@@ -339,7 +320,8 @@
                     </div>
                     <div class="form-group">
                         <label for="feedback-description">Description <span style="color: red;">*</span></label>
-                        <textarea id="feedback-description" rows="5" placeholder="Please provide detailed information..." required maxlength="1000"></textarea>
+                        <textarea id="feedback-description" rows="5"
+                            placeholder="Please provide detailed information..." required maxlength="1000"></textarea>
                         <div class="char-counter"><span id="char-count">0</span>/1000</div>
                     </div>
                     <div class="feedback-modal-footer">
@@ -358,6 +340,33 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script src="app.js?v=15"></script>
+    <div id="new-key-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+        <div
+            style="background: white; border-radius: 8px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 20px; color: #111;">Your New API Key</h2>
+                <button id="close-new-key-modal"
+                    style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; line-height: 1;">&times;</button>
+            </div>
+            <div
+                style="background: #e0f2fe; color: #0369a1; padding: 12px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; border: 1px solid #bae6fd;">
+                <strong>Info:</strong> this API key is displayed only once, now. Therefore, copy and keep this key
+                somewhere safe but accessible. If you lose this key, you can generate a new one.
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="new-key-input" readonly value=""
+                    style="flex: 1; padding: 12px 16px; background: #f8f9fa; border: 1px solid #ccc; color: #333; border-radius: 4px; font-family: monospace; font-size: 14px; outline: none;">
+                <button id="copy-new-key-btn"
+                    style="padding: 10px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Copy</button>
+            </div>
+            <div style="text-align: right;">
+                <button id="done-new-key-btn"
+                    style="padding: 10px 20px; background: #0f3b73; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">I
+                    have copied my key</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
