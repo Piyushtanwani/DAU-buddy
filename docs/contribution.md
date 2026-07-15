@@ -23,15 +23,25 @@ Thank you for your interest in contributing! This guide covers local setup, codi
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/gamekeepers/dau-mcp-server.git
-cd dau-mcp-server
+git clone https://github.com/Piyushtanwani/mcp-server.git
+cd mcp-server
 ```
 
 ### 2. Virtual Environment
 
+It is highly recommended to use a virtual environment (`venv`).
+
+**For Windows (PowerShell):**
+```powershell
+python -m venv win_venv
+.\win_venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+**For Mac/Linux:**
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -44,11 +54,18 @@ cp .env.example .env
 Edit `.env` with your PostgreSQL credentials and SMTP settings:
 
 ```ini
-DB_HOST=localhost
+DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_NAME=daiict_db
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=your-postgresql-password
+
+# Email Configuration (Feedback System)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_sender_email@gmail.com
+SMTP_PASSWORD=your_app_password
+FEEDBACK_RECIPIENT_EMAILS=admin1@domain.com,admin2@domain.com
 ```
 
 ### 4. Initialize Database
@@ -133,7 +150,7 @@ docker run -p 8080:8080 --env-file .env dau-mcp-server
 - MCP tool docstrings follow this format:
 
   ```python
-  @tool
+  @mcp.tool()
   def my_tool(param: str) -> dict:
       """
       Short description of what the tool does.
