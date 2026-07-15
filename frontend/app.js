@@ -21,9 +21,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const regenerateBtn = document.getElementById("regenerate-key-btn");
     const configCode = document.getElementById("claude-config-code");
     const cursorConfigCode = document.getElementById("cursor-config-code");
-    const welcomeEmail = document.getElementById("welcome-email");
-    const welcomeAvatar = document.getElementById("welcome-avatar");
-    const userRoleBadge = document.getElementById("user-role-badge");
+    const dropdownName = document.getElementById("dropdown-name");
+    const dropdownEmail = document.getElementById("dropdown-email");
+    const dropdownAvatar = document.getElementById("dropdown-avatar");
+    const navProfileTrigger = document.getElementById("nav-profile-trigger");
+    const dropdownRole = document.getElementById("dropdown-role");
+    const profileDropdown = document.getElementById("profile-dropdown");
+    const profileContainer = document.getElementById("profile-container");
+
+    const landingProfileContainer = document.getElementById("landing-profile-container");
+    const landingProfileTrigger = document.getElementById("landing-profile-trigger");
+    const landingProfileDropdown = document.getElementById("landing-profile-dropdown");
+    const landingDropdownAvatar = document.getElementById("landing-dropdown-avatar");
+    const landingDropdownName = document.getElementById("landing-dropdown-name");
+    const landingDropdownEmail = document.getElementById("landing-dropdown-email");
+    const landingDropdownRole = document.getElementById("landing-dropdown-role");
+    const landingLogoutBtn = document.getElementById("landing-logout-btn");
 
 
     function setApiKeyValue(val) {
@@ -44,9 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
 
                 // ALWAYS update the role if the API provides it
-                if (userRoleBadge) {
+                if (dropdownRole) {
                     const role = data.role || "User";
-                    userRoleBadge.textContent = "Role: " + role;
+                    dropdownRole.textContent = role;
+                    if (landingDropdownRole) landingDropdownRole.textContent = role;
                     const authData = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
                     authData.role = role;
                     sessionStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
@@ -114,9 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 setApiKeyValue(maskedKey);
 
                 updateConfigSnippet(maskedKey);
-                if (userRoleBadge) {
+                if (dropdownRole) {
                     const role = data.role || "User";
-                    userRoleBadge.textContent = "Role: " + role;
+                    dropdownRole.textContent = role;
+                    if (landingDropdownRole) landingDropdownRole.textContent = role;
 
                     const updatedAuth = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
                     updatedAuth.role = role;
@@ -249,24 +264,27 @@ document.addEventListener("DOMContentLoaded", () => {
             sessionStorage.setItem("dau_buddy_view", "dashboard");
         }
 
-        welcomeName.textContent = name || "User"; // Use block layout for robust scrolling
-
+        let displayName = name || "User";
         if (name) {
             // If the display name is purely numeric (e.g. "2025 12063"), use the email local part instead
             const firstName = name.split(" ")[0];
-            const displayName = /^\d+$/.test(firstName) ? email.split("@")[0] : firstName;
-            welcomeName.textContent = `Welcome, ${displayName}!`;
+            displayName = /^\d+$/.test(firstName) ? email.split("@")[0] : firstName;
         }
-        welcomeEmail.textContent = email;
+        welcomeName.textContent = `Welcome, ${displayName}!`;
+        if (dropdownName) dropdownName.textContent = displayName;
+        if (dropdownEmail) dropdownEmail.textContent = email;
+        if (landingDropdownName) landingDropdownName.textContent = displayName;
+        if (landingDropdownEmail) landingDropdownEmail.textContent = email;
 
         if (picture) {
-            welcomeAvatar.src = picture;
-            welcomeAvatar.style.display = "block";
-            document.getElementById("welcome-icon").style.display = "none";
+            if (dropdownAvatar) dropdownAvatar.src = picture;
+            if (navProfileTrigger) navProfileTrigger.src = picture;
+            if (landingDropdownAvatar) landingDropdownAvatar.src = picture;
+            if (landingProfileTrigger) landingProfileTrigger.src = picture;
         }
 
         // Determine role synchronously from email
-        if (userRoleBadge && email) {
+        if (dropdownRole && email) {
             let role = "User";
             if (email.endsWith("@dau.ac.in")) {
                 const localPart = email.split("@")[0];
@@ -276,7 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     role = "Faculty/Staff";
                 }
             }
-            userRoleBadge.textContent = "Role: " + role;
+            dropdownRole.textContent = role;
+            if (landingDropdownRole) landingDropdownRole.textContent = role;
         }
 
         let activeKey = cachedKey;
@@ -289,8 +308,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Restore role if saved
             const authData = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
-            if (authData.role && userRoleBadge) {
-                userRoleBadge.textContent = "Role: " + authData.role;
+            if (authData.role && dropdownRole) {
+                dropdownRole.textContent = authData.role;
+                if (landingDropdownRole) landingDropdownRole.textContent = authData.role;
             }
 
             // Sync status/role in background if we have credential
@@ -320,7 +340,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             // Should not happen, but fallback
             setApiKeyValue("Please Login Again");
-            if (userRoleBadge) userRoleBadge.textContent = "";
+            if (dropdownRole) dropdownRole.textContent = "";
+            if (landingDropdownRole) landingDropdownRole.textContent = "";
         }
 
         if (regenerateBtn) {
@@ -366,7 +387,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Update landing page buttons to indicate they lead to the dashboard
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
-                if (btnSignIn) btnSignIn.textContent = "Dashboard";
+                if (btnSignIn) {
+                    btnSignIn.textContent = "Dashboard";
+                    if (landingProfileContainer) landingProfileContainer.style.display = "block";
+                }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
             }
         } catch (e) {
@@ -397,7 +421,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Update landing page buttons immediately
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
-                if (btnSignIn) btnSignIn.textContent = "Dashboard";
+                if (btnSignIn) {
+                    btnSignIn.textContent = "Dashboard";
+                    if (landingProfileContainer) landingProfileContainer.style.display = "block";
+                }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
 
                 // Fade out overlay
@@ -420,6 +447,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Logout handling
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
+            if (profileDropdown) profileDropdown.style.display = "none";
+            if (landingProfileDropdown) landingProfileDropdown.style.display = "none";
+            if (landingProfileContainer) landingProfileContainer.style.display = "none";
             sessionStorage.removeItem("dau_buddy_auth");
             sessionStorage.removeItem("dau_buddy_view");
             appContainer.style.display = "none";
@@ -430,14 +460,15 @@ document.addEventListener("DOMContentLoaded", () => {
             // Revert landing page buttons back to original text
             const btnSignIn = document.getElementById("nav-signin-btn");
             const btnGetStarted = document.getElementById("hero-get-started-btn");
-            if (btnSignIn) btnSignIn.textContent = "Sign In";
+            if (btnSignIn) {
+                btnSignIn.innerHTML = "Sign In";
+                if (landingProfileContainer) landingProfileContainer.style.display = "none";
+            }
             if (btnGetStarted) btnGetStarted.textContent = "Access MCP Server";
 
-            loginOverlay.style.opacity = "1";
-            loginOverlay.style.display = "flex";
+            window.history.replaceState({}, document.title, window.location.pathname);
         });
     }
-// Landing Page UI functionality
     const btnGetStarted = document.getElementById("hero-get-started-btn");
     const btnSignIn = document.getElementById("nav-signin-btn");
     const btnCloseLogin = document.getElementById("close-login-btn");
@@ -725,4 +756,64 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Profile Dropdown Toggle
+    if (navProfileTrigger && profileDropdown) {
+        navProfileTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (profileDropdown.style.display === "none") {
+                profileDropdown.style.display = "block";
+            } else {
+                profileDropdown.style.display = "none";
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!profileContainer.contains(e.target)) {
+                profileDropdown.style.display = "none";
+            }
+        });
+
+        const closeProfileBtn = document.getElementById("close-profile-btn");
+        if (closeProfileBtn) {
+            closeProfileBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                profileDropdown.style.display = "none";
+            });
+        }
+    }
+
+    // Landing Profile Dropdown Toggle
+    if (landingProfileTrigger && landingProfileDropdown) {
+        landingProfileTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (landingProfileDropdown.style.display === "none") {
+                landingProfileDropdown.style.display = "block";
+            } else {
+                landingProfileDropdown.style.display = "none";
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            if (landingProfileContainer && !landingProfileContainer.contains(e.target)) {
+                landingProfileDropdown.style.display = "none";
+            }
+        });
+
+        const landingCloseProfileBtn = document.getElementById("landing-close-profile-btn");
+        if (landingCloseProfileBtn) {
+            landingCloseProfileBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                landingProfileDropdown.style.display = "none";
+            });
+        }
+        
+        // Wire up the logout button in the landing dropdown
+        if (landingLogoutBtn && logoutBtn) {
+            landingLogoutBtn.addEventListener("click", () => {
+                logoutBtn.click(); // reuse existing logic
+            });
+        }
+    }
 });

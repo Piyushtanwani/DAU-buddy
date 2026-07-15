@@ -24,9 +24,68 @@
                 <i class="fa-solid fa-building-columns"></i>
                 <span>DAU Buddy</span>
             </div>
-            <div class="nav-links" style="display: flex; gap: 16px; align-items: center;">
-                <a href="/?view=landing">Back to Home</a>
-                <a href="/?view=login" id="docs-login-btn" class="nav-signin-btn" style="text-decoration: none; color: white !important;">Access MCP Server</a>
+            <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
+                <button onclick="sessionStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+                <button onclick="window.location.href='docs.html'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-book"></i> Docs
+                </button>
+                <div class="community-dropdown-container">
+                    <button class="nav-docs-btn"
+                        style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                    </button>
+                    <div class="community-dropdown-menu">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server" target="_blank" class="community-dropdown-item">
+                            <i class="fa-brands fa-github" style="width: 16px; text-align: center;"></i> Contribute
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new" target="_blank" class="community-dropdown-item">
+                            <i class="fa-solid fa-bug" style="width: 16px; text-align: center;"></i> Raise an issue
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank" class="community-dropdown-item">
+                            <i class="fa-solid fa-star" style="width: 16px; text-align: center;"></i> Leave a star
+                        </a>
+                    </div>
+                </div>
+                <button onclick="window.location.href='/?view=login'" class="nav-signin-btn" id="docs-login-btn">Sign
+                    In</button>
+                <div class="profile-container" id="landing-profile-container"
+                    style="position: relative; display: none;">
+                    <img id="landing-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
+                        referrerpolicy="no-referrer" alt="Profile"
+                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
+
+                    <div id="landing-profile-dropdown" class="profile-dropdown"
+                        style="display: none; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        <div class="profile-info"
+                            style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <button id="landing-close-profile-btn"
+                                style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                            <img id="landing-dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user"
+                                referrerpolicy="no-referrer"
+                                style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
+                            <h3 id="landing-dropdown-name"
+                                style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+                                Welcome!</h3>
+                            <p id="landing-dropdown-email"
+                                style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">
+                                Authenticated User</p>
+                            <span id="landing-dropdown-role"
+                                style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
+                        </div>
+                        <div class="profile-actions" style="padding: 8px;">
+                            <button id="landing-logout-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"
+                                    style="color: #555; font-size: 18px;"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </nav>
 
@@ -51,7 +110,8 @@
                     </ul>
                 </aside>
 
-                <main class="docs-content" style="background: #ffffff; padding: 40px 48px; flex: 1; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+                <main class="docs-content"
+                    style="background: #ffffff; padding: 40px 48px; flex: 1; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
                     <section id="overview">
                         <h2 style="color: #0f3b73; margin-top: 0; font-size: 32px;">DAU Buddy Server</h2>
                         <p style="color: #555; line-height: 1.8; font-size: 16px;">An MCP platform providing AI
@@ -118,8 +178,14 @@ Service Service Service   Service    Service    Service
                             dashboard to ensure your API keys are correctly injected.</p>
 
                         <h4 style="color: #222; margin-top: 24px;">1. Claude Desktop (HTTP/SSE via Proxy)</h4>
-                        <p style="color: #555; line-height: 1.6;">Claude Desktop connects to our HTTP/SSE server using a local <code
-                                style="background: #eef2f6; padding: 2px 6px; border-radius: 4px; color: #d90429;">npx mcp-remote</code> bridge to securely pass the Server-Sent Events stream into Claude's memory.</p>
+                        <p style="color: #555; line-height: 1.6;">Claude Desktop connects to our HTTP/SSE server using a
+                            local <code
+                                style="background: #eef2f6; padding: 2px 6px; border-radius: 4px; color: #d90429;">npx mcp-remote</code>
+                            bridge to securely pass the Server-Sent Events stream into Claude's memory.</p>
+                        <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-brands fa-node-js" style="font-size: 16px; color: #68a063;"></i>
+                            <span><strong>Node.js Required:</strong> You must have <a href="https://nodejs.org/en/download" target="_blank" style="color: #856404; font-weight: bold; text-decoration: underline;">Node.js installed</a> on your PC to use this Claude Desktop configuration.</span>
+                        </div>
                         <div class="code-block-wrapper"
                             style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
                             <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
@@ -162,9 +228,10 @@ Service Service Service   Service    Service    Service
   }
 }</code></pre>
                         </div>
-                        
+
                         <h4 style="color: #222; margin-top: 32px;">3. OpenCode (Remote HTTP/SSE)</h4>
-                        <p style="color: #555; line-height: 1.6;">OpenCode connects using the <strong>remote</strong> type flag:</p>
+                        <p style="color: #555; line-height: 1.6;">OpenCode connects using the <strong>remote</strong>
+                            type flag:</p>
                         <div class="code-block-wrapper"
                             style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
                             <pre style="margin: 0;"><code style="color: #333; font-family: monospace; font-size: 13px;">{
@@ -218,7 +285,8 @@ Service Service Service   Service    Service    Service
                                     style="color: #d90429; font-size: 13px;">list_scholars()</code>, <code
                                     style="color: #d90429; font-size: 13px;">search_scholars(query)</code>, <code
                                     style="color: #d90429; font-size: 13px;">get_scholar_details(name)</code></p>
-                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Find Ph.D. scholars researching Machine Learning."</div>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
+                                "Find Ph.D. scholars researching Machine Learning."</div>
                         </div>
 
                         <div class="tool-card"
@@ -290,7 +358,7 @@ Service Service Service   Service    Service    Service
                 }, observerOptions);
 
                 sections.forEach(section => observer.observe(section));
-                
+
                 // Dynamically update the SSE URL to match the current domain
                 const codes = document.querySelectorAll('code');
                 const dynamicUrl = window.location.origin + "/mcp/sse";
@@ -301,23 +369,77 @@ Service Service Service   Service    Service    Service
                 });
             });
         </script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const btn = document.getElementById("docs-login-btn");
-            if (btn) {
-                const storedSession = localStorage.getItem("dau_buddy_auth");
-                if (storedSession) {
-                    try {
-                        const authData = JSON.parse(storedSession);
-                        if (authData.email && authData.credential) {
-                            btn.textContent = "Go to Dashboard";
-                            btn.href = "/?view=dashboard";
-                        }
-                    } catch(e) {}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const btn = document.getElementById("docs-login-btn");
+                const profileContainer = document.getElementById("landing-profile-container");
+                const profileTrigger = document.getElementById("landing-profile-trigger");
+                const profileDropdown = document.getElementById("landing-profile-dropdown");
+                const dropdownAvatar = document.getElementById("landing-dropdown-avatar");
+                const dropdownName = document.getElementById("landing-dropdown-name");
+                const dropdownEmail = document.getElementById("landing-dropdown-email");
+                const dropdownRole = document.getElementById("landing-dropdown-role");
+                const closeProfileBtn = document.getElementById("landing-close-profile-btn");
+                const logoutBtn = document.getElementById("landing-logout-btn");
+
+                if (btn) {
+                    const storedSession = sessionStorage.getItem("dau_buddy_auth") || localStorage.getItem("dau_buddy_auth");
+                    if (storedSession) {
+                        try {
+                            const authData = JSON.parse(storedSession);
+                            if (authData.email && authData.credential) {
+                                btn.textContent = "Dashboard";
+                                btn.onclick = function() {
+                                    sessionStorage.setItem('dau_buddy_view', 'dashboard');
+                                    window.location.href = '/';
+                                };
+
+                                // Show Profile
+                                if (profileContainer) {
+                                    profileContainer.style.display = "block";
+                                    if (authData.picture) {
+                                        if (profileTrigger) profileTrigger.src = authData.picture;
+                                        if (dropdownAvatar) dropdownAvatar.src = authData.picture;
+                                    }
+                                    if (authData.name && dropdownName) dropdownName.textContent = authData.name;
+                                    if (authData.email && dropdownEmail) dropdownEmail.textContent = authData.email;
+                                    if (authData.role && dropdownRole) dropdownRole.textContent = authData.role;
+                                }
+                            }
+                        } catch (e) { }
+                    }
                 }
-            }
-        });
-    </script>
+
+                // Dropdown Toggle Logic
+                if (profileTrigger && profileDropdown) {
+                    profileTrigger.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        profileDropdown.style.display = profileDropdown.style.display === "none" ? "block" : "none";
+                    });
+
+                    document.addEventListener("click", (e) => {
+                        if (profileContainer && !profileContainer.contains(e.target)) {
+                            profileDropdown.style.display = "none";
+                        }
+                    });
+
+                    if (closeProfileBtn) {
+                        closeProfileBtn.addEventListener("click", (e) => {
+                            e.stopPropagation();
+                            profileDropdown.style.display = "none";
+                        });
+                    }
+
+                    if (logoutBtn) {
+                        logoutBtn.addEventListener("click", () => {
+                            sessionStorage.removeItem("dau_buddy_auth");
+                            localStorage.removeItem("dau_buddy_auth");
+                            window.location.reload();
+                        });
+                    }
+                }
+            });
+        </script>
 </body>
 
 </html>
