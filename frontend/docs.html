@@ -25,7 +25,8 @@
                 <span>DAU Buddy</span>
             </div>
             <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
-                <button onclick="sessionStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'" class="nav-docs-btn"
+                <button onclick="sessionStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'"
+                    class="nav-docs-btn"
                     style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-house"></i> Home
                 </button>
@@ -36,16 +37,20 @@
                 <div class="community-dropdown-container">
                     <button class="nav-docs-btn"
                         style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
-                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down"
+                            style="font-size: 10px;"></i>
                     </button>
                     <div class="community-dropdown-menu">
-                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server" target="_blank" class="community-dropdown-item">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server"
+                            target="_blank" class="community-dropdown-item">
                             <i class="fa-brands fa-github" style="width: 16px; text-align: center;"></i> Contribute
                         </a>
-                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new" target="_blank" class="community-dropdown-item">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new/choose" target="_blank"
+                            class="community-dropdown-item">
                             <i class="fa-solid fa-bug" style="width: 16px; text-align: center;"></i> Raise an issue
                         </a>
-                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank" class="community-dropdown-item">
+                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
+                            class="community-dropdown-item">
                             <i class="fa-solid fa-star" style="width: 16px; text-align: center;"></i> Leave a star
                         </a>
                     </div>
@@ -182,9 +187,13 @@ Service Service Service   Service    Service    Service
                             local <code
                                 style="background: #eef2f6; padding: 2px 6px; border-radius: 4px; color: #d90429;">npx mcp-remote</code>
                             bridge to securely pass the Server-Sent Events stream into Claude's memory.</p>
-                        <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                        <div
+                            style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
                             <i class="fa-brands fa-node-js" style="font-size: 16px; color: #68a063;"></i>
-                            <span><strong>Node.js Required:</strong> You must have <a href="https://nodejs.org/en/download" target="_blank" style="color: #856404; font-weight: bold; text-decoration: underline;">Node.js installed</a> on your PC to use this Claude Desktop configuration.</span>
+                            <span><strong>Node.js Required:</strong> You must have <a
+                                    href="https://nodejs.org/en/download" target="_blank"
+                                    style="color: #856404; font-weight: bold; text-decoration: underline;">Node.js
+                                    installed</a> on your PC to use this Claude Desktop configuration.</span>
                         </div>
                         <div class="code-block-wrapper"
                             style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin: 16px 0; overflow-x: auto;">
@@ -389,7 +398,7 @@ Service Service Service   Service    Service    Service
                             const authData = JSON.parse(storedSession);
                             if (authData.email && authData.credential) {
                                 btn.textContent = "Dashboard";
-                                btn.onclick = function() {
+                                btn.onclick = function () {
                                     sessionStorage.setItem('dau_buddy_view', 'dashboard');
                                     window.location.href = '/';
                                 };

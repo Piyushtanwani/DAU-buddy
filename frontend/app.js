@@ -81,6 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     return { hasKey: true, prefix: data.key_prefix };
                 }
+            } else if (response.status === 429) {
+                return { rateLimited: true };
             } else if (response.status === 401) {
                 // Token expired or invalid
                 sessionStorage.removeItem("dau_buddy_auth");
@@ -319,22 +321,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } else if (currentCredential) {
             const result = await checkExistingKey(currentCredential);
-            const hasKey = result && result.hasKey;
-            if (!hasKey) {
-                setApiKeyValue("No API Key Generated");
-                if (regenerateBtn) regenerateBtn.textContent = "Generate Key";
+            if (result && result.rateLimited) {
+                setApiKeyValue("Rate limit exceeded. Please wait a minute.");
+                if (regenerateBtn) regenerateBtn.textContent = "Wait & Refresh";
                 updateConfigSnippet("YOUR_API_KEY_HERE");
             } else {
-                if (regenerateBtn) {
-                    regenerateBtn.textContent = "Regenerate Key";
-                }
-                if (result.prefix) {
-                    const maskedKey = result.prefix + "••••••••••••••••••••••••••••••••";
-                    setApiKeyValue(maskedKey);
-                    updateConfigSnippet(maskedKey);
-                } else {
-                    setApiKeyValue("Key exists but is not cached. Please regenerate.");
+                const hasKey = result && result.hasKey;
+                if (!hasKey) {
+                    setApiKeyValue("No API Key Generated");
+                    if (regenerateBtn) regenerateBtn.textContent = "Generate Key";
                     updateConfigSnippet("YOUR_API_KEY_HERE");
+                } else {
+                    if (regenerateBtn) {
+                        regenerateBtn.textContent = "Regenerate Key";
+                    }
+                    if (result.prefix) {
+                        const maskedKey = result.prefix + "••••••••••••••••••••••••••••••••";
+                        setApiKeyValue(maskedKey);
+                        updateConfigSnippet(maskedKey);
+                    } else {
+                        setApiKeyValue("Key exists but is not cached. Please regenerate.");
+                        updateConfigSnippet("YOUR_API_KEY_HERE");
+                    }
                 }
             }
         } else {
@@ -346,6 +354,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (regenerateBtn) {
             regenerateBtn.onclick = async () => {
+                if (regenerateBtn.textContent.includes("Wait & Refresh")) {
+                    window.location.reload();
+                    return;
+                }
                 const isRegenerating = regenerateBtn.textContent.includes("Regenerate") || regenerateBtn.textContent.includes("Generating");
                 await generateKey(currentCredential, isRegenerating);
             };
