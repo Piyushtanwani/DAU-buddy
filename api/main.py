@@ -63,13 +63,14 @@ def split_key(raw_key: str) -> tuple[str, str]:
 
 def verify_google_token(credential: str) -> str:
     try:
-        idinfo = id_token.verify_oauth2_token(credential, cached_google_request, CLIENT_ID)
+        idinfo = id_token.verify_oauth2_token(credential, cached_google_request, CLIENT_ID, clock_skew_in_seconds=300)
         email = idinfo['email']
         # Domain check bypassed for testing
         # if not (email.endswith("@dau.ac.in") or email.endswith("@daiict.ac.in")):
         #     raise HTTPException(status_code=403, detail="Invalid domain")
         return email
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Google Token Verification Error (ValueError): {e}")
         raise HTTPException(status_code=401, detail="Invalid Google token")
 
 def create_app() -> FastAPI:
@@ -244,27 +245,34 @@ def create_app() -> FastAPI:
         subject: str = Field(..., max_length=200)
         description: str = Field(..., max_length=2000)
         priority: str = Field(default="Medium", max_length=20)
+        credential: str
 
     @app.post("/api/feedback")
     @limiter.limit("5/minute")
-    def submit_feedback(request: Request, req: FeedbackRequest, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user_from_api_key)):
+    def submit_feedback(request: Request, req: FeedbackRequest, background_tasks: BackgroundTasks):
+        email = verify_google_token(req.credential)
         from core.email_service import send_feedback_email_async
         try:
             with db_connection() as conn:
                 with conn.cursor() as cursor:
+                    # Get user role from api_keys or assign default
+                    cursor.execute("SELECT role FROM api_keys WHERE email = %s", (email,))
+                    row = cursor.fetchone()
+                    role = row[0] if row else 'User'
+
                     cursor.execute("""
                         INSERT INTO feedback (user_email, role, category, subject, description, priority, status)
                         VALUES (%s, %s, %s, %s, %s, %s, 'Open')
                         RETURNING id
-                    """, (user["email"], user["role"], req.category, req.subject, req.description, req.priority))
+                    """, (email, role, req.category, req.subject, req.description, req.priority))
                     feedback_id = cursor.fetchone()[0]
             
             # Send Email Asynchronously
             background_tasks.add_task(
                 send_feedback_email_async,
                 feedback_id=feedback_id,
-                user_email=user["email"],
-                role=user["role"],
+                user_email=email,
+                role=role,
                 category=req.category,
                 subject=req.subject,
                 description=req.description

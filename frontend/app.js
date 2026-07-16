@@ -48,11 +48,15 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkExistingKey(credential) {
         // [Lines truncated for replace block; we will replace from the start of the file down to the old handleCredentialResponse]
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             const response = await fetch("/api/me", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ credential: credential })
+                body: JSON.stringify({ credential: credential }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             if (response.ok) {
                 const data = await response.json();
 
@@ -199,10 +203,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:${"${AUTH_HEADER}"}"
+        "Authorization:\${AUTH_HEADER}"
       ],
       "env": {
-        "AUTH_HEADER": "Bearer <YOUR_API_KEY>"
+        "AUTH_HEADER": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
       }
     }
   }
@@ -216,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "type": "sse",
       "url": "${baseUrl}",
       "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>"
+        "Authorization": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
       }
     }
   }
@@ -232,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "type": "remote",
       "url": "${baseUrl}",
       "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>"
+        "Authorization": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
       }
     }
   }
@@ -695,10 +699,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // Get current API key
-                const currentKey = apiKeyInput ? apiKeyInput.value : null;
-                if (!currentKey || currentKey === "Loading..." || currentKey.includes("Please")) {
-                    showToast("API Key not found. Please log in again.", "error");
+                // Get current Google credential
+                const authSession = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
+                const currentCredential = authSession.credential;
+                
+                if (!currentCredential) {
+                    showToast("Session not found. Please log in again.", "error");
                     return;
                 }
 
@@ -710,10 +716,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const response = await fetch("/api/feedback", {
                         method: "POST",
                         headers: { 
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${currentKey}`
+                            "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ category, subject, description })
+                        body: JSON.stringify({ category, subject, description, credential: currentCredential })
                     });
 
                     if (response.ok) {
