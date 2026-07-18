@@ -90,11 +90,15 @@ mcp.add_tool(get_scholar_details)
 mcp.add_tool(sync_scholar_data)
 
 # ==============================================================================
-# Usage Tracking (Monkey-patching call_tool)
+# Usage Tracking (wrapping ToolManager.call_tool)
 # ==============================================================================
-original_call_tool = mcp.call_tool
+_original_call_tool = mcp._tool_manager.call_tool
 
-async def tracking_call_tool(name: str, arguments: dict, *args, **kwargs):
+async def _tracking_call_tool(name, arguments, context=None, convert_result=False):
+    """Wrapper that only logs to mcp_analytics on successful tool execution."""
+    result = await _original_call_tool(name, arguments, context=context, convert_result=convert_result)
+    
+    # If we reach here, the tool executed successfully
     try:
         email = user_email_var.get()
         client_name = client_name_var.get()
@@ -106,11 +110,11 @@ async def tracking_call_tool(name: str, arguments: dict, *args, **kwargs):
                         (email, name, client_name)
                     )
     except Exception as e:
-        logger.error(f"Error tracking usage for {name}: {e}")
-    
-    return await original_call_tool(name, arguments, *args, **kwargs)
+        logger.error(f"Error tracking successful usage for {name}: {e}")
+        
+    return result
 
-mcp.call_tool = tracking_call_tool
+mcp._tool_manager.call_tool = _tracking_call_tool
 
 # ==============================================================================
 # Entry Point

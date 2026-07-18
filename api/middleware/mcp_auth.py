@@ -2,7 +2,8 @@ import hashlib
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
-from starlette.concurrency import run_in_threadpool
+import logging
+logger = logging.getLogger(__name__)
 from core.database import db_connection
 from api.context import user_role_var
 
@@ -73,5 +74,8 @@ class MCPAuthMiddleware:
         user_role_var.set(role)
         user_email_var.set(email)
         client_name_var.set(client_name)
+
+        if scope["type"] == "http" and scope["path"].startswith("/mcp/messages") and scope["method"] == "POST":
+            return await self.app(scope, receive, send)
 
         return await self.app(scope, receive, send)
