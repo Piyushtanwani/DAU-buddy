@@ -172,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     const updatedAuth = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                     updatedAuth.role = role;
+                    updatedAuth.key_prefix = key.substring(0, 14);
                     localStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
                     updateMaintainerDashboardVisibility(role);
                 }
@@ -325,18 +326,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (landingProfileTrigger) landingProfileTrigger.src = picture;
         }
 
-        // Determine role synchronously from email
+        // Determine role: use cached role from localStorage first, fall back to email-based guess
         if ((dropdownRole || landingDropdownRole) && email) {
-            let role = "User";
-            if (email.endsWith("@dau.ac.in")) {
-                const localPart = email.split("@")[0];
-                if (/^\d+$/.test(localPart)) {
-                    role = "Student";
-                } else {
-                    role = "Faculty/Staff";
+            const cachedAuth = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+            let role = cachedAuth.role || "User";
+            if (!cachedAuth.role) {
+                // No cached role, guess from email pattern
+                if (email.endsWith("@dau.ac.in")) {
+                    const localPart = email.split("@")[0];
+                    if (/^\d+$/.test(localPart)) {
+                        role = "Student";
+                    } else {
+                        role = "Faculty/Staff";
+                    }
                 }
             }
-            // Temporarily set it until API overrides, but don't assume Maintainer here
             if (dropdownRole) dropdownRole.textContent = role;
             if (landingDropdownRole) landingDropdownRole.textContent = role;
             updateMaintainerDashboardVisibility(role);
@@ -857,6 +861,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
     if (authData) {
-        showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential);
+        // Build a cached display key from stored key_prefix so the UI doesn't show "No API Key Generated"
+        // when the /api/me call fails (e.g. due to expired Google JWT token)
+        let cachedDisplayKey = null;
+        if (authData.key_prefix) {
+            cachedDisplayKey = authData.key_prefix + "••••••••••••••••••••••••••••••••";
+        }
+        showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, cachedDisplayKey);
     }
 });
