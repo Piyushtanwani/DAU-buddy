@@ -19,16 +19,13 @@ HOLIDAY_PDF_URL = "https://www.daiict.ac.in/sites/default/files/other-files/DAU_
 ACADEMIC_CAL_URL = "https://www.daiict.ac.in/academic-calendar"
 
 def parse_date(date_str: str, year: int = 2026):
-    """Attempts to parse a date string like 'August 15', '15-Aug' into a DATE object."""
-    # Simple heuristics. Real parsing might need `dateutil`
+    """Attempts to parse a date string like 'August 15', '15-Aug', '20-07-2026' into a DATE object."""
     date_str = date_str.strip()
     try:
-        # Common formats: "15 August 2026", "15-Aug-2026", "15-Aug", "15 August"
-        if str(year) not in date_str:
+        if str(year) not in date_str and not re.search(r'\d{4}', date_str):
             date_str = f"{date_str} {year}"
         
-        # Try a few common formats
-        for fmt in ["%d %B %Y", "%d %b %Y", "%B %d %Y", "%b %d %Y", "%d-%b-%Y"]:
+        for fmt in ["%d %B %Y", "%d %b %Y", "%B %d %Y", "%b %d %Y", "%d-%b-%Y", "%d-%m-%Y"]:
             try:
                 dt = datetime.strptime(date_str, fmt)
                 return dt.date()
@@ -39,20 +36,26 @@ def parse_date(date_str: str, year: int = 2026):
     return None
 
 def extract_dates_from_range(date_str: str, year: int = 2026):
-    """Extract start and end date from strings like '15 - 20 August' or '15 August - 20 August'"""
-    # Just a basic fallback, returns None for dates if it's too complex
-    parts = date_str.split('-')
+    """Extract start and end date from strings like '15 - 20 August' or '06-07-2026 to 17-07-2026'"""
+    date_str = date_str.replace("to", " to ").strip()
+    # Normalize spaces
+    date_str = ' '.join(date_str.split())
+    
+    parts = []
+    if " to " in date_str:
+        parts = date_str.split(" to ")
+    else:
+        parts = [date_str]
+        
     if len(parts) == 1:
         dt = parse_date(parts[0], year)
         return dt, dt
     elif len(parts) == 2:
         d1, d2 = parts[0].strip(), parts[1].strip()
-        # if d1 is just a number e.g. "15", append month from d2
-        if d1.isdigit():
-            month = ''.join([c for c in d2 if c.isalpha()])
-            d1 = f"{d1} {month}"
         dt1 = parse_date(d1, year)
         dt2 = parse_date(d2, year)
+        # If dt1 failed because it didn't have year/month, we can try to extract from d2 if needed,
+        # but for DD-MM-YYYY it's fully qualified.
         return dt1, dt2
     return None, None
 

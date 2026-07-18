@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintainer Dashboard - DAU Buddy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/maintainer.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container" style="display: block; background-color: #f4f7f6; min-height: 100vh;">
+        <div class="top-accent-bar"></div>
+        <nav class="app-nav" style="background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Maintainer Dashboard</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button onclick="window.location.href='/'" class="nav-docs-btn" style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+            </div>
+        </nav>
+
+        <div class="maintainer-container">
+            <div id="error-alert" class="error-message">
+                <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-text">Access Denied.</span>
+            </div>
+
+            <div id="loading-spinner" class="loading-state">
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading Analytics...
+            </div>
+
+            <div id="dashboard-content" style="display: none;">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="metric-info">
+                            <h3>Total Users</h3>
+                            <p id="total-users">0</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fa-solid fa-user-plus"></i></div>
+                        <div class="metric-info">
+                            <h3>New Signups (7 Days)</h3>
+                            <p id="new-users">0</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="metric-info">
+                            <h3>Total Queries</h3>
+                            <p id="total-queries">0</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fa-solid fa-user-check"></i></div>
+                        <div class="metric-info">
+                            <h3>Active Users</h3>
+                            <p id="active-users">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid-full">
+                    <div class="chart-card">
+                        <h3>Signups Over Time (Last 30 Days)</h3>
+                        <div class="chart-container-large">
+                            <canvas id="signups-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Tool Usage Frequency</h3>
+                        <div class="chart-container-medium">
+                            <canvas id="tools-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Client Usage Distribution</h3>
+                        <div class="chart-container-medium">
+                            <canvas id="clients-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Role Distribution</h3>
+                        <div class="chart-container-medium">
+                            <canvas id="roles-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="charts-grid-full">
+                    <div class="chart-card">
+                        <h3>Queries Per User</h3>
+                        <table class="data-table sortable-table" id="queries-user-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="email" style="cursor: pointer;">User Email <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="count" style="cursor: pointer;">Usage Count <i class="fa-solid fa-sort-down"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Users rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/maintainer.js"></script>
+</body>
+</html>

@@ -57,6 +57,21 @@ class MCPAuthMiddleware:
         role, email = auth_data
         scope["user_role"] = role
         scope["user_email"] = email
+        
+        # Determine client name from headers
+        client_name = "Unknown"
+        x_client_name = headers.get(b"x-client-name")
+        if x_client_name:
+            client_name = x_client_name.decode("utf-8")
+        else:
+            user_agent = headers.get(b"user-agent")
+            if user_agent:
+                client_name = user_agent.decode("utf-8")
+                
+        # Set ContextVars
+        from api.context import user_role_var, user_email_var, client_name_var
         user_role_var.set(role)
+        user_email_var.set(email)
+        client_name_var.set(client_name)
 
         return await self.app(scope, receive, send)

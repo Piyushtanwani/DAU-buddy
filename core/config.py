@@ -95,4 +95,10 @@ def get_library_opac_base_url() -> str:
     """Base URL of the DA-IICT Koha OPAC (no trailing slash)."""
     return os.getenv("LIBRARY_OPAC_BASE_URL", "https://opac.daiict.ac.in").rstrip("/")
 
-
+# ==============================================================================
+# Feedback Configuration
+# ==============================================================================
+def get_feedback_recipient_emails() -> list[str]:
+    """Return a list of feedback recipient emails."""
+    emails = os.getenv("FEEDBACK_RECIPIENT_EMAILS", "")
+    return [e.strip() for e in emails.split(",") if e.strip()]

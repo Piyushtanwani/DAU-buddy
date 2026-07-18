@@ -10,6 +10,25 @@ window.handleCredentialResponse = (response) => {
     }
 };
 
+// Redirect unauthenticated users to the login page
+(function() {
+    const session = localStorage.getItem("dau_buddy_auth");
+    if (!session) {
+        window.location.href = "/?view=login";
+        return;
+    }
+    try {
+        const authData = JSON.parse(session);
+        if (!authData.email || !authData.credential) {
+            window.location.href = "/?view=login";
+            return;
+        }
+    } catch (e) {
+        window.location.href = "/?view=login";
+        return;
+    }
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
     // ── Google OAuth & Session Management ─────────────────────────────────────
     const loginOverlay = document.getElementById("login-overlay");
@@ -45,6 +64,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function updateMaintainerDashboardVisibility(role) {
+        const dashboardBtn = document.getElementById("nav-dashboard-btn");
+        if (dashboardBtn) {
+            if (role && role.includes("Maintainer")) {
+                dashboardBtn.style.display = "flex";
+            } else {
+                dashboardBtn.style.display = "none";
+            }
+        }
+    }
+
     async function checkExistingKey(credential) {
         // [Lines truncated for replace block; we will replace from the start of the file down to the old handleCredentialResponse]
         try {
@@ -61,13 +91,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
 
                 // ALWAYS update the role if the API provides it
-                if (dropdownRole) {
+                if (dropdownRole || landingDropdownRole) {
                     const role = data.role || "User";
-                    dropdownRole.textContent = role;
+                    if (dropdownRole) dropdownRole.textContent = role;
                     if (landingDropdownRole) landingDropdownRole.textContent = role;
-                    const authData = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
+                    const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                     authData.role = role;
-                    sessionStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                    localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                    updateMaintainerDashboardVisibility(role);
                 }
 
                 if (data.has_key) {
@@ -79,9 +110,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
                     if (data.key_prefix) {
-                        const authData = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
+                        const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                         authData.key_prefix = data.key_prefix;
-                        sessionStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
+                        localStorage.setItem("dau_buddy_auth", JSON.stringify(authData));
                     }
                     return { hasKey: true, prefix: data.key_prefix };
                 }
@@ -89,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return { rateLimited: true };
             } else if (response.status === 401) {
                 // Token expired or invalid
-                sessionStorage.removeItem("dau_buddy_auth");
+                localStorage.removeItem("dau_buddy_auth");
                 window.location.reload();
             }
         } catch (e) {
@@ -134,19 +165,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 setApiKeyValue(maskedKey);
 
                 updateConfigSnippet(maskedKey);
-                if (dropdownRole) {
+                if (dropdownRole || landingDropdownRole) {
                     const role = data.role || "User";
-                    dropdownRole.textContent = role;
+                    if (dropdownRole) dropdownRole.textContent = role;
                     if (landingDropdownRole) landingDropdownRole.textContent = role;
 
-                    const updatedAuth = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
+                    const updatedAuth = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                     updatedAuth.role = role;
-                    sessionStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
+                    localStorage.setItem("dau_buddy_auth", JSON.stringify(updatedAuth));
+                    updateMaintainerDashboardVisibility(role);
                 }
             } else {
                 if (response.status === 401) {
                     alert("Session expired. Please login again.");
-                    sessionStorage.removeItem("dau_buddy_auth");
+                    localStorage.removeItem("dau_buddy_auth");
                     window.location.reload();
                     return;
                 }
@@ -203,10 +235,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:\${AUTH_HEADER}"
+        "Authorization:\${AUTH_HEADER}",
+        "--header",
+        "X-Client-Name:Claude"
       ],
       "env": {
-        "AUTH_HEADER": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
+        "AUTH_HEADER": "Bearer <YOUR_API_KEY>"
       }
     }
   }
@@ -220,7 +254,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "type": "sse",
       "url": "${baseUrl}",
       "headers": {
-        "Authorization": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
+        "Authorization": "Bearer <YOUR_API_KEY>",
+        "X-Client-Name": "Cursor/Windsurf"
       }
     }
   }
@@ -236,7 +271,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "type": "remote",
       "url": "${baseUrl}",
       "headers": {
-        "Authorization": "Bearer ${key === 'YOUR_API_KEY_HERE' ? '<YOUR_API_KEY>' : key}"
+        "Authorization": "Bearer <YOUR_API_KEY>",
+        "X-Client-Name": "OpenCode"
       }
     }
   }
@@ -264,10 +300,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const landingView = document.getElementById("landing-view");
             if (landingView) landingView.style.display = "none";
 
-            loginOverlay.style.opacity = "0";
-            loginOverlay.style.display = "none";
-            appContainer.style.display = "block";
-            sessionStorage.setItem("dau_buddy_view", "dashboard");
+            if (loginOverlay) loginOverlay.style.opacity = "0";
+            if (loginOverlay) loginOverlay.style.display = "none";
+            if (appContainer) appContainer.style.display = "block";
+            localStorage.setItem("dau_buddy_view", "dashboard");
         }
 
         let displayName = name || "User";
@@ -276,7 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const firstName = name.split(" ")[0];
             displayName = /^\d+$/.test(firstName) ? email.split("@")[0] : firstName;
         }
-        welcomeName.textContent = `Welcome, ${displayName}!`;
+        if (welcomeName) welcomeName.textContent = `Welcome, ${displayName}!`;
         if (dropdownName) dropdownName.textContent = displayName;
         if (dropdownEmail) dropdownEmail.textContent = email;
         if (landingDropdownName) landingDropdownName.textContent = displayName;
@@ -290,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Determine role synchronously from email
-        if (dropdownRole && email) {
+        if ((dropdownRole || landingDropdownRole) && email) {
             let role = "User";
             if (email.endsWith("@dau.ac.in")) {
                 const localPart = email.split("@")[0];
@@ -300,8 +336,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     role = "Faculty/Staff";
                 }
             }
-            dropdownRole.textContent = role;
+            // Temporarily set it until API overrides, but don't assume Maintainer here
+            if (dropdownRole) dropdownRole.textContent = role;
             if (landingDropdownRole) landingDropdownRole.textContent = role;
+            updateMaintainerDashboardVisibility(role);
         }
 
         let activeKey = cachedKey;
@@ -313,10 +351,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (regenerateBtn) regenerateBtn.textContent = "Regenerate Key";
 
             // Restore role if saved
-            const authData = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
-            if (authData.role && dropdownRole) {
-                dropdownRole.textContent = authData.role;
+            const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
+            if (authData.role && (dropdownRole || landingDropdownRole)) {
+                if (dropdownRole) dropdownRole.textContent = authData.role;
                 if (landingDropdownRole) landingDropdownRole.textContent = authData.role;
+                updateMaintainerDashboardVisibility(authData.role);
             }
 
             // Sync status/role in background if we have credential
@@ -371,30 +410,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get('view');
     if (viewParam === 'landing' || viewParam === 'dashboard') {
-        sessionStorage.setItem("dau_buddy_view", viewParam);
+        localStorage.setItem("dau_buddy_view", viewParam);
         // Clean up the URL so refresh works normally
         window.history.replaceState({}, document.title, window.location.pathname);
     } else if (viewParam === 'login') {
-        sessionStorage.setItem("dau_buddy_view", "landing");
+        localStorage.setItem("dau_buddy_view", "landing");
         window.history.replaceState({}, document.title, window.location.pathname);
         // Wait just a tiny bit for the UI to be ready
         setTimeout(() => {
             const loginOverlay = document.getElementById("login-overlay");
             if (loginOverlay) {
-                loginOverlay.style.display = "flex";
-                setTimeout(() => loginOverlay.style.opacity = "1", 10);
+                if (loginOverlay) loginOverlay.style.display = "flex";
+                setTimeout(() => { if (loginOverlay) loginOverlay.style.opacity = "1"; }, 10);
             }
         }, 100);
     }
 
     // Check if user is already logged in
-    const storedSession = sessionStorage.getItem("dau_buddy_auth");
+    const storedSession = localStorage.getItem("dau_buddy_auth");
     if (storedSession) {
         try {
             const authData = JSON.parse(storedSession);
             if (authData.email && authData.credential) {
                 // Determine which view to show based on last state
-                const currentView = sessionStorage.getItem("dau_buddy_view");
+                const currentView = localStorage.getItem("dau_buddy_view");
                 const shouldShowDashboard = (currentView === "dashboard");
 
                 // Valid session exists, configure UI
@@ -404,14 +443,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
-                    btnSignIn.textContent = "Dashboard";
+                    if (btnSignIn) btnSignIn.textContent = "Dashboard";
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
             }
         } catch (e) {
             console.error("Invalid auth session data", e);
-            sessionStorage.removeItem("dau_buddy_auth");
+            localStorage.removeItem("dau_buddy_auth");
         }
     }
 
@@ -426,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (email) {
                 // Successful login
-                sessionStorage.setItem("dau_buddy_auth", JSON.stringify({
+                localStorage.setItem("dau_buddy_auth", JSON.stringify({
                     email: email,
                     name: decodedPayload.name,
                     picture: decodedPayload.picture,
@@ -438,15 +477,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
-                    btnSignIn.textContent = "Dashboard";
+                    if (btnSignIn) btnSignIn.textContent = "Dashboard";
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
 
                 // Fade out overlay
-                loginOverlay.style.opacity = "0";
+                if (loginOverlay) loginOverlay.style.opacity = "0";
                 setTimeout(() => {
-                    loginOverlay.style.display = "none";
+                    if (loginOverlay) loginOverlay.style.display = "none";
                     showWelcomeScreen(decodedPayload.name, email, decodedPayload.picture, response.credential);
                 }, 400);
             } else {
@@ -460,47 +499,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Logout handling
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-            if (profileDropdown) profileDropdown.style.display = "none";
-            if (landingProfileDropdown) landingProfileDropdown.style.display = "none";
-            if (landingProfileContainer) landingProfileContainer.style.display = "none";
-            sessionStorage.removeItem("dau_buddy_auth");
-            sessionStorage.removeItem("dau_buddy_view");
-            appContainer.style.display = "none";
-
-            const landingView = document.getElementById("landing-view");
-            if (landingView) landingView.style.display = "block";
-
-            // Revert landing page buttons back to original text
-            const btnSignIn = document.getElementById("nav-signin-btn");
-            const btnGetStarted = document.getElementById("hero-get-started-btn");
-            if (btnSignIn) {
-                btnSignIn.innerHTML = "Sign In";
-                if (landingProfileContainer) landingProfileContainer.style.display = "none";
-            }
-            if (btnGetStarted) btnGetStarted.textContent = "Access MCP Server";
-
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
-    }
+        // Logout handling
+    const handleLogout = () => {
+        localStorage.removeItem("dau_buddy_auth");
+        localStorage.removeItem("dau_buddy_view");
+        window.location.href = "/";
+    };
+    if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+    if (landingLogoutBtn) landingLogoutBtn.addEventListener("click", handleLogout);
     const btnGetStarted = document.getElementById("hero-get-started-btn");
     const btnSignIn = document.getElementById("nav-signin-btn");
     const btnCloseLogin = document.getElementById("close-login-btn");
     const homeBtn = document.getElementById("home-btn");
 
     if (homeBtn) {
-        homeBtn.addEventListener("click", () => {
-            appContainer.style.display = "none";
+        if (homeBtn) homeBtn.addEventListener("click", () => {
+            if (appContainer) appContainer.style.display = "none";
             const landingView = document.getElementById("landing-view");
             if (landingView) landingView.style.display = "block";
-            sessionStorage.setItem("dau_buddy_view", "landing");
+            localStorage.setItem("dau_buddy_view", "landing");
         });
     }
 
     function openLoginModal() {
-        const storedSession = sessionStorage.getItem("dau_buddy_auth");
+        const storedSession = localStorage.getItem("dau_buddy_auth");
         if (storedSession) {
             try {
                 const authData = JSON.parse(storedSession);
@@ -508,20 +530,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Already logged in, just switch back to dashboard
                     const landingView = document.getElementById("landing-view");
                     if (landingView) landingView.style.display = "none";
-                    appContainer.style.display = "block";
-                    sessionStorage.setItem("dau_buddy_view", "dashboard");
+                    if (appContainer) appContainer.style.display = "block";
+                    localStorage.setItem("dau_buddy_view", "dashboard");
                     return;
                 }
             } catch (e) {}
         }
 
-        loginOverlay.style.display = "flex";
-        setTimeout(() => loginOverlay.style.opacity = "1", 10);
+        if (loginOverlay) loginOverlay.style.display = "flex";
+        setTimeout(() => { if (loginOverlay) loginOverlay.style.opacity = "1"; }, 10);
     }
 
     function closeLoginModal() {
-        loginOverlay.style.opacity = "0";
-        setTimeout(() => loginOverlay.style.display = "none", 300);
+        if (loginOverlay) loginOverlay.style.opacity = "0";
+        setTimeout(() => { if (loginOverlay) loginOverlay.style.display = "none"; }, 300);
     }
 
     if (btnGetStarted) btnGetStarted.addEventListener("click", openLoginModal);
@@ -551,7 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (tabClaude) {
-        tabClaude.addEventListener("click", () => {
+        if (tabClaude) tabClaude.addEventListener("click", () => {
             resetTabs();
             tabClaude.style.background = "#0f3b73";
             tabClaude.style.color = "white";
@@ -560,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (tabCursor) {
-        tabCursor.addEventListener("click", () => {
+        if (tabCursor) tabCursor.addEventListener("click", () => {
             resetTabs();
             tabCursor.style.background = "#0f3b73";
             tabCursor.style.color = "white";
@@ -569,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (tabOpenCode) {
-        tabOpenCode.addEventListener("click", () => {
+        if (tabOpenCode) tabOpenCode.addEventListener("click", () => {
             resetTabs();
             tabOpenCode.style.background = "#0f3b73";
             tabOpenCode.style.color = "white";
@@ -580,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Config Copy Buttons
     const copyClaudeBtn = document.getElementById("copy-claude-btn");
     if (copyClaudeBtn) {
-        copyClaudeBtn.addEventListener("click", () => {
+        if (copyClaudeBtn) copyClaudeBtn.addEventListener("click", () => {
             navigator.clipboard.writeText(configCode.textContent).then(() => {
                 copyClaudeBtn.textContent = "Copied!";
                 copyClaudeBtn.style.background = "#10b981";
@@ -596,7 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const copyCursorBtn = document.getElementById("copy-cursor-btn");
     if (copyCursorBtn && cursorConfigCode) {
-        copyCursorBtn.addEventListener("click", () => {
+        if (copyCursorBtn) copyCursorBtn.addEventListener("click", () => {
             navigator.clipboard.writeText(cursorConfigCode.textContent).then(() => {
                 copyCursorBtn.textContent = "Copied!";
                 copyCursorBtn.style.background = "#10b981";
@@ -613,7 +635,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyOpenCodeBtn = document.getElementById("copy-opencode-btn");
     const opencodeConfigCode = document.getElementById("opencode-config-code");
     if (copyOpenCodeBtn && opencodeConfigCode) {
-        copyOpenCodeBtn.addEventListener("click", () => {
+        if (copyOpenCodeBtn) copyOpenCodeBtn.addEventListener("click", () => {
             navigator.clipboard.writeText(opencodeConfigCode.textContent).then(() => {
                 copyOpenCodeBtn.textContent = "Copied!";
                 copyOpenCodeBtn.style.background = "#10b981";
@@ -656,7 +678,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (feedbackBtn && feedbackModal) {
-        feedbackBtn.addEventListener("click", () => {
+        if (feedbackBtn) feedbackBtn.addEventListener("click", () => {
             feedbackModal.style.display = "flex";
             document.body.style.overflow = "hidden";
         });
@@ -669,14 +691,14 @@ document.addEventListener("DOMContentLoaded", () => {
             charCount.parentElement.classList.remove("limit-reached");
         };
 
-        closeFeedbackBtn.addEventListener("click", closeModal);
-        cancelFeedbackBtn.addEventListener("click", closeModal);
-        feedbackModal.addEventListener("click", (e) => {
+        if (closeFeedbackBtn) closeFeedbackBtn.addEventListener("click", closeModal);
+        if (cancelFeedbackBtn) cancelFeedbackBtn.addEventListener("click", closeModal);
+        if (feedbackModal) feedbackModal.addEventListener("click", (e) => {
             if (e.target === feedbackModal) closeModal();
         });
 
         if (feedbackDesc && charCount) {
-            feedbackDesc.addEventListener("input", (e) => {
+            if (feedbackDesc) feedbackDesc.addEventListener("input", (e) => {
                 const len = e.target.value.length;
                 charCount.textContent = len;
                 if (len >= 1000) {
@@ -687,9 +709,12 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        let isSubmittingFeedback = false;
         if (feedbackForm) {
             feedbackForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
+                if (isSubmittingFeedback) return;
+                
                 const category = document.getElementById("feedback-category").value;
                 const subject = document.getElementById("feedback-subject").value.trim();
                 const description = feedbackDesc.value.trim();
@@ -700,7 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 // Get current Google credential
-                const authSession = JSON.parse(sessionStorage.getItem("dau_buddy_auth") || "{}");
+                const authSession = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                 const currentCredential = authSession.credential;
                 
                 if (!currentCredential) {
@@ -708,6 +733,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                isSubmittingFeedback = true;
                 submitFeedbackBtn.disabled = true;
                 if (submitText) submitText.style.display = "none";
                 if (loader) loader.style.display = "block";
@@ -732,6 +758,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.error("Feedback error:", error);
                     showToast("An error occurred. Please try again.", "error");
                 } finally {
+                    isSubmittingFeedback = false;
                     submitFeedbackBtn.disabled = false;
                     if (submitText) submitText.style.display = "block";
                     if (loader) loader.style.display = "none";
@@ -759,7 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (doneNewKeyBtn) doneNewKeyBtn.addEventListener("click", closeKeyModal);
     
     if (copyNewKeyBtn && newKeyInput) {
-        copyNewKeyBtn.addEventListener("click", () => {
+        if (copyNewKeyBtn) copyNewKeyBtn.addEventListener("click", () => {
             if (newKeyInput.value) {
                 navigator.clipboard.writeText(newKeyInput.value).then(() => {
                     copyNewKeyBtn.textContent = "Copied!";
@@ -775,12 +802,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Profile Dropdown Toggle
     if (navProfileTrigger && profileDropdown) {
-        navProfileTrigger.addEventListener("click", (e) => {
+        if (navProfileTrigger) navProfileTrigger.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (profileDropdown.style.display === "none") {
-                profileDropdown.style.display = "block";
-            } else {
+            if (profileDropdown.style.display === "flex") {
                 profileDropdown.style.display = "none";
+            } else {
+                profileDropdown.style.display = "flex";
             }
         });
         
@@ -793,7 +820,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const closeProfileBtn = document.getElementById("close-profile-btn");
         if (closeProfileBtn) {
-            closeProfileBtn.addEventListener("click", (e) => {
+            if (closeProfileBtn) closeProfileBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 profileDropdown.style.display = "none";
             });
@@ -802,12 +829,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Landing Profile Dropdown Toggle
     if (landingProfileTrigger && landingProfileDropdown) {
-        landingProfileTrigger.addEventListener("click", (e) => {
+        if (landingProfileTrigger) landingProfileTrigger.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (landingProfileDropdown.style.display === "none") {
-                landingProfileDropdown.style.display = "block";
-            } else {
+            if (landingProfileDropdown.style.display === "flex") {
                 landingProfileDropdown.style.display = "none";
+            } else {
+                landingProfileDropdown.style.display = "flex";
             }
         });
         
@@ -820,17 +847,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const landingCloseProfileBtn = document.getElementById("landing-close-profile-btn");
         if (landingCloseProfileBtn) {
-            landingCloseProfileBtn.addEventListener("click", (e) => {
+            if (landingCloseProfileBtn) landingCloseProfileBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 landingProfileDropdown.style.display = "none";
             });
         }
         
-        // Wire up the logout button in the landing dropdown
-        if (landingLogoutBtn && logoutBtn) {
-            landingLogoutBtn.addEventListener("click", () => {
-                logoutBtn.click(); // reuse existing logic
-            });
-        }
+    }
+
+    const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
+    if (authData) {
+        showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential);
     }
 });
