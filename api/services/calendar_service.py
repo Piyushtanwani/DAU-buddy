@@ -147,3 +147,34 @@ def search_calendar(query: str, semester: int = None) -> Dict[str, List[Dict[str
                 "academic_events": academic_results,
                 "holidays": holiday_results
             }
+
+def get_events_by_date(date_str: str) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Finds academic events or holidays that fall on a specific date (YYYY-MM-DD).
+    """
+    academic_query = """
+        SELECT event_name, start_date, end_date, raw_date_text, semester_type
+        FROM academic_calendar
+        WHERE %s >= start_date AND %s <= end_date
+        ORDER BY start_date ASC;
+    """
+    
+    holiday_query = """
+        SELECT holiday_date, holiday_name, day_of_week, raw_date_text
+        FROM holiday_calendar
+        WHERE holiday_date = %s
+        ORDER BY holiday_date ASC;
+    """
+    
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(academic_query, (date_str, date_str))
+            academic_results = cur.fetchall()
+            
+            cur.execute(holiday_query, (date_str,))
+            holiday_results = cur.fetchall()
+            
+    return {
+        "academic_events": academic_results,
+        "holidays": holiday_results
+    }

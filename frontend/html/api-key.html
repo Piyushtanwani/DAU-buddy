@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DAU Buddy</title>
+    <title>API Keys - DAU Buddy</title>
     <meta name="description" content="DAU Buddy Login Interface">
 
     <!-- Google Fonts -->
@@ -21,165 +21,13 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="/css/style.css?v=6">
+    <link rel="stylesheet" href="/css/api-key.css">
 </head>
 
 <body>
-    <!-- ── Landing View ──────────────────────────────────────────────── -->
-    <div class="landing-view" id="landing-view">
-        <div class="top-accent-bar"></div>
-        <nav class="landing-nav">
-            <div class="nav-brand">
-                <i class="fa-solid fa-building-columns"></i>
-                <span>DAU Buddy</span>
-            </div>
-            <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
-                <button onclick="window.location.href='/'" class="nav-docs-btn"
-                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
-                    <i class="fa-solid fa-house"></i> Home
-                </button>
-                <button onclick="window.location.href='docs.html'" class="nav-docs-btn"
-                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
-                    <i class="fa-solid fa-book"></i> Docs
-                </button>
-                <div class="community-dropdown-container">
-                    <button class="nav-docs-btn"
-                        style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
-                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down"
-                            style="font-size: 10px;"></i>
-                    </button>
-                    <div class="community-dropdown-menu">
-                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server"
-                            target="_blank" class="community-dropdown-item">
-                            <i class="fa-brands fa-github" style="width: 16px; text-align: center;"></i> Contribute
-                        </a>
-                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new/choose" target="_blank"
-                            class="community-dropdown-item">
-                            <i class="fa-solid fa-bug" style="width: 16px; text-align: center;"></i> Raise an issue
-                        </a>
-                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
-                            class="community-dropdown-item">
-                            <i class="fa-solid fa-star" style="width: 16px; text-align: center;"></i> Leave a star
-                        </a>
-                    </div>
-                </div>
-                <button class="nav-signin-btn" id="nav-signin-btn">Sign In</button>
-                <div class="profile-container" id="landing-profile-container"
-                    style="position: relative; display: none;">
-                    <img id="landing-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
-                        referrerpolicy="no-referrer" alt="Profile"
-                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
-
-                    <div id="landing-profile-dropdown" class="profile-dropdown"
-                        style="display: none; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
-                        <div class="profile-info"
-                            style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                            <button id="landing-close-profile-btn"
-                                style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i
-                                    class="fa-solid fa-xmark"></i></button>
-                            <img id="landing-dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user"
-                                referrerpolicy="no-referrer"
-                                style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
-                            <h3 id="landing-dropdown-name"
-                                style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">
-                                Welcome!</h3>
-                            <p id="landing-dropdown-email"
-                                style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">
-                                Authenticated User</p>
-                            <span id="landing-dropdown-role"
-                                style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
-                        </div>
-                        <div class="profile-actions" style="padding: 8px;">
-                            <button id="landing-logout-btn"
-                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
-                                <i class="fa-solid fa-arrow-right-from-bracket"
-                                    style="color: #555; font-size: 18px;"></i> Sign out
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <header class="landing-hero">
-            <div class="hero-content">
-                <h1>DAU Buddy <br><span class="hero-highlight">MCP Server</span></h1>
-                <p>Securely query the university information right from your favorite AI portals like Cursor, Windsurf,
-                    OpenCode, or
-                    Claude Desktop. Role-based access ensures data privacy.</p>
-                <div class="hero-actions">
-                    <button class="hero-btn primary" id="hero-get-started-btn">Access MCP Server</button>
-                    <a href="docs.html" class="hero-btn secondary">View Documentation</a>
-                </div>
-            </div>
-        </header>
-
-        <section class="landing-features">
-            <div class="feature-card">
-                <div class="feat-icon"><i class="fa-solid fa-database"></i></div>
-                <h3>Centralized Data</h3>
-                <p>Connect to the faculty and student DB instantly over your local network.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feat-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                <h3>Role-Based Security</h3>
-                <p>Strict RBAC ensures users only access permitted institutional endpoints.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feat-icon"><i class="fa-solid fa-plug"></i></div>
-                <h3>Plug & Play Integration</h3>
-                <p>No complex setup. Just copy the JSON snippet into your MCP client config.</p>
-            </div>
-        </section>
-
-        <footer class="landing-footer">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <h4>DAU</h4>
-                    <p>Dhirubhai Ambani University (formerly DA-IICT)</p>
-                    <p>Gandhinagar, Gujarat</p>
-                </div>
-                <div class="footer-links" style="display: flex; flex-direction: column; gap: 12px; text-align: right;">
-                    <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
-                        style="color: #cccccc; text-decoration: none; font-size: 14px; transition: color 0.2s;"
-                        onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cccccc'">About Us</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>Made with ❤️ by DAU Students</p>
-            </div>
-        </footer>
-    </div>
-
-    <!-- ── Login Container Modal ─────────────────────────────────────── -->
-    <div class="login-overlay" id="login-overlay" style="display: none;">
-        <div class="login-card">
-            <button class="close-modal-btn" id="close-login-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="login-header">
-                <i class="fa-solid fa-graduation-cap login-logo"></i>
-                <h2>DAU Buddy</h2>
-                <p>Sign in with your university account to authenticate.</p>
-            </div>
-
-            <div class="login-error" id="login-error" style="display: none;">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span>Access Restricted: Please use a valid @dau.ac.in email address.</span>
-            </div>
-
-            <div id="g_id_onload"
-                data-client_id="590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
-                data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
-                data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-                data-text="signin_with" data-size="large" data-logo_alignment="left">
-            </div>
-        </div>
-    </div>
-
-    <!-- Main App hidden initially -->
-    <div class="app-container" id="app-container"
-        style="display: none; background-color: #0f3b73; min-height: 100vh; overflow-y: auto; box-sizing: border-box; text-align: left; color: #333; font-family: 'Open Sans', sans-serif;">
+<div class="app-container" id="app-container"
+        style="display: flex; flex-direction: column; background-color: #0f3b73; min-height: 100vh; overflow-y: auto; box-sizing: border-box; text-align: left; color: #333; font-family: 'Open Sans', sans-serif;">
         <div class="top-accent-bar"></div>
 
         <!-- Dashboard Navigation -->
@@ -191,13 +39,17 @@
                 <span>DAU Buddy Portal</span>
             </div>
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
-                <button id="home-btn" class="nav-docs-btn"
+                <button onclick="localStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'" class="nav-docs-btn"
                     style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-house"></i> Home
                 </button>
-                <button onclick="window.location.href='docs.html'" class="nav-docs-btn"
+                <button onclick="window.location.href='/docs'" class="nav-docs-btn"
                     style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-book"></i> Docs
+                </button>
+                <button id="nav-dashboard-btn" onclick="window.location.href='/maintainer'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
                 </button>
                 <div class="community-dropdown-container">
                     <button class="nav-docs-btn"
@@ -230,7 +82,7 @@
                         style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
 
                     <div id="profile-dropdown" class="profile-dropdown"
-                        style="display: none; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
                         <div class="profile-info"
                             style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
                             <button id="close-profile-btn"
@@ -354,10 +206,12 @@
         "--transport",
         "sse-only",
         "--header",
-        "Authorization:${AUTH_HEADER}"
+        "Authorization:${AUTH_HEADER}",
+        "--header",
+        "X-Client-Name:Claude"
       ],
       "env": {
-        "AUTH_HEADER": "Bearer dau_sk_2494b7668f981ee1d9015eaeea53fb7d"
+        "AUTH_HEADER": "Bearer <YOUR_API_KEY>"
       }
     }
   }
@@ -366,7 +220,7 @@
                 </div>
 
                 <!-- Cursor Content -->
-                <div id="content-cursor" style="display: none;">
+                <div id="content-cursor" style="display: none; flex-direction: column;">
                     <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
                         Cursor, Windsurf, or OpenCode MCP settings to connect over the network using Server-Sent Events
                         (SSE).
@@ -382,7 +236,8 @@
       "type": "sse",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
-        "Authorization": "Bearer dau_sk_your_api_key_here"
+        "Authorization": "Bearer <YOUR_API_KEY>",
+        "X-Client-Name": "Cursor/Windsurf"
       }
     }
   }
@@ -391,7 +246,7 @@
                 </div>
 
                 <!-- OpenCode Content -->
-                <div id="content-opencode" style="display: none;">
+                <div id="content-opencode" style="display: none; flex-direction: column;">
                     <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
                         OpenCode MCP settings to connect over the network using Server-Sent Events (SSE).
                         <strong>Requires the backend server to be running.</strong>
@@ -406,7 +261,8 @@
       "type": "remote",
       "url": "http://127.0.0.1:8001/mcp/sse",
       "headers": {
-        "Authorization": "Bearer dau_sk_your_api_key_here"
+        "Authorization": "Bearer <YOUR_API_KEY>",
+        "X-Client-Name": "OpenCode"
       }
     }
   }
@@ -436,7 +292,7 @@
     </div>
 
     <!-- Feedback Modal -->
-    <div id="feedback-modal" class="feedback-modal-overlay" style="display: none;">
+    <div id="feedback-modal" class="feedback-modal-overlay" style="display: none; flex-direction: column;">
         <div class="feedback-modal-content">
             <div class="feedback-modal-header">
                 <h2>Share Your Feedback</h2>
@@ -481,9 +337,9 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <script src="app.js?v=15"></script>
+
     <div id="new-key-modal"
-        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+        style="display: none; flex-direction: column; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
         <div
             style="background: white; border-radius: 8px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -509,6 +365,8 @@
             </div>
         </div>
     </div>
-</body>
 
+    <script src="/js/api-key.js"></script>
+
+</body>
 </html>

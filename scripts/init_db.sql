@@ -243,3 +243,16 @@ CREATE TABLE IF NOT EXISTS feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- =============================================================================
+-- MCP Analytics Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS mcp_analytics (
+    id SERIAL PRIMARY KEY,
+    user_email VARCHAR(255) NOT NULL,
+    tool_name VARCHAR(100) NOT NULL,
+    client_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_email ON mcp_analytics(user_email);
+CREATE INDEX IF NOT EXISTS idx_analytics_tool ON mcp_analytics(tool_name);

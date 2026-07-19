@@ -13,7 +13,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 
 <body>
@@ -25,13 +25,13 @@
                 <span>DAU Buddy</span>
             </div>
             <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
-                <button onclick="sessionStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'"
+                <button onclick="localStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'"
                     class="nav-docs-btn"
                     style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-house"></i> Home
                 </button>
-                <button onclick="window.location.href='docs.html'" class="nav-docs-btn"
-                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                <button onclick="window.location.href='/docs'" class="nav-docs-btn nav-docs-btn-active"
+                    style="padding: 8px 16px; background: #0f3b73; color: #ffffff; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
                     <i class="fa-solid fa-book"></i> Docs
                 </button>
                 <div class="community-dropdown-container">
@@ -55,7 +55,7 @@
                         </a>
                     </div>
                 </div>
-                <button onclick="window.location.href='/?view=login'" class="nav-signin-btn" id="docs-login-btn">Sign
+                <button onclick="window.location.href='/?view=login'" class="nav-signout-btn" id="docs-login-btn">Sign
                     In</button>
                 <div class="profile-container" id="landing-profile-container"
                     style="position: relative; display: none;">
@@ -64,7 +64,7 @@
                         style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
 
                     <div id="landing-profile-dropdown" class="profile-dropdown"
-                        style="display: none; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
                         <div class="profile-info"
                             style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
                             <button id="landing-close-profile-btn"
@@ -378,29 +378,26 @@ Service Service Service   Service    Service    Service
                 });
             });
         </script>
-        <script>
+        <script src="/js/app.js"></script>
+                <script>
             document.addEventListener("DOMContentLoaded", () => {
                 const btn = document.getElementById("docs-login-btn");
                 const profileContainer = document.getElementById("landing-profile-container");
                 const profileTrigger = document.getElementById("landing-profile-trigger");
-                const profileDropdown = document.getElementById("landing-profile-dropdown");
                 const dropdownAvatar = document.getElementById("landing-dropdown-avatar");
                 const dropdownName = document.getElementById("landing-dropdown-name");
                 const dropdownEmail = document.getElementById("landing-dropdown-email");
                 const dropdownRole = document.getElementById("landing-dropdown-role");
-                const closeProfileBtn = document.getElementById("landing-close-profile-btn");
-                const logoutBtn = document.getElementById("landing-logout-btn");
 
                 if (btn) {
-                    const storedSession = sessionStorage.getItem("dau_buddy_auth") || localStorage.getItem("dau_buddy_auth");
+                    const storedSession = localStorage.getItem("dau_buddy_auth") || localStorage.getItem("dau_buddy_auth");
                     if (storedSession) {
                         try {
                             const authData = JSON.parse(storedSession);
                             if (authData.email && authData.credential) {
                                 btn.textContent = "Dashboard";
                                 btn.onclick = function () {
-                                    sessionStorage.setItem('dau_buddy_view', 'dashboard');
-                                    window.location.href = '/';
+                                    window.location.href = '/api-keys';
                                 };
 
                                 // Show Profile
@@ -416,35 +413,6 @@ Service Service Service   Service    Service    Service
                                 }
                             }
                         } catch (e) { }
-                    }
-                }
-
-                // Dropdown Toggle Logic
-                if (profileTrigger && profileDropdown) {
-                    profileTrigger.addEventListener("click", (e) => {
-                        e.stopPropagation();
-                        profileDropdown.style.display = profileDropdown.style.display === "none" ? "block" : "none";
-                    });
-
-                    document.addEventListener("click", (e) => {
-                        if (profileContainer && !profileContainer.contains(e.target)) {
-                            profileDropdown.style.display = "none";
-                        }
-                    });
-
-                    if (closeProfileBtn) {
-                        closeProfileBtn.addEventListener("click", (e) => {
-                            e.stopPropagation();
-                            profileDropdown.style.display = "none";
-                        });
-                    }
-
-                    if (logoutBtn) {
-                        logoutBtn.addEventListener("click", () => {
-                            sessionStorage.removeItem("dau_buddy_auth");
-                            localStorage.removeItem("dau_buddy_auth");
-                            window.location.reload();
-                        });
                     }
                 }
             });

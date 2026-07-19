@@ -126,22 +126,29 @@ def create_app() -> FastAPI:
                     cursor.execute("SELECT status, created_at, last_used, role, key_prefix FROM api_keys WHERE email = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (email,))
                     row = cursor.fetchone()
                     if row:
-                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": row[3], "key_prefix": row[4]}
+                        role = row[3]
+                        if email in config.get_feedback_recipient_emails():
+                            local_part = email.split('@')[0]
+                            role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
+                        return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": role, "key_prefix": row[4]}
                     
-                    # Calculate role if no key exists
-                    local_part = email.split('@')[0]
                     assigned_role = 'User'
-                    if local_part.isdigit():
-                        assigned_role = 'Student'
+                    if email in config.get_feedback_recipient_emails():
+                        local_part = email.split('@')[0]
+                        assigned_role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
                     else:
-                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
-                        if cursor.fetchone():
-                            assigned_role = 'Faculty'
+                        local_part = email.split('@')[0]
+                        if local_part.isdigit():
+                            assigned_role = 'Student'
                         else:
-                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+                            cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
                             if cursor.fetchone():
-                                assigned_role = 'Staff'
-                                
+                                assigned_role = 'Faculty'
+                            else:
+                                cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+                                if cursor.fetchone():
+                                    assigned_role = 'Staff'
+                                    
                     return {"has_key": False, "role": assigned_role}
         except Exception as e:
             logger.error(f"DB Error: {e}")
@@ -152,24 +159,27 @@ def create_app() -> FastAPI:
     def generate_api_key(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
         
-        local_part = email.split('@')[0]
         assigned_role = 'User'
-        
-        if local_part.isdigit():
-            assigned_role = 'Student'
+        if email in config.get_feedback_recipient_emails():
+            local_part = email.split('@')[0]
+            assigned_role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
         else:
-            try:
-                with db_connection() as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
-                        if cursor.fetchone():
-                            assigned_role = 'Faculty'
-                        else:
-                            cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+            local_part = email.split('@')[0]
+            if local_part.isdigit():
+                assigned_role = 'Student'
+            else:
+                try:
+                    with db_connection() as conn:
+                        with conn.cursor() as cursor:
+                            cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
                             if cursor.fetchone():
-                                assigned_role = 'Staff'
-            except Exception as e:
-                logger.error(f"Error checking directories for role assignment: {e}")
+                                assigned_role = 'Faculty'
+                            else:
+                                cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+                                if cursor.fetchone():
+                                    assigned_role = 'Staff'
+                except Exception as e:
+                    logger.error(f"Error checking directories for role assignment: {e}")
 
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
         key_prefix, hashed_k = split_key(raw_key)
@@ -211,6 +221,9 @@ def create_app() -> FastAPI:
                     """, (key_prefix, hashed_k, email))
                     row = cursor.fetchone()
                     role = row[0] if row else 'User'
+                    if email in config.get_feedback_recipient_emails():
+                        local_part = email.split('@')[0]
+                        role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
             return {"api_key": raw_key, "role": role}
         except Exception as e:
             logger.error(f"Error regenerating key: {e}")
@@ -234,7 +247,12 @@ def create_app() -> FastAPI:
                     row = cursor.fetchone()
                     if row and row[0] == "Active" and secrets.compare_digest(row[3], hashed_k):
                         cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE hashed_key = %s", (hashed_k,))
-                        return {"role": row[1], "email": row[2]}
+                        email = row[2]
+                        role = row[1]
+                        if email in config.get_feedback_recipient_emails():
+                            local_part = email.split('@')[0]
+                            role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
+                        return {"role": role, "email": email}
         except Exception as e:
             logger.error(f"Auth Error: {e}")
         
@@ -345,6 +363,71 @@ def create_app() -> FastAPI:
             "refresh_token": client_id
         }
 
+    @app.post("/api/maintainer/dashboard")
+    def maintainer_dashboard(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
+        if email not in config.get_feedback_recipient_emails():
+            raise HTTPException(status_code=403, detail="Maintainer access required")
+        
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    # User Growth
+                    cursor.execute("SELECT COUNT(*) FROM api_keys")
+                    total_users = cursor.fetchone()[0]
+                    cursor.execute("SELECT COUNT(*) FROM api_keys WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'")
+                    new_users = cursor.fetchone()[0]
+                    
+                    # Platform Usage
+                    cursor.execute("SELECT COUNT(*) FROM mcp_analytics")
+                    total_queries = cursor.fetchone()[0]
+                    cursor.execute("SELECT COUNT(DISTINCT user_email) FROM mcp_analytics")
+                    active_users = cursor.fetchone()[0]
+                    
+                    # Signups Over Time (Last 30 Days)
+                    cursor.execute("""
+                        SELECT DATE(created_at), COUNT(*) 
+                        FROM api_keys 
+                        WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' 
+                        GROUP BY DATE(created_at) 
+                        ORDER BY DATE(created_at) ASC
+                    """)
+                    signups_over_time = [{"date": str(r[0]), "count": r[1]} for r in cursor.fetchall()]
+                    
+                    # Queries Per User
+                    cursor.execute("""
+                        SELECT user_email, COUNT(*) as c 
+                        FROM mcp_analytics 
+                        GROUP BY user_email 
+                        ORDER BY c DESC
+                    """)
+                    queries_per_user = [{"email": r[0], "count": r[1]} for r in cursor.fetchall()]
+                    
+                    # Tool Analytics
+                    cursor.execute("SELECT tool_name, COUNT(*) as c FROM mcp_analytics GROUP BY tool_name ORDER BY c DESC")
+                    tools_data = [{"tool_name": r[0], "count": r[1]} for r in cursor.fetchall()]
+                    
+                    # Client Analytics
+                    cursor.execute("SELECT client_name, COUNT(*) as c FROM mcp_analytics GROUP BY client_name ORDER BY c DESC")
+                    clients_data = [{"client_name": r[0], "count": r[1]} for r in cursor.fetchall()]
+                    
+                    # Role Analytics
+                    cursor.execute("SELECT role, COUNT(*) as c FROM api_keys GROUP BY role ORDER BY c DESC")
+                    roles_data = [{"role": r[0], "count": r[1]} for r in cursor.fetchall()]
+                    
+                    return {
+                        "users": {"total": total_users, "new_last_7_days": new_users},
+                        "platform": {"total_queries": total_queries, "active_users": active_users},
+                        "tools": tools_data,
+                        "clients": clients_data,
+                        "roles": roles_data,
+                        "signups_over_time": signups_over_time,
+                        "queries_per_user": queries_per_user
+                    }
+        except Exception as e:
+            logger.error(f"Dashboard Error: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
     app.include_router(api_router, prefix="/api")
 
     logger.info("Mounting FastMCP HTTP/SSE endpoints at /mcp")
@@ -358,9 +441,28 @@ def create_app() -> FastAPI:
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     frontend_dir = os.path.join(root_dir, "frontend")
 
+    from fastapi.responses import FileResponse
+    
     if os.path.exists(frontend_dir):
         logger.info(f"Mounting frontend from: {frontend_dir}")
-        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+        app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
+        app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
+        
+        @app.get("/")
+        def serve_index():
+            return FileResponse(os.path.join(frontend_dir, "html", "index.html"))
+            
+        @app.get("/api-keys")
+        def serve_api_keys():
+            return FileResponse(os.path.join(frontend_dir, "html", "api-key.html"))
+            
+        @app.get("/docs")
+        def serve_docs():
+            return FileResponse(os.path.join(frontend_dir, "html", "docs.html"))
+            
+        @app.get("/maintainer")
+        def serve_maintainer():
+            return FileResponse(os.path.join(frontend_dir, "html", "maintainer.html"))
     else:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 

@@ -149,3 +149,31 @@ async def search_calendar(query: str, semester: Optional[int] = None) -> str:
     except Exception as e:
         logger.error(f"Error in search_calendar: {e}")
         return f"Error: {str(e)}"
+
+@mcp.tool()
+async def get_events_by_date(date_str: str) -> str:
+    """
+    Finds academic events or holidays that fall on a specific date.
+    Args:
+        date_str: The date to check, in YYYY-MM-DD format (e.g. '2024-07-20').
+    """
+    logger.info(f"Executing get_events_by_date tool for date: {date_str}")
+    try:
+        results = calendar_service.get_events_by_date(date_str)
+        if not results['academic_events'] and not results['holidays']:
+            return f"No events found for date: {date_str}"
+        
+        output = []
+        if results['academic_events']:
+            output.append("=== Academic Events ===")
+            output.append(serialize_records(results['academic_events']))
+        if results['holidays']:
+            output.append("=== Holidays ===")
+            output.append(serialize_records(results['holidays']))
+            
+        return "\n".join(output)
+    except ValueError:
+        return "Error: Invalid date format. Please use YYYY-MM-DD format."
+    except Exception as e:
+        logger.error(f"Error in get_events_by_date: {e}")
+        return f"Error: {str(e)}"
