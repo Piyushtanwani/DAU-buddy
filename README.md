@@ -7,6 +7,7 @@ A unified MCP platform providing AI assistants with structured access to DAU fac
 - **Faculty Tools**: List faculty, search by name or expertise, view full profiles, and trigger live website syncing.
 - **Staff Tools**: List staff, search by name or designation, view full profiles, and trigger live website syncing.
 - **Scholars Tools**: List Ph.D. scholars, search by name or research area, view detailed profiles, and synchronize directly with the official DAU directory.
+- **Document Retrieval**: Full-text search across official DAU documents (like Academic Requirements). Automatically chunks PDFs and returns exact page citations.
 - **Library OPAC Tools**: Instantly search the DAU library catalog (over 28,000 records) and retrieve detailed book metadata using PostgreSQL full-text search. Includes fallback links to the live OPAC.
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
 - **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DAU sources.
@@ -28,10 +29,10 @@ Claude / Cursor
    FastMCP SSE Application
         │
   ┌──────┼──────────┬──────────┬──────────┬─────────┬─────────┐
-  │      │          │          │          │         │         │
-Faculty Staff   Library   Timetable  Calendar  Scholar   Feedback
-Service Service Service   Service    Service   Service   Service
-  │      │          │          │          │         │         │
+  │      │          │          │          │         │         │         │
+Faculty Staff   Library   Timetable  Calendar  Scholar   Feedback  Document
+Service Service Service   Service    Service   Service   Service   Service
+  │      │          │          │          │         │         │         │
   └──────────── PostgreSQL (Local) ───────────────────────────┘
 ```
 
@@ -66,7 +67,8 @@ MCP Project/
 │       ├── scholar_service.py
 │       ├── library_service.py
 │       ├── timetable_service.py
-│       └── calendar_service.py
+│       ├── calendar_service.py
+│       └── document_service.py
 │
 ├── frontend/                   # Web Dashboard UI
 │   ├── index.html
@@ -84,7 +86,8 @@ MCP Project/
 │   ├── library_mcp_server.py
 │   ├── timetable_mcp_server.py
 │   ├── calendar_mcp_server.py
-│   └── scholar_mcp_server.py
+│   ├── scholar_mcp_server.py
+│   └── documents_mcp_server.py
 │
 ├── scripts/                    # Operational one-shot scripts
 │   ├── init_db.sql             # Database schema initialization
@@ -93,7 +96,8 @@ MCP Project/
 │   ├── seed_library.py
 │   ├── seed_timetable.py
 │   ├── seed_calendar.py
-│   └── seed_scholars.py
+│   ├── seed_scholars.py
+│   └── seed_documents.py
 │
 ├── tests/                      # Unit and integration tests
 │
@@ -178,6 +182,7 @@ pip install -r requirements.txt
    python scripts/seed_library.py
    python scripts/seed_timetable.py
    python scripts/seed_calendar.py
+   python scripts/seed_documents.py
    ```
    *(Wait for each script to finish before starting the next one. The library seeding might take a moment since there are 28,000+ books).*
 
@@ -266,6 +271,10 @@ Cursor, Windsurf, and OpenCode support direct SSE network connections. You only 
 - `list_scholars()`, `search_scholars(query)`, `get_scholar_details(name_or_email)`, `sync_scholar_data()`
 *Example*: "Show me the research areas of Ph.D. scholars."
 
+**Documents:**
+- `search_academic_requirements(query)`, `list_academic_documents()`, `get_academic_document_pages(filename)`, `sync_academic_documents()`
+*Example*: "What is the minimum CPI to graduate with a BTech in ICT?"
+
 **Library:**
 - `search_library_books(query, limit)`, `get_book_details(biblionumber)`
 *Example*: "Find books on Artificial Intelligence."
@@ -289,6 +298,7 @@ The local PostgreSQL database is actively seeded with:
 | **Faculty Records** | ~116 | Includes expertise & contact information |
 | **Staff Records** | ~92 | Includes administrative designations |
 | **Scholars Records**| ~60 | Ph.D. scholars and research areas |
+| **Academic Documents** | ~15 | Multi-page PDFs (chunked & indexed) |
 | **Library Catalog** | 28,000+ | Books searchable via OPAC |
 | **Timetable Slots** | 1,200+ | Daily Lectures, Labs, and Tutorials |
 | **Academic Calendar**| 120+ | Semester events and public holidays |
