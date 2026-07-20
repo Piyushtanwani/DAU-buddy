@@ -116,6 +116,15 @@ def create_app() -> FastAPI:
     class KeyRequest(BaseModel):
         credential: str
 
+    @app.get("/api/config-info")
+    def get_config_info():
+        import sys
+        import os
+        return {
+            "python_path": sys.executable,
+            "project_path": os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        }
+
     @app.post("/api/me")
     @limiter.limit("60/minute")
     def get_me(request: Request, req: KeyRequest):
