@@ -7,9 +7,11 @@ import pdfplumber
 import logging
 from typing import Dict, List, Any
 import sys
+from dotenv import load_dotenv
 
 # Add parent dir to path so we can import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
 from connectors.apache_directory_connector import ApacheDirectoryConnector
 from parsers.document_metadata_parser import DocumentMetadataParser
