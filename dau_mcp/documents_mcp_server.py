@@ -14,7 +14,14 @@ mcp = FastMCP("DocumentsServer")
 def search_academic_requirements(query: str, program: str = None, cohort_year: str = None, limit: int = 8) -> str:
     """
     Search academic requirement documents based on a query.
-    IMPORTANT FOR AI: when answering from these results you MUST cite the source as: Document title, page N (URL).
+    
+    IMPORTANT FOR AI (QUERY FORMAT): 
+    This uses strict Database Full-Text Search, NOT semantic search. 
+    Do NOT pass full sentences or questions (e.g., "what is the minimum CPI for BTech"). 
+    You MUST extract 2-4 core keywords (e.g., "minimum CPI graduation BTech") otherwise it will fail to find matches.
+    
+    IMPORTANT FOR AI (CITATION): 
+    When answering from these results you MUST cite the source as: Document title, page N (URL).
     Answers without a citation are considered wrong. Note: URLs open only on the DAU campus network.
     """
     results = DocumentService.search_documents("academic_requirements", query, program, cohort_year, limit)

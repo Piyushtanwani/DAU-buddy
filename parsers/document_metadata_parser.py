@@ -21,8 +21,21 @@ class DocumentMetadataParser:
         prog = re.sub(r'Ph\s*D', 'PhD', prog, flags=re.IGNORECASE)
         prog = re.sub(r'M\s*Des', 'MDes', prog, flags=re.IGNORECASE)
         
-        # Remove parens and extra spaces
-        prog = prog.replace("(", " ").replace(")", " ")
+        # Remove parens, dashes, and extra spaces
+        prog = prog.replace("(", " ").replace(")", " ").replace("-", " ")
+        
+        # Standardize "EnggScience" vs "Engg&Science" -> "Engg Science"
+        prog = prog.replace("&", " ")
+        prog = prog.replace("EnggScience", "Engg Science")
+        
+        # Remove standalone years like 2016, 2021, etc.
+        prog = re.sub(r'\b20\d{2}\b', '', prog)
+        
+        # Remove "updated as of August" etc.
+        prog = re.sub(r'updated as of.*', '', prog, flags=re.IGNORECASE)
+        prog = re.sub(r'as of.*', '', prog, flags=re.IGNORECASE)
+        prog = re.sub(r'updated', '', prog, flags=re.IGNORECASE)
+        
         prog = re.sub(r'\s+', ' ', prog).strip()
         
         return prog
@@ -43,18 +56,18 @@ class DocumentMetadataParser:
             'version': None
         }
 
-        # Academic Requirements_MTech(CS&ML)_Program_wef 2021-22.pdf
         # Try to find the 'wef' (with effect from) part
-        wef_match = re.search(r'wef\s*(?:Aut|Spr)?\s*(\d{4}-\d{2})', filename, re.IGNORECASE)
+        wef_match = re.search(r'wef[\s_]*(?:Aut|Spr)?[\s_]*(\d{4}-\d{2})', filename, re.IGNORECASE)
         if wef_match:
             metadata['effective_year'] = wef_match.group(1)
             metadata['version'] = metadata['effective_year']
 
         # Try to extract the program/degree
-        if "Academic Requirement" in filename:
+        if "academic requirement" in filename.lower():
             # Drop the prefix and the wef part
             name_part = re.sub(r'^Academic Requirements?_?', '', filename, flags=re.IGNORECASE)
             name_part = re.sub(r'_?wef.*\.pdf$', '', name_part, flags=re.IGNORECASE)
+            name_part = name_part.replace('.pdf', '')
             
             normalized = self.normalize_program(name_part)
             metadata['program'] = normalized

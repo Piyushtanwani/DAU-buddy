@@ -50,7 +50,7 @@ class ApacheDirectoryConnector:
 
             decoded_filename = urllib.parse.unquote(href)
 
-            if self.filename_prefix and not decoded_filename.startswith(self.filename_prefix):
+            if self.filename_prefix and not decoded_filename.lower().startswith(self.filename_prefix.lower()):
                 logger.debug(f"Skipping {decoded_filename} (does not match prefix '{self.filename_prefix}')")
                 continue
 
