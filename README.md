@@ -11,6 +11,7 @@ A unified MCP platform providing AI assistants with structured access to DAU fac
 - **Timetable Tools**: Query faculty schedules, course timings, free time slots, and full program batch timetables.
 - **Calendar Tools**: Query academic calendar events, examination schedules, semester activities, and holidays synchronized from official DAU sources.
 - **User Feedback System**: Built-in feedback form allowing users to submit bug reports, feature requests, and suggestions. Automatically sends beautifully formatted HTML emails to administrators asynchronously.
+- **Maintainer Dashboard**: Dedicated analytics portal for monitoring API usage, rate limit metrics, and endpoint popularity via interactive charts.
 - **Full-Text Search**: Powered by PostgreSQL tsvector, `websearch_to_tsquery`, and GIN indexes for fast, relevance-ranked retrieval across institutional datasets.
 - **Secure Authentication**: All endpoints (including the Feedback API) are secured by an ASGI authentication middleware that verifies API keys and enforces rate limits.
 - **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DAU email upon Google Sign-In.

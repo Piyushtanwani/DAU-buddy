@@ -11,7 +11,7 @@ window.handleCredentialResponse = (response) => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    // ── Google OAuth & Session Management ─────────────────────────────────────
+    // â”€â”€ Google OAuth & Session Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const loginOverlay = document.getElementById("login-overlay");
     const appContainer = document.getElementById("app-container");
     const loginError = document.getElementById("login-error");
@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 
                 // Mask the key on main UI
-                const maskedKey = (data.key_prefix || key.substring(0, 14)) + "••••••••••••••••••••••••••••••••";
+                const maskedKey = (data.key_prefix || key.substring(0, 14)) + "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
                 setApiKeyValue(maskedKey);
 
                 updateConfigSnippet(maskedKey);
@@ -360,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         regenerateBtn.textContent = "Regenerate Key";
                     }
                     if (result.prefix) {
-                        const maskedKey = result.prefix + "••••••••••••••••••••••••••••••••";
+                        const maskedKey = result.prefix + "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
                         setApiKeyValue(maskedKey);
                         updateConfigSnippet(maskedKey);
                     } else {
@@ -429,7 +429,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
-                    btnSignIn.textContent = "Dashboard";
+                    btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
+                    btnSignIn.className = 'nav-docs-btn';
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -463,7 +464,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
-                    btnSignIn.textContent = "Dashboard";
+                    btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
+                    btnSignIn.className = 'nav-docs-btn';
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -728,3 +730,4 @@ document.addEventListener("DOMContentLoaded", () => {
         
     }
 });
+

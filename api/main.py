@@ -117,7 +117,7 @@ def create_app() -> FastAPI:
         credential: str
 
     @app.post("/api/me")
-    @limiter.limit("5/minute")
+    @limiter.limit("60/minute")
     def get_me(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
         try:
