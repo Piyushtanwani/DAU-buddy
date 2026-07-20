@@ -1,0 +1,5 @@
+collections:
+  - id: academic_requirements
+    connector: apache_directory
+    url: https://intranet.daiict.ac.in/~daiict_nt01/Academic/
+    filename_prefix: "Academic Requirements"

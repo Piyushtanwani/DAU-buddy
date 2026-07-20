@@ -33,6 +33,10 @@ from dau_mcp.calendar_mcp_server import (
 from dau_mcp.scholar_mcp_server import (
     list_scholars, search_scholars, get_scholar_details, sync_scholar_data
 )
+from dau_mcp.documents_mcp_server import (
+    search_academic_requirements, list_academic_documents,
+    get_academic_document_pages, sync_academic_documents
+)
 
 # ==============================================================================
 # Usage Tracking
@@ -88,6 +92,12 @@ mcp.add_tool(list_scholars)
 mcp.add_tool(search_scholars)
 mcp.add_tool(get_scholar_details)
 mcp.add_tool(sync_scholar_data)
+
+# Register Academic Document Tools
+mcp.add_tool(search_academic_requirements)
+mcp.add_tool(list_academic_documents)
+mcp.add_tool(get_academic_document_pages)
+mcp.add_tool(sync_academic_documents)
 
 # ==============================================================================
 # Usage Tracking (wrapping ToolManager.call_tool)

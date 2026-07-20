@@ -256,3 +256,42 @@ CREATE TABLE IF NOT EXISTS mcp_analytics (
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_email ON mcp_analytics(user_email);
 CREATE INDEX IF NOT EXISTS idx_analytics_tool ON mcp_analytics(tool_name);
+
+-- =============================================================================
+-- Generic Document Retrieval Framework Tables
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS documents (
+    id              SERIAL PRIMARY KEY,
+    collection      VARCHAR(100) NOT NULL,
+    filename        TEXT NOT NULL,
+    title           TEXT,
+    url             TEXT NOT NULL,
+    degree          VARCHAR(100),
+    program         VARCHAR(255),
+    effective_year  VARCHAR(50),
+    version         VARCHAR(50),
+    is_latest       BOOLEAN DEFAULT false,
+    last_modified   TIMESTAMP,
+    synced_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    page_count      INT,
+    checksum        VARCHAR(64),
+    status          VARCHAR(50) DEFAULT 'active',
+    UNIQUE (collection, filename)
+);
+
+CREATE INDEX IF NOT EXISTS idx_documents_collection ON documents(collection);
+CREATE INDEX IF NOT EXISTS idx_documents_program ON documents(program);
+
+CREATE TABLE IF NOT EXISTS document_chunks (
+    id              SERIAL PRIMARY KEY,
+    document_id     INT REFERENCES documents(id) ON DELETE CASCADE,
+    page            INT,
+    section_heading TEXT,
+    chunk_index     INT NOT NULL,
+    content         TEXT NOT NULL,
+    search_vector   tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce(content, ''))) STORED
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_chunks_search_vector
+    ON document_chunks USING GIN (search_vector);
