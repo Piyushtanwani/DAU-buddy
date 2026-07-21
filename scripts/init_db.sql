@@ -295,3 +295,47 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 CREATE INDEX IF NOT EXISTS idx_document_chunks_search_vector
     ON document_chunks USING GIN (search_vector);
+
+-- =============================================================================
+-- Timetables Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS timetables (
+    id             SERIAL PRIMARY KEY,
+    
+    -- Program Information
+    program        VARCHAR(100),
+    semester       VARCHAR(20),
+    
+    -- Session Information
+    session_type   VARCHAR(50),
+    -- Course Information
+    course_code    VARCHAR(100),
+    course_name    VARCHAR(255),
+    course_type    VARCHAR(100),
+
+    -- Faculty Information
+    faculty_name   VARCHAR(255),
+
+    -- Schedule Information
+    day_of_week    VARCHAR(20),
+    start_time     TIME,
+    end_time       TIME,
+
+    -- Venue Information
+    room           VARCHAR(255),
+
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE timetables
+    ADD COLUMN IF NOT EXISTS search_vector tsvector
+    GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(course_code, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(course_name, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(faculty_name, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(room, '')), 'D')
+    ) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_timetables_search_vector ON timetables USING GIN (search_vector);
+CREATE INDEX IF NOT EXISTS idx_timetables_faculty ON timetables (faculty_name, day_of_week);
+CREATE INDEX IF NOT EXISTS idx_timetables_course ON timetables (course_code, day_of_week);

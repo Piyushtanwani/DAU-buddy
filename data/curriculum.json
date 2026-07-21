@@ -1,0 +1,1802 @@
+{
+    "IC101": [
+        {
+            "course_name": "Language and Literature",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "IC102": [
+        {
+            "course_name": "Introduction to Programming",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "IC103": [
+        {
+            "course_name": "Programming Lab",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "IC104": [
+        {
+            "course_name": "Basic Electronic Circuits",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "IC105": [
+        {
+            "course_name": "Maths I (Calculus)",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "IC106": [
+        {
+            "course_name": "CoCurricular I",
+            "program": "B Tech (Institute Core)",
+            "semester": 1,
+            "course_type": "Institute Core"
+        }
+    ],
+    "PC1": [
+        {
+            "course_name": "Discrete Mathematics",
+            "program": "B Tech (Program Core)",
+            "semester": 1,
+            "course_type": "Program-Core-B Tech (ICT)"
+        }
+    ],
+    "HM216": [
+        {
+            "course_name": "Science, Technology, and Society",
+            "program": "B Tech (ICT, CS, MnC, EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "CT204": [
+        {
+            "course_name": "Signal and Systems",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT216": [
+        {
+            "course_name": "Design and Analysis of Algorithms",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT227": [
+        {
+            "course_name": "Computer Systems Programming",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "SC223": [
+        {
+            "course_name": "Linear Algebra",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC222": [
+        {
+            "course_name": "Exploration Project 2",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        },
+        {
+            "course_name": "Exploration Project II",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "CO211": [
+        {
+            "course_name": "CoCurricular III",
+            "program": "B Tech (ICT and CS)",
+            "semester": 3,
+            "course_type": "Core"
+        },
+        {
+            "course_name": "CoCurricular III",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MC211": [
+        {
+            "course_name": "Functions of Several Variables and PDEs",
+            "program": "B Tech (MnC)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MC212": [
+        {
+            "course_name": "Database Management Systems",
+            "program": "B Tech (MnC)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MC213": [
+        {
+            "course_name": "Design and Analysis of Algorithms",
+            "program": "B Tech (MnC)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MC214": [
+        {
+            "course_name": "Operating Systems",
+            "program": "B Tech (MnC)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MC216": [
+        {
+            "course_name": "Probability and Random Processes",
+            "program": "B Tech (MnC)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "ED211": [
+        {
+            "course_name": "Engineering Mathematics III",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "ED212": [
+        {
+            "course_name": "Solid State Devices",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "ED213": [
+        {
+            "course_name": "Signal Processing and Control Systems",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "ED214": [
+        {
+            "course_name": "Electronic Design Lab",
+            "program": "B Tech (EVD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT314": [
+        {
+            "course_name": "Software Engineering",
+            "program": "B Tech (ICT and CS)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "IT304": [
+        {
+            "course_name": "Computer Networks",
+            "program": "B Tech (ICT and CS)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "CT303": [
+        {
+            "course_name": "Digital Communication",
+            "program": "B Tech (ICT and CS)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "CS374": [
+        {
+            "course_name": "Computational and Numerical Methods",
+            "program": "B Tech (CS)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "MC311": [
+        {
+            "course_name": "Mathematical Optimization",
+            "program": "B Tech (MnC)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "MC312": [
+        {
+            "course_name": "Modelling and Simulation",
+            "program": "B Tech (MnC)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "MC313": [
+        {
+            "course_name": "Algebraic Structures",
+            "program": "B Tech (MnC)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "MC314": [
+        {
+            "course_name": "Principles of Economics",
+            "program": "B Tech (MnC)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "ED311": [
+        {
+            "course_name": "Digital Signal Processing Hardware",
+            "program": "B Tech (EVD)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "ED312": [
+        {
+            "course_name": "VLSI Design",
+            "program": "B Tech (EVD)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "ED313": [
+        {
+            "course_name": "VLSI Design LAB",
+            "program": "B Tech (EVD)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "HM116": [
+        {
+            "course_name": "Principles of Economics",
+            "program": "B Tech (EVD)",
+            "semester": 5,
+            "course_type": "Core"
+        }
+    ],
+    "PC503": [
+        {
+            "course_name": "Programming Lab",
+            "program": "M Tech (ICT)",
+            "semester": 1,
+            "course_type": "Program Core"
+        }
+    ],
+    "PC512": [
+        {
+            "course_name": "Communication Skills and Technical Writing",
+            "program": "M Tech (ICT)",
+            "semester": 1,
+            "course_type": "Program Core"
+        }
+    ],
+    "IT580": [
+        {
+            "course_name": "Advanced Algorithm",
+            "program": "Specialization Core",
+            "semester": 1,
+            "course_type": "SS Sp. Core"
+        },
+        {
+            "course_name": "Advanced Algorithm",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "ML General Elective (Technical)"
+        },
+        {
+            "course_name": "Advanced Algorithm",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IT582": [
+        {
+            "course_name": "Foundations of Machine Learning",
+            "program": "Specialization Core",
+            "semester": 1,
+            "course_type": "ML Sp. Core"
+        },
+        {
+            "course_name": "Foundations of Machine Learning",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "SS General Elective (Technical)"
+        }
+    ],
+    "EL526": [
+        {
+            "course_name": "VLSI System Design",
+            "program": "Specialization Core",
+            "semester": 1,
+            "course_type": "VES Sp. Core"
+        },
+        {
+            "course_name": "VLSI System Design",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "VLSI System Design",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "VLSI System Design",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "WCSP General Elective (Technical)"
+        }
+    ],
+    "CT546": [
+        {
+            "course_name": "Introduction to Wireless Communication",
+            "program": "Specialization Core",
+            "semester": 1,
+            "course_type": "WCSP Sp. Core"
+        },
+        {
+            "course_name": "Introduction to Wireless Communication",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "PC844": [
+        {
+            "course_name": "MTech (ICT) Major Project 1",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC613": [
+        {
+            "course_name": "Communication Skills",
+            "program": "MSc (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT623": [
+        {
+            "course_name": "Data Structures",
+            "program": "MSc (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT615": [
+        {
+            "course_name": "Database Management Systems",
+            "program": "MSc (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "SC612": [
+        {
+            "course_name": "Discrete Mathematics",
+            "program": "MSc (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT603": [
+        {
+            "course_name": "Introduction to Programming",
+            "program": "MSc (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "DS601": [
+        {
+            "course_name": "Mathematical Foundation for Data Science",
+            "program": "MSc (DS)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "DS602": [
+        {
+            "course_name": "Statistical Methods (Lab:python)",
+            "program": "MSc (DS)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "DS603": [
+        {
+            "course_name": "Data Structures and Algorithms (with Python)",
+            "program": "MSc (DS)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "DS604": [
+        {
+            "course_name": "Introduction to Data Management",
+            "program": "MSc (DS)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "DS605": [
+        {
+            "course_name": "Fundamentals of Machine Learning",
+            "program": "MSc (DS)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT643": [
+        {
+            "course_name": "Software Design and Testing",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT644": [
+        {
+            "course_name": "Web Services and SOA",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT645": [
+        {
+            "course_name": "Web and Mobile Development",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "DS635": [
+        {
+            "course_name": "Machine Learning Systems Engineering",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "DS636": [
+        {
+            "course_name": "Data Science Ethics",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MA611": [
+        {
+            "course_name": "Fundamentals of Python Programming and SQL",
+            "program": "MSc (AA)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA612": [
+        {
+            "course_name": "Fundamentals of Analytics / Statistical Methods",
+            "program": "MSc (AA)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA613": [
+        {
+            "course_name": "Earth Orbit Systems",
+            "program": "MSc (AA)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA614": [
+        {
+            "course_name": "Preparatory Mathematics",
+            "program": "MSc (AA)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA615": [
+        {
+            "course_name": "Fundamentals of Agricultural Science",
+            "program": "MSc (AA)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA631": [
+        {
+            "course_name": "Crops & Soil Analytics",
+            "program": "MSc (AA)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MA632": [
+        {
+            "course_name": "Risk Analysis and Modelling",
+            "program": "MSc (AA)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MA633": [
+        {
+            "course_name": "Weather and Water Analytic",
+            "program": "MSc (AA)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MA634": [
+        {
+            "course_name": "Agriculture Market Analytics",
+            "program": "MSc (AA)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IT1001": [
+        {
+            "course_name": "Introduction to Programming (C)",
+            "program": "BS-MS (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA1001": [
+        {
+            "course_name": "Discrete Mathematics",
+            "program": "BS-MS (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        },
+        {
+            "course_name": "Calculus",
+            "program": "BS-MS (DS & AI)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT1002": [
+        {
+            "course_name": "Digital Logic & Computer Organization",
+            "program": "BS-MS (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "IT1003": [
+        {
+            "course_name": "Computational Thinking and Problem Solving",
+            "program": "BS-MS (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "HS1001": [
+        {
+            "course_name": "Language and Communication",
+            "program": "BS-MS (IT)",
+            "semester": 1,
+            "course_type": "Core"
+        },
+        {
+            "course_name": "Language and Communication",
+            "program": "BS-MS (DS & AI)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MA1002": [
+        {
+            "course_name": "Linear Algebra",
+            "program": "BS-MS (DS & AI)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "CP1001": [
+        {
+            "course_name": "Computational Thinking & Problem Solving",
+            "program": "BS-MS (DS & AI)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "CP1002": [
+        {
+            "course_name": "Programming in Python",
+            "program": "BS-MS (DS & AI)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MI601": [
+        {
+            "course_name": "Orientation to Intelligent User-ExperienceDesign",
+            "program": "MDes (IUxD)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MI602": [
+        {
+            "course_name": "Fundamentals of Design for IUxD",
+            "program": "MDes (IUxD)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MI603": [
+        {
+            "course_name": "Elements of Design for IUxD",
+            "program": "MDes (IUxD)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MI604": [
+        {
+            "course_name": "Intelligent Technology: An-introduction",
+            "program": "MDes (IUxD)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "MI605": [
+        {
+            "course_name": "Basics of UI, UX & IxD",
+            "program": "MDes (IUxD)",
+            "semester": 1,
+            "course_type": "Core"
+        }
+    ],
+    "PC741": [
+        {
+            "course_name": "Animation",
+            "program": "MDes (CD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC733": [
+        {
+            "course_name": "Web Design: Applications, Inter-Connectibility",
+            "program": "MDes (CD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC743": [
+        {
+            "course_name": "Thematic Seminar/Workshop OR RR (Reading/Research) course if no thematic Seminar/Workshop is offered",
+            "program": "MDes (CD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC745": [
+        {
+            "course_name": "Research Application: Constructing Narratives",
+            "program": "MDes (CD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "PC740": [
+        {
+            "course_name": "Research Proposal Seminar: Rationale, Process, Outcome",
+            "program": "MDes (CD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MI621": [
+        {
+            "course_name": "AR &amp; XR for Designers",
+            "program": "MDes (IUxD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MI622": [
+        {
+            "course_name": "Interaction Design",
+            "program": "MDes (IUxD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MI623": [
+        {
+            "course_name": "Phygital Experience Design",
+            "program": "MDes (IUxD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MI624": [
+        {
+            "course_name": "Immersive Experience Design",
+            "program": "MDes (IUxD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "MI625": [
+        {
+            "course_name": "Open Elective",
+            "program": "MDes (IUxD)",
+            "semester": 3,
+            "course_type": "Core"
+        }
+    ],
+    "IE402": [
+        {
+            "course_name": "Optimization",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective"
+        },
+        {
+            "course_name": "Optimization",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Optimization",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective"
+        },
+        {
+            "course_name": "Optimization",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Optimization",
+            "program": "General Elective (Maths)",
+            "semester": 1,
+            "course_type": "General Elective (Maths)"
+        }
+    ],
+    "IE424": [
+        {
+            "course_name": "IoT Sensors and Systems",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "IoT Sensors and Systems",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        }
+    ],
+    "IE406": [
+        {
+            "course_name": "Machine Learning",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Machine Learning",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Machine Learning",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Machine Learning",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "IE415": [
+        {
+            "course_name": "Control of Autonomous Systems",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Control of Autonomous Systems",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Control of Autonomous Systems",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Control of Autonomous Systems",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "IE403": [
+        {
+            "course_name": "Human Computer Interaction",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Human Computer Interaction",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Human Computer Interaction",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Human Computer Interaction",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "SS General Elective (Technical)"
+        }
+    ],
+    "IE494": [
+        {
+            "course_name": "Big Data Processing",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Big Data Processing",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Big Data Processing",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Big Data Processing",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Big Data Processing",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "SS Elective III/IV"
+        },
+        {
+            "course_name": "Big Data Processing",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "CT505": [
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Detection and Estimation Theory",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "WCSP General Elective (Technical)"
+        }
+    ],
+    "CT437": [
+        {
+            "course_name": "Speech Communication",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Speech Communication",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Speech Communication",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Speech Communication",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "EL453": [
+        {
+            "course_name": "Nanoelectronics",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Nanoelectronics",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Nanoelectronics",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "VES Elective III/IV"
+        }
+    ],
+    "EL470": [
+        {
+            "course_name": "Printed and Flexible Electronics",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Printed and Flexible Electronics",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Printed and Flexible Electronics",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Printed and Flexible Electronics",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Printed and Flexible Electronics",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "VES General Elective (Technical)"
+        }
+    ],
+    "IT462": [
+        {
+            "course_name": "Exploratory Data Analysis",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Exploratory Data Analysis",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Exploratory Data Analysis",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Exploratory Data Analysis",
+            "program": "General Elective (Maths)",
+            "semester": 1,
+            "course_type": "General Elective (Maths)"
+        },
+        {
+            "course_name": "Exploratory Data Analysis",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IT543": [
+        {
+            "course_name": "Advanced Logic for Computer Science",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Advanced Logic for Computer Science",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Advanced Logic for Computer Science",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Advanced Logic for Computer Science",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Advanced Logic for Computer Science",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "SS Elective III/IV"
+        }
+    ],
+    "SC301": [
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "B Tech (ICT and CS)",
+            "semester": null,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Numerical Linear Algebra",
+            "program": "General Elective (Maths)",
+            "semester": 1,
+            "course_type": "General Elective (Maths)"
+        }
+    ],
+    "SC451": [
+        {
+            "course_name": "AI-Assisted Mathematical Reasoning",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "AI-Assisted Mathematical Reasoning",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "AI-Assisted Mathematical Reasoning",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        }
+    ],
+    "SC404": [
+        {
+            "course_name": "Advanced Matrix Theory",
+            "program": "B Tech (MnC)",
+            "semester": null,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Advanced Matrix Theory",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Advanced Matrix Theory",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Advanced Matrix Theory",
+            "program": "General Elective (Maths)",
+            "semester": 1,
+            "course_type": "General Elective (Maths)"
+        }
+    ],
+    "EL403": [
+        {
+            "course_name": "VLSI Circuit for DSP",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Specialization Elective-2"
+        },
+        {
+            "course_name": "VLSI Circuit for DSP",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IE420": [
+        {
+            "course_name": "Real Time Embedded Software",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Specialization Elective-2"
+        },
+        {
+            "course_name": "Real Time Embedded Software",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective (RAS minor)"
+        },
+        {
+            "course_name": "Real Time Embedded Software",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "EL467": [
+        {
+            "course_name": "Digital Programming",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Digital Programming",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Digital Programming",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Digital Programming",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "VES General Elective (Technical)"
+        }
+    ],
+    "IE411": [
+        {
+            "course_name": "Operating Systems",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Operating Systems",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "ICT & Technical Elective"
+        },
+        {
+            "course_name": "Operating Systems",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Operating Systems",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "SS General Elective (Technical)"
+        }
+    ],
+    "EL411": [
+        {
+            "course_name": "DESIGN OF ANALOG CMOS IC",
+            "program": "B Tech (EVD)",
+            "semester": null,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "DESIGN OF ANALOG CMOS IC",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "DESIGN OF ANALOG CMOS IC",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "DESIGN OF ANALOG CMOS IC",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "VES Elective III/IV"
+        }
+    ],
+    "EL413": [
+        {
+            "course_name": "MEMS and Applications",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "MEMS and Applications",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Specialization Elective-4"
+        },
+        {
+            "course_name": "MEMS and Applications",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "VES Elective III/IV"
+        }
+    ],
+    "IT550": [
+        {
+            "course_name": "Information Retrieval",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Information Retrieval",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Information Retrieval",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "ML Elective III/IV"
+        }
+    ],
+    "IT531": [
+        {
+            "course_name": "Advanced Computer Networks",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Advanced Computer Networks",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "SS Elective III/IV"
+        },
+        {
+            "course_name": "Advanced Computer Networks",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IT524": [
+        {
+            "course_name": "Computer Vision",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Computer Vision",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "ML Elective III/IV"
+        },
+        {
+            "course_name": "Computer Vision",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IT457": [
+        {
+            "course_name": "Cloud Computing",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Cloud Computing",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Cloud Computing",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "SS General Elective (Technical)"
+        }
+    ],
+    "IT594": [
+        {
+            "course_name": "Deep Neural NLP & Applications",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Deep Neural NLP & Applications",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Deep Neural NLP & Applications",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "ML Elective III/IV"
+        },
+        {
+            "course_name": "Deep Neural NLP & Applications",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "IT586": [
+        {
+            "course_name": "Trustworthy AI \u2013 Theory and Practice",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Trustworthy AI \u2013 Theory and Practice",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Trustworthy AI \u2013 Theory and Practice",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Trustworthy AI \u2013 Theory and Practice",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "SS Elective III/IV"
+        },
+        {
+            "course_name": "Trustworthy AI \u2013 Theory and Practice",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "DS401": [
+        {
+            "course_name": "Causal Inference",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Causal Inference",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Causal Inference",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "ML Elective III/IV"
+        },
+        {
+            "course_name": "Causal Inference",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "HM484": [
+        {
+            "course_name": "Modern European Philosophy",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        },
+        {
+            "course_name": "Modern European Philosophy",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Modern European Philosophy",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "HM405": [
+        {
+            "course_name": "Idea of India",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        },
+        {
+            "course_name": "Idea of India",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Idea of India",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "HM406": [
+        {
+            "course_name": "Migration & Transational Identities",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        },
+        {
+            "course_name": "Migration and Transnational Identities",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Migration and Transnational Identities",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "HM404": [
+        {
+            "course_name": "Indian Society and Governance",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        },
+        {
+            "course_name": "Indian Society and Governance",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Indian Society and Governance",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "HM432": [
+        {
+            "course_name": "Organisational Behaviour",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        }
+    ],
+    "HM443": [
+        {
+            "course_name": "The Art of Influence: Communication, Storytelling and Personal Branding",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "HASSE/ Open Elective"
+        },
+        {
+            "course_name": "The Art of Influence: Communication, Storytelling and Personal Branding",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "The Art of Influence: Communication, Storytelling and Personal Branding",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "The Art of Influence: Communication, Storytelling and Personal Branding",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Open Elective"
+        }
+    ],
+    "DE401": [
+        {
+            "course_name": "Creative Intelligence for Engineers",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Design Intelligence for Engineers",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Design Intelligence for Engineers",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Creative Intelligence for Engineers",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Creative Intelligence for Engineers",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "SC452": [
+        {
+            "course_name": "Processes on Networks",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Processes on Networks",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        }
+    ],
+    "SC477": [
+        {
+            "course_name": "Quantum Information Theory",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Quantum Information Theory",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Quantum Information Theory",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        }
+    ],
+    "SC478": [
+        {
+            "course_name": "Application of Statistics to Complex Systems",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Application of Statistics to Complex Systems",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        }
+    ],
+    "SC453": [
+        {
+            "course_name": "Applied Quantitative Finance",
+            "program": "B Tech (ICT and ICT-CS)",
+            "semester": 7,
+            "course_type": "Science Elective"
+        },
+        {
+            "course_name": "Applied Quantitative Finance",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        }
+    ],
+    "IT433": [
+        {
+            "course_name": "Digital Twins",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "MnC Elective"
+        },
+        {
+            "course_name": "Digital Twins",
+            "program": "B Tech (ICT-CS)",
+            "semester": 7,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Digital Twins",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "SS Elective III/IV"
+        }
+    ],
+    "HM 432": [
+        {
+            "course_name": "Organisational Behaviour",
+            "program": "B Tech (MnC)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Organisational Behaviour",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Open Elective"
+        },
+        {
+            "course_name": "Organisational Behaviour",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Open Elective"
+        }
+    ],
+    "EL412": [
+        {
+            "course_name": "IoT Sensors and Systems",
+            "program": "B Tech (EVD)",
+            "semester": 7,
+            "course_type": "Specialization Elective-5"
+        },
+        {
+            "course_name": "IoT Sensors and Systems",
+            "program": "General Elective (Technical)",
+            "semester": 1,
+            "course_type": "VES General Elective (Technical)"
+        }
+    ],
+    "EL505": [
+        {
+            "course_name": "VLSI Circuit for DSP",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "VES Elective III/IV"
+        }
+    ],
+    "EL518": [
+        {
+            "course_name": "Real Time Embedded Software",
+            "program": "M Tech (ICT)",
+            "semester": 3,
+            "course_type": "VES Elective III/IV"
+        }
+    ],
+    "IT627": [
+        {
+            "course_name": "Cloud Computing",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        },
+        {
+            "course_name": "Cloud Computing",
+            "program": "MSc (DS)",
+            "semester": 3,
+            "course_type": "Technical Elective"
+        }
+    ],
+    "HM409": [
+        {
+            "course_name": "Management Skills for Professional Excellence",
+            "program": "MSc (IT)",
+            "semester": 3,
+            "course_type": "Open Elective"
+        }
+    ]
+}

@@ -195,7 +195,7 @@ pip install -r requirements.txt
    python scripts/seed_scholars.py
    python scripts/seed_library.py
    python scripts/seed_calendar.py
-   python scripts/seed_timetable.py          # Seeds active timetable dataset (with program & MSc semester splits)
+   python scripts/seed_timetable.py          
    python scripts/seed_documents.py
    ```
 
