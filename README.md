@@ -90,15 +90,16 @@ MCP Project/
 │   └── documents_mcp_server.py
 │
 ├── scripts/                    # Operational one-shot scripts
-│   ├── init_db.sql             # Database schema initialization
 │   ├── seed_faculty.py
 │   ├── seed_staff.py
 │   ├── seed_library.py
 │   ├── seed_timetable.py
+│   ├── seed_timetable_autumn.py
 │   ├── seed_calendar.py
 │   ├── seed_scholars.py
 │   └── seed_documents.py
 │
+├── setup_db.py                 # Master one-click database setup & seeder script
 ├── tests/                      # Unit and integration tests
 │
 ├── .env.example                # Template for .env
@@ -164,27 +165,41 @@ pip install -r requirements.txt
    CREATE DATABASE daiict_db;
    ```
 
-2. **Run Initialization Scripts:**
-   This sets up the required PostgreSQL schema (tables for faculty, staff, library, calendar, and api_keys):
+2. **Master Automated Setup (Recommended):**
+   Run `setup_db.py` to execute schema initialization (`init_db.sql`) and all seeder scripts in their required dependency order:
+   ```bash
+   python setup_db.py
+   ```
+
+   **Production / Live Server Deployment (e.g. `mcp.dau.ac.in`):**
+   - Skip long-running operations (like re-indexing 28,000+ library catalog books or PDF scraping):
+     ```bash
+     python setup_db.py --skip-library --skip-documents
+     ```
+   - Update **only** timetable entries (e.g. after uploading a new timetable Excel):
+     ```bash
+     python setup_db.py --only timetable
+     ```
+   - Target a specific dataset seeder:
+     ```bash
+     python setup_db.py --only faculty
+     python setup_db.py --only staff
+     python setup_db.py --only calendar
+     ```
+
+3. **Manual / Individual Seeding (Optional):**
+   If running individual scripts manually, ensure `seed_timetable_autumn.py` is executed **after** `seed_timetable.py` (since `seed_timetable.py` clears the timetable table first):
    ```bash
    psql -U postgres -d daiict_db -f scripts/init_db.sql
-   ```
-   > **Note for Windows Users:** If you get a `'psql' is not recognized` error, you can either:
-   > 1. Open **pgAdmin**, connect to `daiict_db`, open the Query Tool, paste the contents of `scripts/init_db.sql`, and execute it.
-   > 2. Or, add your PostgreSQL `bin` folder (e.g., `C:\Program Files\PostgreSQL\15\bin`) to your system's PATH.
-
-3. **Seed the Data:**
-   Run the individual Python scripts provided in the `scripts/` folder to populate your database with real data:
-   ```bash
    python scripts/seed_faculty.py
    python scripts/seed_staff.py
    python scripts/seed_scholars.py
    python scripts/seed_library.py
-   python scripts/seed_timetable.py
    python scripts/seed_calendar.py
+   python scripts/seed_timetable.py          # Seeds base/spring timetable
+   python scripts/seed_timetable_autumn.py   # Seeds Autumn 2026-27 timetable & splits MSc semesters
    python scripts/seed_documents.py
    ```
-   *(Wait for each script to finish before starting the next one. The library seeding might take a moment since there are 28,000+ books).*
 
 ## Starting the Server & Dashboard
 

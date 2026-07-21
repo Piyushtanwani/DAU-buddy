@@ -7,11 +7,16 @@ import pdfplumber
 import logging
 from typing import Dict, List, Any
 import sys
-from dotenv import load_dotenv
 
-# Add parent dir to path so we can import modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+# Add parent dir to path and load .env (same as other seed scripts)
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _root)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=os.path.join(_root, ".env"), override=True)
+except ImportError:
+    pass  # dotenv not installed; rely on environment variables
+
 
 from connectors.apache_directory_connector import ApacheDirectoryConnector
 from parsers.document_metadata_parser import DocumentMetadataParser
@@ -22,7 +27,7 @@ logger = logging.getLogger(__name__)
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASSWORD", "postgres")
 DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "postgres")
+DB_NAME = os.getenv("DB_NAME", "daiict_db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 
 def get_db_connection():
