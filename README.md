@@ -90,16 +90,16 @@ MCP Project/
 │   └── documents_mcp_server.py
 │
 ├── scripts/                    # Operational one-shot scripts
+│   ├── init_db.sql             # Database schema initialization
+│   ├── setup_db.py             # Master database setup & seeder script
 │   ├── seed_faculty.py
 │   ├── seed_staff.py
 │   ├── seed_library.py
 │   ├── seed_timetable.py
-│   ├── seed_timetable_autumn.py
 │   ├── seed_calendar.py
 │   ├── seed_scholars.py
 │   └── seed_documents.py
 │
-├── setup_db.py                 # Master one-click database setup & seeder script
 ├── tests/                      # Unit and integration tests
 │
 ├── .env.example                # Template for .env
@@ -166,29 +166,28 @@ pip install -r requirements.txt
    ```
 
 2. **Master Automated Setup (Recommended):**
-   Run `setup_db.py` to execute schema initialization (`init_db.sql`) and all seeder scripts in their required dependency order:
+   Run `scripts/setup_db.py` to execute schema initialization (`init_db.sql`) and all seeder scripts in their required dependency order:
    ```bash
-   python setup_db.py
+   python scripts/setup_db.py
    ```
 
    **Production / Live Server Deployment (e.g. `mcp.dau.ac.in`):**
    - Skip long-running operations (like re-indexing 28,000+ library catalog books or PDF scraping):
      ```bash
-     python setup_db.py --skip-library --skip-documents
+     python scripts/setup_db.py --skip-library --skip-documents
      ```
    - Update **only** timetable entries (e.g. after uploading a new timetable Excel):
      ```bash
-     python setup_db.py --only timetable
+     python scripts/setup_db.py --only timetable
      ```
    - Target a specific dataset seeder:
      ```bash
-     python setup_db.py --only faculty
-     python setup_db.py --only staff
-     python setup_db.py --only calendar
+     python scripts/setup_db.py --only faculty
+     python scripts/setup_db.py --only staff
+     python scripts/setup_db.py --only calendar
      ```
 
 3. **Manual / Individual Seeding (Optional):**
-   If running individual scripts manually, ensure `seed_timetable_autumn.py` is executed **after** `seed_timetable.py` (since `seed_timetable.py` clears the timetable table first):
    ```bash
    psql -U postgres -d daiict_db -f scripts/init_db.sql
    python scripts/seed_faculty.py
@@ -196,8 +195,7 @@ pip install -r requirements.txt
    python scripts/seed_scholars.py
    python scripts/seed_library.py
    python scripts/seed_calendar.py
-   python scripts/seed_timetable.py          # Seeds base/spring timetable
-   python scripts/seed_timetable_autumn.py   # Seeds Autumn 2026-27 timetable & splits MSc semesters
+   python scripts/seed_timetable.py          # Seeds active timetable dataset (with program & MSc semester splits)
    python scripts/seed_documents.py
    ```
 
