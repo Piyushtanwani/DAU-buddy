@@ -30,16 +30,16 @@ async def get_faculty_location(faculty_name: str, day: str, time: str) -> str:
     try:
         result = timetable_service.get_faculty_location(faculty_name, day, time)
         if result:
-            batch_info = f" (Batch: {result['batch_group']})" if result['batch_group'] else ""
+            batch_info = f" (Batch: {result['program']})" if result['program'] else ""
             name_info = f" - {result['course_name']}" if result['course_name'] else ""
             return (f"{faculty_name} is currently teaching a {result['session_type']} for "
                     f"{result['course_code']}{name_info}{batch_info} "
-                    f"in {result['location']} from {result['start_time']} to {result['end_time']}.")
+                    f"in {result['room']} from {result['start_time']} to {result['end_time']}.")
         else:
             return f"{faculty_name} does not have any scheduled classes at {time} on {day}."
     except Exception as e:
-        logger.error(f"Error in get_faculty_location: {e}")
-        return f"Error querying faculty location: {str(e)}"
+        logger.error(f"Error in get_faculty_room: {e}")
+        return f"Error querying faculty room: {str(e)}"
 
 @mcp.tool()
 async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None) -> str:
@@ -58,8 +58,8 @@ async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None) -> 
         
         schedule = [f"Schedule for {faculty_name}:"]
         for row in results:
-            batch_info = f" [Batch: {row['batch_group']}]" if row['batch_group'] else ""
-            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} ({row['course_code']}) in {row['location']}{batch_info}")
+            batch_info = f" [Batch: {row['program']}]" if row['program'] else ""
+            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} ({row['course_code']}) in {row['room']}{batch_info}")
         
         return "\n".join(schedule)
     except Exception as e:
@@ -123,8 +123,10 @@ async def get_course_schedule(course_code: str, day: Optional[str] = None) -> st
         
         schedule = [f"Schedule for {course_code}:"]
         for row in results:
-            batch_info = f" [Batch: {row['batch_group']}]" if row['batch_group'] else ""
-            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} with {row['faculty_name']} in {row['location']}{batch_info}")
+            batch_info = f" [Batch: {row['program']} Sem {row['semester']}]" if row['program'] else ""
+            type_info = f" [{row['course_type']}]" if row.get('course_type') else ""
+            name_info = f" - {row['course_name']}" if row.get('course_name') else ""
+            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} for {row.get('course_code', course_code)}{type_info}{name_info} with {row['faculty_name']} in {row['room']}{batch_info}")
         
         return "\n".join(schedule)
     except Exception as e:
@@ -148,24 +150,28 @@ async def list_programs() -> str:
         return f"Error querying programs: {str(e)}"
 
 @mcp.tool()
-async def get_program_timetable(program_name: str, day: Optional[str] = None) -> str:
+async def get_program_timetable(program_name: str, day: Optional[str] = None, semester: Optional[str] = None) -> str:
     """
     Retrieves the timetable for an entire program/batch.
     
     Args:
         program_name: The name of the program or batch (e.g., 'Msc-it Semester 2', 'BTech Sem-II').
         day: Optional day of the week to filter by.
+        semester: Optional semester number (e.g., '1', '2', '3') to filter the timetable by.
     """
     try:
-        results = timetable_service.get_program_timetable(program_name, day)
+        results = timetable_service.get_program_timetable(program_name, day, semester)
         if not results:
             day_str = f" on {day}" if day else ""
-            return f"No scheduled classes found for program {program_name}{day_str}."
+            sem_str = f" for Semester {semester}" if semester else ""
+            return f"No scheduled classes found for program {program_name}{sem_str}{day_str}."
         
-        schedule = [f"Schedule for {program_name}:"]
+        sem_str = f" (Semester {semester})" if semester else ""
+        schedule = [f"Schedule for {program_name}{sem_str}:"]
         for row in results:
             name_info = f" - {row['course_name']}" if row['course_name'] else ""
-            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} for {row['course_code']}{name_info} with {row['faculty_name']} in {row['location']}")
+            type_info = f" [{row['course_type']}]" if row.get('course_type') else ""
+            schedule.append(f"- {row['day_of_week']} {row['start_time']} to {row['end_time']}: {row['session_type']} for {row['course_code']}{type_info}{name_info} with {row['faculty_name']} in {row['room']}")
         
         return "\n".join(schedule)
     except Exception as e:
