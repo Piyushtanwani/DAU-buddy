@@ -11,7 +11,7 @@ window.handleCredentialResponse = (response) => {
 };
 
 // Redirect unauthenticated users to the login page
-(function() {
+(function () {
     const session = localStorage.getItem("dau_buddy_auth");
     if (!session) {
         window.location.href = "/?view=login";
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const apiKeyInput = document.getElementById("api-key-input");
     const regenerateBtn = document.getElementById("regenerate-key-btn");
     const configCode = document.getElementById("codeBlock");
-    
+
     const dropdownName = document.getElementById("dropdown-name");
     const dropdownEmail = document.getElementById("dropdown-email");
     const dropdownAvatar = document.getElementById("dropdown-avatar");
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 regenerateBtn.disabled = true;
                 regenerateBtn.textContent = "Generating...";
             }
-            
+
             if (!credential) {
                 alert("Error: Missing Google credential in frontend. Please login again.");
                 return;
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 const data = await response.json();
                 const key = data.api_key;
-                
+
                 // Show modal with new key
                 const newKeyModal = document.getElementById("new-key-modal");
                 const newKeyInput = document.getElementById("new-key-input");
@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     newKeyInput.value = key;
                     newKeyModal.style.display = "flex";
                 }
-                
+
                 // Mask the key on main UI
                 const maskedKey = (data.key_prefix || key.substring(0, 14)) + "••••••••••••••••••••••••••••••••";
                 setApiKeyValue(maskedKey);
@@ -220,69 +220,69 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentApp = 'claude';
     let currentKey = 'YOUR_API_KEY_HERE';
 
-    window.config = function() {
+    window.config = function () {
         const baseUrl = window.location.origin + "/mcp/sse";
         const displayKey = (currentKey.includes('••••') || currentKey === 'YOUR_API_KEY_HERE') ? '<YOUR_API_KEY>' : currentKey;
-        
+
         if (currentApp === 'claude') {
             return '{' + '\n' +
-            '  "mcpServers": {' + '\n' +
-            '    "DAU Buddy": {' + '\n' +
-            '      "command": "npx",' + '\n' +
-            '      "args": [' + '\n' +
-            '        "-y", "mcp-remote",' + '\n' +
-            '        "' + baseUrl + '",' + '\n' +
-            '        "--allow-http",' + '\n' +
-            '        "--transport", "sse-only",' + '\n' +
-            '        "--header", "Authorization:${AUTH_HEADER}",' + '\n' +
-            '        "--header", "X-Client-Name:Claude"' + '\n' +
-            '      ],' + '\n' +
-            '      "env": { "AUTH_HEADER": "Bearer ' + displayKey + '" }' + '\n' +
-            '    }' + '\n' +
-            '  }' + '\n' +
-            '}';
+                '  "mcpServers": {' + '\n' +
+                '    "DAU Buddy": {' + '\n' +
+                '      "command": "npx",' + '\n' +
+                '      "args": [' + '\n' +
+                '        "-y", "mcp-remote",' + '\n' +
+                '        "' + baseUrl + '",' + '\n' +
+                '        "--allow-http",' + '\n' +
+                '        "--transport", "sse-only",' + '\n' +
+                '        "--header", "Authorization:${AUTH_HEADER}",' + '\n' +
+                '        "--header", "X-Client-Name:Claude"' + '\n' +
+                '      ],' + '\n' +
+                '      "env": { "AUTH_HEADER": "Bearer ' + displayKey + '" }' + '\n' +
+                '    }' + '\n' +
+                '  }' + '\n' +
+                '}';
         } else if (currentApp === 'cursor') {
             return '{' + '\n' +
-            '  "mcpServers": {' + '\n' +
-            '    "DAU Buddy": {' + '\n' +
-            '      "type": "sse",' + '\n' +
-            '      "url": "' + baseUrl + '",' + '\n' +
-            '      "headers": {' + '\n' +
-            '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
-            '        "X-Client-Name": "Cursor/Windsurf"' + '\n' +
-            '      }' + '\n' +
-            '    }' + '\n' +
-            '  }' + '\n' +
-            '}';
+                '  "mcpServers": {' + '\n' +
+                '    "DAU Buddy": {' + '\n' +
+                '      "type": "sse",' + '\n' +
+                '      "url": "' + baseUrl + '",' + '\n' +
+                '      "headers": {' + '\n' +
+                '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
+                '        "X-Client-Name": "Cursor/Windsurf"' + '\n' +
+                '      }' + '\n' +
+                '    }' + '\n' +
+                '  }' + '\n' +
+                '}';
         } else if (currentApp === 'opencode') {
             return '{' + '\n' +
-            '  "mcpServers": {' + '\n' +
-            '    "DAU Buddy": {' + '\n' +
-            '      "type": "sse",' + '\n' +
-            '      "url": "' + baseUrl + '",' + '\n' +
-            '      "headers": {' + '\n' +
-            '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
-            '        "X-Client-Name": "OpenCode"' + '\n' +
-            '      }' + '\n' +
-            '    }' + '\n' +
-            '  }' + '\n' +
-            '}';
+                '  "mcpServers": {' + '\n' +
+                '    "DAU Buddy": {' + '\n' +
+                '      "type": "remote",' + '\n' +
+                '      "url": "' + baseUrl + '",' + '\n' +
+                '      "headers": {' + '\n' +
+                '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
+                '        "X-Client-Name": "OpenCode"' + '\n' +
+                '      }' + '\n' +
+                '    }' + '\n' +
+                '  }' + '\n' +
+                '}';
         } else if (currentApp === 'codex') {
             return '[mcp_servers.dau-buddy]' + '\n' +
-            'command = "npx"' + '\n' +
-            'args = [' + '\n' +
-            '  "-y",' + '\n' +
-            '  "mcp-remote",' + '\n' +
-            '  "' + baseUrl + '",' + '\n' +
-            '  "--allow-http",' + '\n' +
-            '  "--transport",' + '\n' +
-            '  "sse-only",' + '\n' +
-            '  "--header",' + '\n' +
-            '  "Authorization:${AUTH_HEADER}",' + '\n' +
-            '  "--header",' + '\n' +
-            '  "X-Client-Name:Codex"' + '\n' +
-            ']' + '\n' +
-            'env = { "AUTH_HEADER" = "Bearer ' + displayKey + '" }';
+                'command = "npx"' + '\n' +
+                'args = [' + '\n' +
+                '  "-y",' + '\n' +
+                '  "mcp-remote",' + '\n' +
+                '  "' + baseUrl + '",' + '\n' +
+                '  "--allow-http",' + '\n' +
+                '  "--transport",' + '\n' +
+                '  "sse-only",' + '\n' +
+                '  "--header",' + '\n' +
+                '  "Authorization:${AUTH_HEADER}",' + '\n' +
+                '  "--header",' + '\n' +
+                '  "X-Client-Name:Codex"' + '\n' +
+                ']' + '\n' +
+                'env = { "AUTH_HEADER" = "Bearer ' + displayKey + '" }';
         }
         return '';
     }
@@ -291,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentKey = key;
         const cb = document.getElementById('codeBlock');
         if (cb) cb.textContent = window.config();
-        
+
         // Also update the key display
         const display = document.getElementById('api-key-display');
         if (display && key !== 'YOUR_API_KEY_HERE') {
@@ -456,7 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Valid session exists, configure UI
                 showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, authData.api_key, shouldShowDashboard);
-                
+
                 // Update landing page buttons to indicate they lead to the dashboard
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
@@ -490,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     credential: response.credential
                 }));
                 loginError.style.display = "none";
-                
+
                 // Update landing page buttons immediately
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
@@ -517,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-        // Logout handling
+    // Logout handling
     const handleLogout = () => {
         localStorage.removeItem("dau_buddy_auth");
         localStorage.removeItem("dau_buddy_view");
@@ -552,7 +552,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     localStorage.setItem("dau_buddy_view", "dashboard");
                     return;
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         if (loginOverlay) loginOverlay.style.display = "flex";
@@ -570,26 +570,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // Wizard Logic
-    var OS = (function(){
+    var OS = (function () {
         var p = navigator.platform.toLowerCase(), u = navigator.userAgent.toLowerCase();
-        if(p.indexOf('mac')>-1 || u.indexOf('mac')>-1) return {name:'Mac',path:'~/Library/Application Support/Claude/claude_desktop_config.json'};
-        if(p.indexOf('linux')>-1) return {name:'Linux',path:'~/.config/Claude/claude_desktop_config.json'};
-        return {name:'Windows',path:'%APPDATA%\\Claude\\claude_desktop_config.json'};
+        if (p.indexOf('mac') > -1 || u.indexOf('mac') > -1) return { name: 'Mac', path: '~/Library/Application Support/Claude/claude_desktop_config.json' };
+        if (p.indexOf('linux') > -1) return { name: 'Linux', path: '~/.config/Claude/claude_desktop_config.json' };
+        return { name: 'Windows', path: '%APPDATA%\\Claude\\claude_desktop_config.json' };
     })();
     const osEl = document.getElementById('osName');
-    if(osEl) osEl.textContent = OS.name;
+    if (osEl) osEl.textContent = OS.name;
 
-    window.pickApp = function(el) {
-        document.querySelectorAll('.setup-app').forEach(function(a){a.classList.remove('selected')});
+    window.pickApp = function (el) {
+        document.querySelectorAll('.setup-app').forEach(function (a) { a.classList.remove('selected') });
         el.classList.add('selected');
         var name = el.querySelector('.setup-app-name').textContent;
         const appLabel = document.getElementById('appLabel');
-        if(appLabel) appLabel.textContent = name;
-        
+        if (appLabel) appLabel.textContent = name;
+
         currentApp = el.getAttribute('data-app');
         updateConfigSnippet(currentKey); // Refresh code block
         resetTest();
-        
+
         // Toggle Node.js step
         const nodejsStep = document.getElementById('step-nodejs');
         if (nodejsStep) {
@@ -617,7 +617,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
         }
-        
+
         // Update path info
         const whereNote = document.getElementById('whereNote');
         if (whereNote && whereNote.style.display === 'block') {
@@ -626,19 +626,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    window.copyConfig = function() {
+    window.copyConfig = function () {
         var text = window.config();
-        navigator.clipboard.writeText(text).then(function(){ok()},function(){
-            var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();
-            try{document.execCommand('copy');ok()}catch(e){toastSetup('Copy failed — select the config manually')}
+        navigator.clipboard.writeText(text).then(function () { ok() }, function () {
+            var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); ok() } catch (e) { toastSetup('Copy failed — select the config manually') }
             document.body.removeChild(t);
         });
-        function ok(){
-            var b=document.getElementById('copyBtn');
-            b.innerHTML='<i class="fa-solid fa-check"></i> Copied';
-            setTimeout(function(){b.innerHTML='<i class="fa-regular fa-copy"></i> Copy config'},2200);
+        function ok() {
+            var b = document.getElementById('copyBtn');
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+            setTimeout(function () { b.innerHTML = '<i class="fa-regular fa-copy"></i> Copy config' }, 2200);
             toastSetup('Config copied to clipboard');
-            
+
             // Mark step as done
             const step = b.closest('.setup-step');
             if (step) {
@@ -649,79 +649,79 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    window.toggleCode = function() {
-        var w=document.getElementById('codeWrap'), l=document.getElementById('peekLink');
-        var open = w.style.display==='none';
-        w.style.display = open?'block':'none';
-        l.textContent = open?'Hide the config':'Show the config';
+    window.toggleCode = function () {
+        var w = document.getElementById('codeWrap'), l = document.getElementById('peekLink');
+        var open = w.style.display === 'none';
+        w.style.display = open ? 'block' : 'none';
+        l.textContent = open ? 'Hide the config' : 'Show the config';
     }
 
-    window.toggleWhere = function() {
-        var n=document.getElementById('whereNote');
-        if(n.style.display==='none'){
-            n.style.display='block';
+    window.toggleWhere = function () {
+        var n = document.getElementById('whereNote');
+        if (n.style.display === 'none') {
+            n.style.display = 'block';
             let path = '';
             if (currentApp === 'claude') path = OS.path;
             else if (currentApp === 'cursor') path = 'Settings > Features > MCP';
             else if (currentApp === 'opencode') path = 'Settings > OpenCode > MCP Servers';
             else if (currentApp === 'codex') path = '~/.codex/config.toml';
-            n.innerHTML = 'Location: <b style="font-family:var(--setup-mono);font-size:12px">'+path+'</b>';
-        } else { n.style.display='none'; }
+            n.innerHTML = 'Location: <b style="font-family:var(--setup-mono);font-size:12px">' + path + '</b>';
+        } else { n.style.display = 'none'; }
     }
 
-    var tested=false;
-    window.testConn = function() {
-        var b=document.getElementById('testBtn'), banner=document.getElementById('testBanner'), msg=document.getElementById('testMsg'), icon=document.getElementById('testIcon');
-        b.disabled=true; b.textContent='Checking…'; msg.textContent='Reaching ' + window.location.host + '…';
-        
+    var tested = false;
+    window.testConn = function () {
+        var b = document.getElementById('testBtn'), banner = document.getElementById('testBanner'), msg = document.getElementById('testMsg'), icon = document.getElementById('testIcon');
+        b.disabled = true; b.textContent = 'Checking…'; msg.textContent = 'Reaching ' + window.location.host + '…';
+
         fetch('/api/test-connection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ credential: currentCredential, app: currentApp })
         })
-        .then(res => {
-            if (!res.ok) throw new Error('No recent connection detected');
-            return res.json();
-        })
-        .then(data => {
-            banner.classList.add('ok');
-            if (icon) {
-                icon.classList.remove('fa-satellite-dish', 'fa-triangle-exclamation');
-                icon.classList.add('fa-check-circle');
-                icon.style.color = '';
-            }
-            msg.innerHTML='Connected — DAU Buddy is ready to use in your app.';
-            b.textContent='Check again';
-            b.disabled=false;
-            tested=true;
-            toastSetup('Connection successful');
-        })
-        .catch(e => {
-            msg.innerHTML='No connection detected yet. Make sure your app is open and the config is saved.';
-            b.textContent='Try again';
-            b.disabled=false;
-            banner.classList.remove('ok');
-            if (icon) {
-                icon.classList.remove('fa-satellite-dish', 'fa-check-circle');
-                icon.classList.add('fa-triangle-exclamation');
-                icon.style.color = 'var(--setup-warn)';
-            }
-        });
+            .then(res => {
+                if (!res.ok) throw new Error('No recent connection detected');
+                return res.json();
+            })
+            .then(data => {
+                banner.classList.add('ok');
+                if (icon) {
+                    icon.classList.remove('fa-satellite-dish', 'fa-triangle-exclamation');
+                    icon.classList.add('fa-check-circle');
+                    icon.style.color = '';
+                }
+                msg.innerHTML = 'Connected — DAU Buddy is ready to use in your app.';
+                b.textContent = 'Check again';
+                b.disabled = false;
+                tested = true;
+                toastSetup('Connection successful');
+            })
+            .catch(e => {
+                msg.innerHTML = 'No connection detected yet. Make sure your app is open and the config is saved.';
+                b.textContent = 'Try again';
+                b.disabled = false;
+                banner.classList.remove('ok');
+                if (icon) {
+                    icon.classList.remove('fa-satellite-dish', 'fa-check-circle');
+                    icon.classList.add('fa-triangle-exclamation');
+                    icon.style.color = 'var(--setup-warn)';
+                }
+            });
     }
-    window.resetTest = function() {
-        if(!tested)return; tested=false;
-        var banner=document.getElementById('testBanner'), b=document.getElementById('testBtn'), msg=document.getElementById('testMsg'), icon=document.getElementById('testIcon');
+    window.resetTest = function () {
+        if (!tested) return; tested = false;
+        var banner = document.getElementById('testBanner'), b = document.getElementById('testBtn'), msg = document.getElementById('testMsg'), icon = document.getElementById('testIcon');
         banner.classList.remove('ok');
         if (icon) {
             icon.classList.add('fa-satellite-dish');
             icon.classList.remove('fa-check-circle', 'fa-triangle-exclamation');
             icon.style.color = '';
         }
-        msg.textContent='Once you\'ve saved the file, check the connection.';
-        b.style.display=''; b.disabled=false; b.textContent='Test connection';
+        msg.textContent = 'Once you\'ve saved the file, check the connection.';
+        b.style.display = ''; b.disabled = false; b.textContent = 'Test connection';
     }
 
-    window.openDownload = function(app) {
+    window.openDownload = function (app) {
         let url = '';
         if (app === 'claude') url = 'https://claude.ai/download';
         else if (app === 'cursor') url = 'https://cursor.com';
@@ -729,13 +729,13 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (app === 'opencode') url = 'https://opencode.ai/download';
         else if (app === 'codex-windows') url = 'https://chatgpt.com/download';
         else if (app === 'codex-linux') url = 'https://www.npmjs.com/search?q=codex-cli';
-        
+
         if (url) {
             window.open(url, '_blank');
         } else {
             toastSetup('Download page for ' + app + ' is not available.');
         }
-        
+
         // Mark node step as done if node was clicked
         if (app === 'nodejs') {
             const step = document.getElementById('step-nodejs');
@@ -748,24 +748,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     var toastTimer;
-    window.toastSetup = function(m) {
-        var t=document.getElementById('setup-toast'); 
-        if(!t) return;
-        t.textContent=m; t.classList.add('show');
-        clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove('show')},1800);
+    window.toastSetup = function (m) {
+        var t = document.getElementById('setup-toast');
+        if (!t) return;
+        t.textContent = m; t.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show') }, 1800);
     }
-    
+
     // Open config button
     const openConfigBtn = document.getElementById('openConfigBtn');
     if (openConfigBtn) {
-        openConfigBtn.addEventListener('click', function() {
+        openConfigBtn.addEventListener('click', function () {
             toastSetup('Opening config folder...');
             fetch('/api/open-config-folder', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({app: currentApp})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ app: currentApp })
             }).then(res => res.json()).then(data => {
-                if(data.status === 'success') {
+                if (data.status === 'success') {
                     toastSetup('Config folder opened');
                     // Mark step as done
                     const step = openConfigBtn.closest('.setup-step');
@@ -802,12 +802,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!toastContainer) return;
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
-        toast.innerHTML = type === "success" 
+        toast.innerHTML = type === "success"
             ? `<i class="fa-solid fa-circle-check"></i> <span>${message}</span>`
             : `<i class="fa-solid fa-circle-exclamation"></i> <span>${message}</span>`;
-        
+
         toastContainer.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.animation = "slideInRight 0.3s ease-in reverse forwards";
             setTimeout(() => toast.remove(), 300);
@@ -851,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
             feedbackForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 if (isSubmittingFeedback) return;
-                
+
                 const category = document.getElementById("feedback-category").value;
                 const subject = document.getElementById("feedback-subject").value.trim();
                 const description = feedbackDesc.value.trim();
@@ -864,7 +864,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Get current Google credential
                 const authSession = JSON.parse(localStorage.getItem("dau_buddy_auth") || "{}");
                 const currentCredential = authSession.credential;
-                
+
                 if (!currentCredential) {
                     showToast("Session not found. Please log in again.", "error");
                     return;
@@ -878,7 +878,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     const response = await fetch("/api/feedback", {
                         method: "POST",
-                        headers: { 
+                        headers: {
                             "Content-Type": "application/json"
                         },
                         body: JSON.stringify({ category, subject, description, credential: currentCredential })
@@ -908,7 +908,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyNewKeyBtn = document.getElementById("copy-new-key-btn");
     const closeNewKeyModal = document.getElementById("close-new-key-modal");
     const doneNewKeyBtn = document.getElementById("done-new-key-btn");
-    
+
     function closeKeyModal() {
         if (newKeyModal) {
             newKeyModal.style.display = "none";
@@ -921,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (closeNewKeyModal) closeNewKeyModal.addEventListener("click", closeKeyModal);
     if (doneNewKeyBtn) doneNewKeyBtn.addEventListener("click", closeKeyModal);
-    
+
     if (copyNewKeyBtn && newKeyInput) {
         if (copyNewKeyBtn) copyNewKeyBtn.addEventListener("click", () => {
             if (newKeyInput.value) {
@@ -947,7 +947,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 profileDropdown.style.display = "flex";
             }
         });
-        
+
         // Close dropdown when clicking outside
         document.addEventListener("click", (e) => {
             if (!profileContainer.contains(e.target)) {
@@ -974,7 +974,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 landingProfileDropdown.style.display = "flex";
             }
         });
-        
+
         // Close dropdown when clicking outside
         document.addEventListener("click", (e) => {
             if (landingProfileContainer && !landingProfileContainer.contains(e.target)) {
@@ -989,7 +989,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 landingProfileDropdown.style.display = "none";
             });
         }
-        
+
     }
 
     const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
