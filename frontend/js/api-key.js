@@ -590,6 +590,18 @@ document.addEventListener("DOMContentLoaded", () => {
         updateConfigSnippet(currentKey); // Refresh code block
         resetTest();
 
+        // Update config file name dynamically
+        let configName = 'your config file';
+        if (currentApp === 'claude') configName = 'claude_desktop_config.json';
+        else if (currentApp === 'cursor') configName = 'mcp.json';
+        else if (currentApp === 'opencode') configName = 'opencode.json';
+        else if (currentApp === 'codex') configName = 'config.toml';
+        
+        const configFileNameEl = document.getElementById('configFileName');
+        if (configFileNameEl) {
+            configFileNameEl.innerHTML = '<b style="font-family:var(--setup-mono);">' + configName + '</b>';
+        }
+
         // Toggle Node.js step
         const nodejsStep = document.getElementById('step-nodejs');
         if (nodejsStep) {
