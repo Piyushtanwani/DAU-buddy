@@ -283,6 +283,27 @@ document.addEventListener("DOMContentLoaded", () => {
             opencodeConfigCode.textContent = opencodeText;
         }
 
+        // Codex CLI (TOML, Stdio via mcp-remote bridge)
+        const codexText = `[mcp_servers.dau-buddy]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "${baseUrl}",
+  "--allow-http",
+  "--transport",
+  "sse-only",
+  "--header",
+  "Authorization:\${AUTH_HEADER}",
+  "--header",
+  "X-Client-Name:Codex"
+]
+env = { "AUTH_HEADER" = "Bearer <YOUR_API_KEY>" }`;
+        const codexConfigCode = document.getElementById("codex-config-code");
+        if (codexConfigCode) {
+            codexConfigCode.textContent = codexText;
+        }
+
         const connectorsUrlDisplay = document.getElementById("connectors-url-display");
         if (connectorsUrlDisplay) {
             connectorsUrlDisplay.textContent = baseUrl;
@@ -559,19 +580,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabClaude = document.getElementById("tab-claude");
     const tabCursor = document.getElementById("tab-cursor");
     const tabOpenCode = document.getElementById("tab-opencode");
+    const tabCodex = document.getElementById("tab-codex");
 
     const contentClaude = document.getElementById("content-claude");
     const contentCursor = document.getElementById("content-cursor");
     const contentOpenCode = document.getElementById("content-opencode");
+    const contentCodex = document.getElementById("content-codex");
 
     function resetTabs() {
-        [tabClaude, tabCursor, tabOpenCode].forEach(tab => {
+        [tabClaude, tabCursor, tabOpenCode, tabCodex].forEach(tab => {
             if (tab) {
                 tab.style.background = "transparent";
                 tab.style.color = "#a0a0a0";
             }
         });
-        [contentClaude, contentCursor, contentOpenCode].forEach(content => {
+        [contentClaude, contentCursor, contentOpenCode, contentCodex].forEach(content => {
             if (content) content.style.display = "none";
         });
     }
@@ -600,6 +623,15 @@ document.addEventListener("DOMContentLoaded", () => {
             tabOpenCode.style.background = "#0f3b73";
             tabOpenCode.style.color = "white";
             contentOpenCode.style.display = "block";
+        });
+    }
+
+    if (tabCodex) {
+        tabCodex.addEventListener("click", () => {
+            resetTabs();
+            tabCodex.style.background = "#0f3b73";
+            tabCodex.style.color = "white";
+            contentCodex.style.display = "block";
         });
     }
 
@@ -648,6 +680,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     copyOpenCodeBtn.textContent = "Copy";
                     copyOpenCodeBtn.style.background = "rgba(255,255,255,0.1)";
                     copyOpenCodeBtn.style.borderColor = "#444";
+                }, 2000);
+            });
+        });
+    }
+
+    const copyCodexBtn = document.getElementById("copy-codex-btn");
+    const codexConfigCode = document.getElementById("codex-config-code");
+    if (copyCodexBtn && codexConfigCode) {
+        copyCodexBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(codexConfigCode.textContent).then(() => {
+                copyCodexBtn.textContent = "Copied!";
+                copyCodexBtn.style.background = "#10b981";
+                copyCodexBtn.style.borderColor = "#10b981";
+                setTimeout(() => {
+                    copyCodexBtn.textContent = "Copy";
+                    copyCodexBtn.style.background = "rgba(255,255,255,0.1)";
+                    copyCodexBtn.style.borderColor = "#444";
                 }, 2000);
             });
         });
