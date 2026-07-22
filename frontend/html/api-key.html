@@ -181,6 +181,9 @@
                         <button id="tab-opencode"
                             style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">OpenCode
                             (HTTP/SSE)</button>
+                        <button id="tab-codex"
+                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Codex
+                            CLI (TOML)</button>
                     </div>
                 </div>
 
@@ -276,6 +279,42 @@
     }
   }
 }</code></pre>
+                    </div>
+                </div>
+
+                <!-- Codex CLI Content -->
+                <div id="content-codex" style="display: none; flex-direction: column;">
+                    <p style="font-size: 12px; color: #555; margin: 0 0 8px; line-height: 1.4;">Add this to
+                        <code>~/.codex/config.toml</code> (Codex CLI uses TOML, not JSON). It connects over the network
+                        via the <code>mcp-remote</code> bridge, with <strong>no local file paths exposed</strong>.
+                    </p>
+                    <div
+                        style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-brands fa-node-js" style="font-size: 16px; color: #68a063;"></i>
+                        <span><strong>Node.js Required:</strong> You must have <a href="https://nodejs.org/en/download"
+                                target="_blank"
+                                style="color: #856404; font-weight: bold; text-decoration: underline;">Node.js
+                                installed</a> on your PC to use this Codex CLI configuration.</span>
+                    </div>
+                    <div style="position: relative;">
+                        <button id="copy-codex-btn"
+                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
+                        <pre
+                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="codex-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">[mcp_servers.dau-buddy]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "http://127.0.0.1:8001/mcp/sse",
+  "--allow-http",
+  "--transport",
+  "sse-only",
+  "--header",
+  "Authorization:${AUTH_HEADER}",
+  "--header",
+  "X-Client-Name:Codex"
+]
+env = { "AUTH_HEADER" = "Bearer &lt;YOUR_API_KEY&gt;" }</code></pre>
                     </div>
                 </div>
             </div>
