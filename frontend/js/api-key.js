@@ -258,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return '{' + '\n' +
             '  "mcpServers": {' + '\n' +
             '    "DAU Buddy": {' + '\n' +
-            '      "type": "remote",' + '\n' +
+            '      "type": "sse",' + '\n' +
             '      "url": "' + baseUrl + '",' + '\n' +
             '      "headers": {' + '\n' +
             '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +

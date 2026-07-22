@@ -461,7 +461,7 @@ def create_app() -> FastAPI:
                         delta_seconds = float(row[0])
                         last_client = row[1] or ""
                         
-                        if delta_seconds < 120:
+                        if delta_seconds < 3600:
                             # Verify that the connecting client matches the app we are testing
                             if req.app.lower() in last_client.lower():
                                 return {"status": "success", "message": "Connection verified"}

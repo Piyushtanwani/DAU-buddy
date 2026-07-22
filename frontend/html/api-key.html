@@ -166,7 +166,7 @@
                             <div><div class="setup-app-name">Claude Desktop</div><div class="setup-app-price">Free</div></div>
                         </div>
                         <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('claude')"><i class="fa-solid fa-download"></i> Download</button>
-                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <a href="#" class="setup-app-have" onclick="event.preventDefault(); pickApp(this.closest('.setup-app'))">I already have it</a>
                         <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
                     </div>
 
@@ -177,7 +177,7 @@
                             <div><div class="setup-app-name">Cursor</div><div class="setup-app-price">Free</div></div>
                         </div>
                         <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('cursor')"><i class="fa-solid fa-download"></i> Download</button>
-                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <a href="#" class="setup-app-have" onclick="event.preventDefault(); pickApp(this.closest('.setup-app'))">I already have it</a>
                         <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
                     </div>
 
@@ -188,7 +188,7 @@
                             <div><div class="setup-app-name">OpenCode</div><div class="setup-app-price">Free</div></div>
                         </div>
                         <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('opencode')"><i class="fa-solid fa-download"></i> Download</button>
-                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <a href="#" class="setup-app-have" onclick="event.preventDefault(); pickApp(this.closest('.setup-app'))">I already have it</a>
                         <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
                     </div>
 
@@ -202,7 +202,7 @@
                             <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('codex-windows')"><i class="fa-brands fa-windows"></i> Windows</button>
                             <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('codex-linux')"><i class="fa-brands fa-linux"></i> Linux CLI</button>
                         </div>
-                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <a href="#" class="setup-app-have" onclick="event.preventDefault(); pickApp(this.closest('.setup-app'))">I already have it</a>
                         <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
                     </div>
                 </div>
