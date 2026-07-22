@@ -38,8 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logout-btn");
     const apiKeyInput = document.getElementById("api-key-input");
     const regenerateBtn = document.getElementById("regenerate-key-btn");
-    const configCode = document.getElementById("claude-config-code");
-    const cursorConfigCode = document.getElementById("cursor-config-code");
+    const configCode = document.getElementById("codeBlock");
+    
     const dropdownName = document.getElementById("dropdown-name");
     const dropdownEmail = document.getElementById("dropdown-email");
     const dropdownAvatar = document.getElementById("dropdown-avatar");
@@ -217,78 +217,92 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(err => console.error("Error fetching config info:", err));
 
 
-    function updateConfigSnippet(key) {
-        // Escape backslashes for JSON representation
-        const escapedPythonPath = pythonPath.replace(/\\/g, "\\\\");
-        const escapedProjectPath = projectPath.replace(/\\/g, "\\\\");
+    let currentApp = 'claude';
+    let currentKey = 'YOUR_API_KEY_HERE';
+
+    window.config = function() {
         const baseUrl = window.location.origin + "/mcp/sse";
-
-        // Claude Desktop (Stdio)
-        const claudeText = `{
-  "mcpServers": {
-    "DAU Buddy": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "${baseUrl}",
-        "--allow-http",
-        "--transport",
-        "sse-only",
-        "--header",
-        "Authorization:\${AUTH_HEADER}",
-        "--header",
-        "X-Client-Name:Claude"
-      ],
-      "env": {
-        "AUTH_HEADER": "Bearer <YOUR_API_KEY>"
-      }
-    }
-  }
-}`;
-        configCode.textContent = claudeText;
-
-        // Cursor / Windsurf (HTTP/SSE)
-        const cursorText = `{
-  "mcpServers": {
-    "DAU Buddy": {
-      "type": "sse",
-      "url": "${baseUrl}",
-      "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>",
-        "X-Client-Name": "Cursor/Windsurf"
-      }
-    }
-  }
-}`;
-        if (cursorConfigCode) {
-            cursorConfigCode.textContent = cursorText;
+        const displayKey = (currentKey.includes('••••') || currentKey === 'YOUR_API_KEY_HERE') ? '<YOUR_API_KEY>' : currentKey;
+        
+        if (currentApp === 'claude') {
+            return '{' + '\n' +
+            '  "mcpServers": {' + '\n' +
+            '    "DAU Buddy": {' + '\n' +
+            '      "command": "npx",' + '\n' +
+            '      "args": [' + '\n' +
+            '        "-y", "mcp-remote",' + '\n' +
+            '        "' + baseUrl + '",' + '\n' +
+            '        "--allow-http",' + '\n' +
+            '        "--transport", "sse-only",' + '\n' +
+            '        "--header", "Authorization:${AUTH_HEADER}",' + '\n' +
+            '        "--header", "X-Client-Name:Claude"' + '\n' +
+            '      ],' + '\n' +
+            '      "env": { "AUTH_HEADER": "Bearer ' + displayKey + '" }' + '\n' +
+            '    }' + '\n' +
+            '  }' + '\n' +
+            '}';
+        } else if (currentApp === 'cursor') {
+            return '{' + '\n' +
+            '  "mcpServers": {' + '\n' +
+            '    "DAU Buddy": {' + '\n' +
+            '      "type": "sse",' + '\n' +
+            '      "url": "' + baseUrl + '",' + '\n' +
+            '      "headers": {' + '\n' +
+            '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
+            '        "X-Client-Name": "Cursor/Windsurf"' + '\n' +
+            '      }' + '\n' +
+            '    }' + '\n' +
+            '  }' + '\n' +
+            '}';
+        } else if (currentApp === 'opencode') {
+            return '{' + '\n' +
+            '  "mcpServers": {' + '\n' +
+            '    "DAU Buddy": {' + '\n' +
+            '      "type": "remote",' + '\n' +
+            '      "url": "' + baseUrl + '",' + '\n' +
+            '      "headers": {' + '\n' +
+            '        "Authorization": "Bearer ' + displayKey + '",' + '\n' +
+            '        "X-Client-Name": "OpenCode"' + '\n' +
+            '      }' + '\n' +
+            '    }' + '\n' +
+            '  }' + '\n' +
+            '}';
+        } else if (currentApp === 'codex') {
+            return '[mcp_servers.dau-buddy]' + '\n' +
+            'command = "npx"' + '\n' +
+            'args = [' + '\n' +
+            '  "-y",' + '\n' +
+            '  "mcp-remote",' + '\n' +
+            '  "' + baseUrl + '",' + '\n' +
+            '  "--allow-http",' + '\n' +
+            '  "--transport",' + '\n' +
+            '  "sse-only",' + '\n' +
+            '  "--header",' + '\n' +
+            '  "Authorization:${AUTH_HEADER}",' + '\n' +
+            '  "--header",' + '\n' +
+            '  "X-Client-Name:Codex"' + '\n' +
+            ']' + '\n' +
+            'env = { "AUTH_HEADER" = "Bearer ' + displayKey + '" }';
         }
-
-        // OpenCode (HTTP/SSE) - Uses "remote" type
-        const opencodeText = `{
-  "mcpServers": {
-    "DAU Buddy": {
-      "type": "remote",
-      "url": "${baseUrl}",
-      "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>",
-        "X-Client-Name": "OpenCode"
-      }
-    }
-  }
-}`;
-        const opencodeConfigCode = document.getElementById("opencode-config-code");
-        if (opencodeConfigCode) {
-            opencodeConfigCode.textContent = opencodeText;
-        }
-
-        const connectorsUrlDisplay = document.getElementById("connectors-url-display");
-        if (connectorsUrlDisplay) {
-            connectorsUrlDisplay.textContent = baseUrl;
-        }
+        return '';
     }
 
+    function updateConfigSnippet(key) {
+        currentKey = key;
+        const cb = document.getElementById('codeBlock');
+        if (cb) cb.textContent = window.config();
+        
+        // Also update the key display
+        const display = document.getElementById('api-key-display');
+        if (display && key !== 'YOUR_API_KEY_HERE') {
+            if (key.includes('••••')) {
+                const parts = key.split('••••');
+                display.innerHTML = '<span>' + parts[0] + '</span><span class="dots">' + '•••••••••••••••••••••••••' + '</span>';
+            } else {
+                display.textContent = key;
+            }
+        }
+    }
     let currentCredential = null;
     let currentEmail = null;
 
@@ -555,104 +569,223 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCloseLogin) btnCloseLogin.addEventListener("click", closeLoginModal);
 
 
-    // Tab Switching functionality
-    const tabClaude = document.getElementById("tab-claude");
-    const tabCursor = document.getElementById("tab-cursor");
-    const tabOpenCode = document.getElementById("tab-opencode");
+    // Wizard Logic
+    var OS = (function(){
+        var p = navigator.platform.toLowerCase(), u = navigator.userAgent.toLowerCase();
+        if(p.indexOf('mac')>-1 || u.indexOf('mac')>-1) return {name:'Mac',path:'~/Library/Application Support/Claude/claude_desktop_config.json'};
+        if(p.indexOf('linux')>-1) return {name:'Linux',path:'~/.config/Claude/claude_desktop_config.json'};
+        return {name:'Windows',path:'%APPDATA%\\Claude\\claude_desktop_config.json'};
+    })();
+    const osEl = document.getElementById('osName');
+    if(osEl) osEl.textContent = OS.name;
 
-    const contentClaude = document.getElementById("content-claude");
-    const contentCursor = document.getElementById("content-cursor");
-    const contentOpenCode = document.getElementById("content-opencode");
+    window.pickApp = function(el) {
+        document.querySelectorAll('.setup-app').forEach(function(a){a.classList.remove('selected')});
+        el.classList.add('selected');
+        var name = el.querySelector('.setup-app-name').textContent;
+        const appLabel = document.getElementById('appLabel');
+        if(appLabel) appLabel.textContent = name;
+        
+        currentApp = el.getAttribute('data-app');
+        updateConfigSnippet(currentKey); // Refresh code block
+        resetTest();
+        
+        // Toggle Node.js step
+        const nodejsStep = document.getElementById('step-nodejs');
+        if (nodejsStep) {
+            if (currentApp === 'claude' || currentApp === 'codex') {
+                nodejsStep.style.display = 'flex';
+                const nodeMarker = document.getElementById('nodejs-marker');
+                if (nodeMarker) nodeMarker.classList.remove('done');
+                if (nodeMarker) nodeMarker.innerHTML = '1';
+                // Adjust other numbers
+                document.querySelectorAll('.setup-step-marker').forEach((m, i) => {
+                    if (m.id !== 'nodejs-marker' && !m.classList.contains('done')) {
+                        m.textContent = i + 1;
+                    }
+                });
+            } else {
+                nodejsStep.style.display = 'none';
+                let counter = 1;
+                document.querySelectorAll('.setup-step-marker').forEach((m) => {
+                    if (m.id !== 'nodejs-marker') {
+                        if (!m.parentElement.classList.contains('done')) {
+                            m.textContent = counter;
+                        }
+                        counter++;
+                    }
+                });
+            }
+        }
+        
+        // Update path info
+        const whereNote = document.getElementById('whereNote');
+        if (whereNote && whereNote.style.display === 'block') {
+            toggleWhere();
+            toggleWhere(); // to re-render
+        }
+    }
 
-    function resetTabs() {
-        [tabClaude, tabCursor, tabOpenCode].forEach(tab => {
-            if (tab) {
-                tab.style.background = "transparent";
-                tab.style.color = "#a0a0a0";
+    window.copyConfig = function() {
+        var text = window.config();
+        navigator.clipboard.writeText(text).then(function(){ok()},function(){
+            var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();
+            try{document.execCommand('copy');ok()}catch(e){toastSetup('Copy failed — select the config manually')}
+            document.body.removeChild(t);
+        });
+        function ok(){
+            var b=document.getElementById('copyBtn');
+            b.innerHTML='<i class="fa-solid fa-check"></i> Copied';
+            setTimeout(function(){b.innerHTML='<i class="fa-regular fa-copy"></i> Copy config'},2200);
+            toastSetup('Config copied to clipboard');
+            
+            // Mark step as done
+            const step = b.closest('.setup-step');
+            if (step) {
+                step.classList.add('done');
+                const marker = step.querySelector('.setup-step-marker');
+                if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+        }
+    }
+
+    window.toggleCode = function() {
+        var w=document.getElementById('codeWrap'), l=document.getElementById('peekLink');
+        var open = w.style.display==='none';
+        w.style.display = open?'block':'none';
+        l.textContent = open?'Hide the config':'Show the config';
+    }
+
+    window.toggleWhere = function() {
+        var n=document.getElementById('whereNote');
+        if(n.style.display==='none'){
+            n.style.display='block';
+            let path = '';
+            if (currentApp === 'claude') path = OS.path;
+            else if (currentApp === 'cursor') path = 'Settings > Features > MCP';
+            else if (currentApp === 'opencode') path = 'Settings > OpenCode > MCP Servers';
+            else if (currentApp === 'codex') path = '~/.codex/config.toml';
+            n.innerHTML = 'Location: <b style="font-family:var(--setup-mono);font-size:12px">'+path+'</b>';
+        } else { n.style.display='none'; }
+    }
+
+    var tested=false;
+    window.testConn = function() {
+        var b=document.getElementById('testBtn'), banner=document.getElementById('testBanner'), msg=document.getElementById('testMsg'), icon=document.getElementById('testIcon');
+        b.disabled=true; b.textContent='Checking…'; msg.textContent='Reaching ' + window.location.host + '…';
+        
+        fetch('/api/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: currentCredential, app: currentApp })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('No recent connection detected');
+            return res.json();
+        })
+        .then(data => {
+            banner.classList.add('ok');
+            if (icon) {
+                icon.classList.remove('fa-satellite-dish', 'fa-triangle-exclamation');
+                icon.classList.add('fa-check-circle');
+                icon.style.color = '';
+            }
+            msg.innerHTML='Connected — DAU Buddy is ready to use in your app.';
+            b.textContent='Check again';
+            b.disabled=false;
+            tested=true;
+            toastSetup('Connection successful');
+        })
+        .catch(e => {
+            msg.innerHTML='No connection detected yet. Make sure your app is open and the config is saved.';
+            b.textContent='Try again';
+            b.disabled=false;
+            banner.classList.remove('ok');
+            if (icon) {
+                icon.classList.remove('fa-satellite-dish', 'fa-check-circle');
+                icon.classList.add('fa-triangle-exclamation');
+                icon.style.color = 'var(--setup-warn)';
             }
         });
-        [contentClaude, contentCursor, contentOpenCode].forEach(content => {
-            if (content) content.style.display = "none";
-        });
+    }
+    window.resetTest = function() {
+        if(!tested)return; tested=false;
+        var banner=document.getElementById('testBanner'), b=document.getElementById('testBtn'), msg=document.getElementById('testMsg'), icon=document.getElementById('testIcon');
+        banner.classList.remove('ok');
+        if (icon) {
+            icon.classList.add('fa-satellite-dish');
+            icon.classList.remove('fa-check-circle', 'fa-triangle-exclamation');
+            icon.style.color = '';
+        }
+        msg.textContent='Once you\'ve saved the file, check the connection.';
+        b.style.display=''; b.disabled=false; b.textContent='Test connection';
     }
 
-    if (tabClaude) {
-        if (tabClaude) tabClaude.addEventListener("click", () => {
-            resetTabs();
-            tabClaude.style.background = "#0f3b73";
-            tabClaude.style.color = "white";
-            contentClaude.style.display = "block";
-        });
+    window.openDownload = function(app) {
+        let url = '';
+        if (app === 'claude') url = 'https://claude.ai/download';
+        else if (app === 'cursor') url = 'https://cursor.com';
+        else if (app === 'nodejs') url = 'https://nodejs.org/en/download';
+        else if (app === 'opencode') url = 'https://opencode.ai/download';
+        else if (app === 'codex-windows') url = 'https://chatgpt.com/download';
+        else if (app === 'codex-linux') url = 'https://www.npmjs.com/search?q=codex-cli';
+        
+        if (url) {
+            window.open(url, '_blank');
+        } else {
+            toastSetup('Download page for ' + app + ' is not available.');
+        }
+        
+        // Mark node step as done if node was clicked
+        if (app === 'nodejs') {
+            const step = document.getElementById('step-nodejs');
+            if (step) {
+                step.classList.add('done');
+                const marker = step.querySelector('.setup-step-marker');
+                if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+        }
     }
 
-    if (tabCursor) {
-        if (tabCursor) tabCursor.addEventListener("click", () => {
-            resetTabs();
-            tabCursor.style.background = "#0f3b73";
-            tabCursor.style.color = "white";
-            contentCursor.style.display = "block";
-        });
+    var toastTimer;
+    window.toastSetup = function(m) {
+        var t=document.getElementById('setup-toast'); 
+        if(!t) return;
+        t.textContent=m; t.classList.add('show');
+        clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove('show')},1800);
     }
-
-    if (tabOpenCode) {
-        if (tabOpenCode) tabOpenCode.addEventListener("click", () => {
-            resetTabs();
-            tabOpenCode.style.background = "#0f3b73";
-            tabOpenCode.style.color = "white";
-            contentOpenCode.style.display = "block";
-        });
-    }
-
-    // Config Copy Buttons
-    const copyClaudeBtn = document.getElementById("copy-claude-btn");
-    if (copyClaudeBtn) {
-        if (copyClaudeBtn) copyClaudeBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(configCode.textContent).then(() => {
-                copyClaudeBtn.textContent = "Copied!";
-                copyClaudeBtn.style.background = "#10b981";
-                copyClaudeBtn.style.borderColor = "#10b981";
-                setTimeout(() => {
-                    copyClaudeBtn.textContent = "Copy";
-                    copyClaudeBtn.style.background = "rgba(255,255,255,0.1)";
-                    copyClaudeBtn.style.borderColor = "#444";
-                }, 2000);
+    
+    // Open config button
+    const openConfigBtn = document.getElementById('openConfigBtn');
+    if (openConfigBtn) {
+        openConfigBtn.addEventListener('click', function() {
+            toastSetup('Opening config folder...');
+            fetch('/api/open-config-folder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({app: currentApp})
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    toastSetup('Config folder opened');
+                    // Mark step as done
+                    const step = openConfigBtn.closest('.setup-step');
+                    if (step) {
+                        step.classList.add('done');
+                        const marker = step.querySelector('.setup-step-marker');
+                        if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    }
+                } else {
+                    toastSetup('Could not open folder directly. You may need to open it manually.');
+                }
+            }).catch(e => {
+                console.error(e);
+                toastSetup('Could not open folder directly. You may need to open it manually.');
             });
         });
     }
 
-    const copyCursorBtn = document.getElementById("copy-cursor-btn");
-    if (copyCursorBtn && cursorConfigCode) {
-        if (copyCursorBtn) copyCursorBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(cursorConfigCode.textContent).then(() => {
-                copyCursorBtn.textContent = "Copied!";
-                copyCursorBtn.style.background = "#10b981";
-                copyCursorBtn.style.borderColor = "#10b981";
-                setTimeout(() => {
-                    copyCursorBtn.textContent = "Copy";
-                    copyCursorBtn.style.background = "rgba(255,255,255,0.1)";
-                    copyCursorBtn.style.borderColor = "#444";
-                }, 2000);
-            });
-        });
-    }
-
-    const copyOpenCodeBtn = document.getElementById("copy-opencode-btn");
-    const opencodeConfigCode = document.getElementById("opencode-config-code");
-    if (copyOpenCodeBtn && opencodeConfigCode) {
-        if (copyOpenCodeBtn) copyOpenCodeBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(opencodeConfigCode.textContent).then(() => {
-                copyOpenCodeBtn.textContent = "Copied!";
-                copyOpenCodeBtn.style.background = "#10b981";
-                copyOpenCodeBtn.style.borderColor = "#10b981";
-                setTimeout(() => {
-                    copyOpenCodeBtn.textContent = "Copy";
-                    copyOpenCodeBtn.style.background = "rgba(255,255,255,0.1)";
-                    copyOpenCodeBtn.style.borderColor = "#444";
-                }, 2000);
-            });
-        });
-    }
     // ── Feedback System ────────────────────────────────────────────────────────
+
     const feedbackBtn = document.getElementById("feedback-btn");
     const feedbackModal = document.getElementById("feedback-modal");
     const closeFeedbackBtn = document.getElementById("close-feedback-btn");

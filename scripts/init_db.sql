@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     role VARCHAR(50) DEFAULT 'User',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP,
+    last_client VARCHAR(255),
     status VARCHAR(20) DEFAULT 'Active',
     expires_at TIMESTAMP
 );
@@ -192,6 +193,9 @@ ALTER TABLE api_keys
 
 ALTER TABLE api_keys 
     ADD COLUMN IF NOT EXISTS key_prefix VARCHAR(14);
+
+ALTER TABLE api_keys 
+    ADD COLUMN IF NOT EXISTS last_client VARCHAR(255);
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);

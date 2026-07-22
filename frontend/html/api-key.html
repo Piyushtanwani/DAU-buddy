@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Keys - DAU Buddy</title>
-    <meta name="description" content="DAU Buddy Login Interface">
+    <title>Setup — DAU Buddy</title>
+    <meta name="description" content="DAU Buddy Setup — manage your API key and connect your app">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -121,165 +121,152 @@
             </div>
         </nav>
 
-        <div class="welcome-card api-welcome-card"
-            style="margin: 0 auto; padding: 40px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 800px; width: 100%; margin-bottom:40px">
-            <div
-                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; border-bottom: 1px solid #eee; padding-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div
-                        style="background: rgba(15, 59, 115, 0.1); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                        <i id="welcome-icon" class="fa-solid fa-laptop-code"
-                            style="font-size: 32px; color: #0f3b73;"></i>
+        <!-- ═══════════════════ SETUP WIZARD CONTENT ═══════════════════ -->
+        <div class="setup-page">
+
+            <!-- HERO -->
+            <div class="setup-hero">
+                <div class="setup-glyph">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <div>
+                    <h1 id="welcome-name">Welcome!</h1>
+                    <p>Manage your DAU Buddy API keys and integration settings</p>
+                </div>
+            </div>
+
+            <!-- API KEY CARD -->
+            <div class="setup-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <h2 style="margin:0;font-size:17px;letter-spacing:-.2px">Your personal MCP API key</h2>
+                    <span class="setup-badge active" id="key-status">Active</span>
+                </div>
+                <div class="setup-keyrow">
+                    <div class="setup-keyfield">
+                        <span id="api-key-display">Loading...</span>
                     </div>
-                    <div>
-                        <h1 id="welcome-name"
-                            style="font-family: 'Open Sans', sans-serif; margin: 0 0 4px 0; font-size: 28px; color: #111;">
-                            Welcome!</h1>
-                        <p style="color: #555; margin: 0; font-size: 15px;">Manage your DAU Buddy API keys and
-                            integration settings</p>
+                    <button class="setup-btn danger" id="regenerate-key-btn">Regenerate key</button>
+                </div>
+                <p class="setup-hint">This key acts as your password. Do not share it.</p>
+                <!-- Hidden input kept for JS compatibility -->
+                <input type="hidden" id="api-key-input" value="Loading...">
+            </div>
+
+            <!-- STEP 1: CHOOSE APP -->
+            <div class="setup-card">
+                <div class="setup-eyebrow"><span class="num">Step 1 of 3</span><span class="txt">— pick where you want to use DAU Buddy</span></div>
+                <h2>Choose your app</h2>
+                <p class="setup-sub">Don't have one yet? Tap download — each is free and installs in a minute.</p>
+
+                <div class="setup-apps" id="apps">
+                    <div class="setup-app selected" data-app="claude" onclick="pickApp(this)">
+                        <div class="setup-app-top"><span class="setup-badge rec">Recommended</span></div>
+                        <div class="setup-app-id">
+                            <div class="setup-app-ico"><i class="fa-solid fa-comments"></i></div>
+                            <div><div class="setup-app-name">Claude Desktop</div><div class="setup-app-price">Free</div></div>
+                        </div>
+                        <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('claude')"><i class="fa-solid fa-download"></i> Download</button>
+                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
+                    </div>
+
+                    <div class="setup-app" data-app="cursor" onclick="pickApp(this)">
+                        <div class="setup-app-top"></div>
+                        <div class="setup-app-id">
+                            <div class="setup-app-ico"><i class="fa-solid fa-code"></i></div>
+                            <div><div class="setup-app-name">Cursor</div><div class="setup-app-price">Free</div></div>
+                        </div>
+                        <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('cursor')"><i class="fa-solid fa-download"></i> Download</button>
+                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
+                    </div>
+
+                    <div class="setup-app" data-app="opencode" onclick="pickApp(this)">
+                        <div class="setup-app-top"></div>
+                        <div class="setup-app-id">
+                            <div class="setup-app-ico"><i class="fa-solid fa-terminal"></i></div>
+                            <div><div class="setup-app-name">OpenCode</div><div class="setup-app-price">Free</div></div>
+                        </div>
+                        <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('opencode')"><i class="fa-solid fa-download"></i> Download</button>
+                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
+                    </div>
+
+                    <div class="setup-app" data-app="codex" onclick="pickApp(this)">
+                        <div class="setup-app-top"></div>
+                        <div class="setup-app-id">
+                            <div class="setup-app-ico"><i class="fa-solid fa-robot"></i></div>
+                            <div><div class="setup-app-name">ChatGPT Codex</div><div class="setup-app-price">Free</div></div>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-direction:column; margin-bottom: 9px">
+                            <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('codex-windows')"><i class="fa-brands fa-windows"></i> Windows</button>
+                            <button class="setup-btn block sm" onclick="event.stopPropagation();openDownload('codex-linux')"><i class="fa-brands fa-linux"></i> Linux CLI</button>
+                        </div>
+                        <a href="#" class="setup-app-have" onclick="event.stopPropagation();return false">I already have it</a>
+                        <span class="setup-app-chosen"><i class="fa-solid fa-check"></i> Selected</span>
                     </div>
                 </div>
             </div>
 
-            <div
-                style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
-                <h3
-                    style="margin-top: 0; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #111;">
-                    Your Personal MCP API Key
-                    <span id="key-status"
-                        style="font-size: 11px; padding: 2px 6px; background: #10b981; color: white; border-radius: 10px;">Active</span>
-                </h3>
-                <div class="api-key-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
-                    <input type="text" id="api-key-input" readonly value="Loading..."
-                        style="flex: 1; padding: 12px 16px; background: #ffffff; border: 1px solid #ccc; color: #333; border-radius: 4px; font-family: monospace; font-size: 14px; outline: none;">
-                    <button id="regenerate-key-btn" class="key-btn key-btn-danger"
-                        style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate
-                        Key</button>
+            <!-- STEP 2: SETUP -->
+            <div class="setup-card">
+                <div class="setup-eyebrow"><span class="num">Step 2 of 3</span><span class="txt">— quick setup for <b id="appLabel" style="color:var(--setup-muted)">Claude Desktop</b></span></div>
+
+                <div class="setup-steps">
+                    <div class="setup-step" id="step-nodejs">
+                        <div class="setup-step-marker" id="nodejs-marker">1</div>
+                        <div class="setup-step-body">
+                            <p class="setup-step-t">Install Node.js</p>
+                            <p class="setup-step-d">A small free helper the app needs to connect. Takes about 2 minutes.</p>
+                            <div class="setup-step-actions">
+                                <button class="setup-btn sm" onclick="openDownload('nodejs')"><i class="fa-brands fa-node-js"></i> Get Node.js</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-step">
+                        <div class="setup-step-marker">2</div>
+                        <div class="setup-step-body">
+                            <p class="setup-step-t">Copy your config</p>
+                            <p class="setup-step-d">Copy the configuration below to set up DAU Buddy.</p>
+                            <div class="setup-step-actions">
+                                <button class="setup-btn accent sm" id="copyBtn" onclick="copyConfig()"><i class="fa-regular fa-copy"></i> Copy config</button>
+                                <a href="#" class="setup-inline-link" onclick="toggleCode();return false" id="peekLink">Show the config</a>
+                            </div>
+                            <div id="codeWrap" style="display:none">
+                                <pre id="codeBlock"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-step">
+                        <div class="setup-step-marker">3</div>
+                        <div class="setup-step-body">
+                            <p class="setup-step-t">Paste it into your config file</p>
+                            <p class="setup-step-d">We detected you're on <b id="osName">your computer</b>.</p>
+                            <div class="setup-step-actions">
+                                <button class="setup-btn sm" id="openConfigBtn"><i class="fa-regular fa-folder-open"></i> Open config folder</button>
+                                <a href="#" class="setup-inline-link" onclick="toggleWhere();return false">Where is this?</a>
+                            </div>
+                            <p class="setup-secnote" id="whereNote" style="display:none"></p>
+                        </div>
+                    </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="font-size: 12px; color: #666; margin: 0;">This key acts as your password. Do not share
-                        it.</p>
+
+                <!-- STEP 3: TEST -->
+                <div class="setup-eyebrow" style="margin:22px 0 12px"><span class="num">Step 3 of 3</span><span class="txt">— check it worked</span></div>
+                <div class="setup-test" id="testBanner">
+                    <div class="setup-test-l">
+                        <i class="fa-solid fa-satellite-dish" id="testIcon"></i>
+                        <span id="testMsg">Once you've saved the file, check the connection.</span>
+                    </div>
+                    <button class="setup-btn sm" id="testBtn" onclick="testConn()">Test connection</button>
                 </div>
+
+
             </div>
 
-            <div
-                style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 6px; margin-bottom: 24px;">
-                <div class="api-tabs-header"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="margin: 0; font-size: 16px; font-family: 'Open Sans', sans-serif; color: #111;">
-                        Integration Configuration
-                    </h3>
-                    <!-- Tab Buttons -->
-                    <div class="api-tabs-container"
-                        style="display: flex; gap: 4px; background: #eef2f6; padding: 4px; border-radius: 6px; border: 1px solid #d0d7de;">
-                        <button id="tab-claude"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: #0f3b73; color: white; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Claude
-                            Desktop (HTTP/SSE)</button>
-                        <button id="tab-cursor"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">Cursor
-                            / Windsurf (HTTP/SSE)</button>
-                        <button id="tab-opencode"
-                            style="padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: transparent; color: #555; transition: all 0.2s; font-family: 'Open Sans', sans-serif;">OpenCode
-                            (HTTP/SSE)</button>
-                    </div>
-                </div>
-
-                <!-- Claude Desktop Content -->
-                <div id="content-claude" style="display: block;">
-                    <p style="font-size: 12px; color: #555; margin: 0 0 8px; line-height: 1.4;">Add this to
-                        <code>%APPDATA%\Claude\claude_desktop_config.json</code>. It connects entirely over the network
-                        via a memory-loaded proxy, with <strong>no local file paths or environment variables
-                            exposed</strong>.
-                    </p>
-                    <div
-                        style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-brands fa-node-js" style="font-size: 16px; color: #68a063;"></i>
-                        <span><strong>Node.js Required:</strong> You must have <a href="https://nodejs.org/en/download"
-                                target="_blank"
-                                style="color: #856404; font-weight: bold; text-decoration: underline;">Node.js
-                                installed</a> on your PC to use this Claude Desktop configuration.</span>
-                    </div>
-                    <div style="position: relative;">
-                        <button id="copy-claude-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        <pre
-                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="claude-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
-  "mcpServers": {
-    "DAU Buddy": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "http://127.0.0.1:8001/mcp/sse",
-        "--allow-http",
-        "--transport",
-        "sse-only",
-        "--header",
-        "Authorization:${AUTH_HEADER}",
-        "--header",
-        "X-Client-Name:Claude"
-      ],
-      "env": {
-        "AUTH_HEADER": "Bearer <YOUR_API_KEY>"
-      }
-    }
-  }
-}</code></pre>
-                    </div>
-                </div>
-
-                <!-- Cursor Content -->
-                <div id="content-cursor" style="display: none; flex-direction: column;">
-                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
-                        Cursor, Windsurf, or OpenCode MCP settings to connect over the network using Server-Sent Events
-                        (SSE).
-                        <strong>Requires the backend server to be running.</strong>
-                    </p>
-                    <div style="position: relative;">
-                        <button id="copy-cursor-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        <pre
-                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="cursor-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
-  "mcpServers": {
-    "DAU Buddy": {
-      "type": "sse",
-      "url": "http://127.0.0.1:8001/mcp/sse",
-      "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>",
-        "X-Client-Name": "Cursor/Windsurf"
-      }
-    }
-  }
-}</code></pre>
-                    </div>
-                </div>
-
-                <!-- OpenCode Content -->
-                <div id="content-opencode" style="display: none; flex-direction: column;">
-                    <p style="font-size: 12px; color: #555; margin: 0 0 12px; line-height: 1.4;">Add this block to your
-                        OpenCode MCP settings to connect over the network using Server-Sent Events (SSE).
-                        <strong>Requires the backend server to be running.</strong>
-                    </p>
-                    <div style="position: relative;">
-                        <button id="copy-opencode-btn"
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; cursor: pointer; transition: 0.2s;">Copy</button>
-                        <pre
-                            style="background: #ffffff; padding: 16px; border-radius: 4px; border: 1px solid #e0e0e0; overflow-x: auto; margin: 0;"><code id="opencode-config-code" style="font-family: monospace; font-size: 12px; color: #24292f;">{
-  "mcpServers": {
-    "DAU Buddy": {
-      "type": "remote",
-      "url": "http://127.0.0.1:8001/mcp/sse",
-      "headers": {
-        "Authorization": "Bearer <YOUR_API_KEY>",
-        "X-Client-Name": "OpenCode"
-      }
-    }
-  }
-}</code></pre>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </div><!-- /.setup-page -->
 
         <footer class="landing-footer" style="margin-top: auto;">
             <div class="footer-content">
@@ -346,7 +333,7 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="toast-container"></div>
 
-
+    <!-- New Key Modal -->
     <div id="new-key-modal"
         style="display: none; flex-direction: column; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
         <div
@@ -375,7 +362,9 @@
         </div>
     </div>
 
-    <script src="/js/api-key.js"></script>
+    <!-- Setup-specific toast -->
+    <div id="setup-toast"></div>
 
+    <script src="/js/api-key.js"></script>
 </body>
 </html>

@@ -116,6 +116,10 @@ def create_app() -> FastAPI:
     class KeyRequest(BaseModel):
         credential: str
 
+    class TestConnectionRequest(BaseModel):
+        credential: str
+        app: str
+
     @app.get("/api/config-info")
     def get_config_info():
         import sys
@@ -372,6 +376,102 @@ def create_app() -> FastAPI:
             "refresh_token": client_id
         }
 
+    class OpenFolderRequest(BaseModel):
+        app: str
+
+    @app.post("/api/open-config-folder")
+    def open_config_folder(req: OpenFolderRequest):
+        import platform, subprocess
+        path = ""
+        is_file = False
+        system = platform.system().lower()
+        if req.app == "claude":
+            is_file = True
+            if system == "windows":
+                path = os.path.expandvars(r"%APPDATA%\Claude\claude_desktop_config.json")
+            elif system == "darwin":
+                path = os.path.expanduser("~/Library/Application Support/Claude/claude_desktop_config.json")
+            elif system == "linux":
+                path = os.path.expanduser("~/.config/Claude/claude_desktop_config.json")
+        elif req.app == "cursor":
+            is_file = True
+            if system == "windows":
+                path = os.path.expanduser(r"~\.cursor\mcp.json")
+            elif system == "darwin":
+                path = os.path.expanduser("~/.cursor/mcp.json")
+            elif system == "linux":
+                path = os.path.expanduser("~/.cursor/mcp.json")
+        elif req.app == "opencode":
+            is_file = True
+            if system == "windows":
+                path = os.path.expanduser(r"~\.config\opencode\opencode.json")
+            elif system == "darwin":
+                path = os.path.expanduser("~/Library/Application Support/OpenCode/opencode.json")
+            elif system == "linux":
+                path = os.path.expanduser("~/.config/opencode/opencode.json")
+        elif req.app == "codex":
+            is_file = True
+            path = os.path.expanduser("~/.codex/config.toml")
+        # Other apps might have other paths, but for now we'll support the common ones
+        
+        if path:
+            folder = os.path.dirname(path) if is_file else path
+            os.makedirs(folder, exist_ok=True)
+            
+            if is_file and not os.path.exists(path):
+                try:
+                    with open(path, 'w') as f:
+                        if req.app in ["claude", "opencode", "cursor"]:
+                            f.write("{\n  \"mcpServers\": {\n    \n  }\n}")
+                        else:
+                            f.write("")
+                except Exception as e:
+                    logger.error(f"Failed to create config file: {e}")
+
+            try:
+                if system == "windows":
+                    os.startfile(path)
+                elif system == "darwin":
+                    subprocess.Popen(["open", path])
+                else:
+                    subprocess.Popen(["xdg-open", path])
+                return {"status": "success"}
+            except Exception as e:
+                logger.error(f"Failed to open path: {e}")
+                return JSONResponse(status_code=500, content={"error": str(e)})
+        else:
+            return JSONResponse(status_code=400, content={"error": "Unsupported app or OS for direct folder opening"})
+
+    @app.post("/api/test-connection")
+    def test_connection(req: TestConnectionRequest):
+        email = verify_google_token(req.credential)
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Check if the active key was used in the last 2 minutes (120 seconds)
+                    cursor.execute("""
+                        SELECT EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - last_used)), last_client
+                        FROM api_keys 
+                        WHERE email = %s AND status = 'Active' 
+                        ORDER BY created_at DESC LIMIT 1
+                    """, (email,))
+                    row = cursor.fetchone()
+                    
+                    if row and row[0] is not None:
+                        delta_seconds = float(row[0])
+                        last_client = row[1] or ""
+                        
+                        if delta_seconds < 120:
+                            # Verify that the connecting client matches the app we are testing
+                            if req.app.lower() in last_client.lower():
+                                return {"status": "success", "message": "Connection verified"}
+                            else:
+                                return JSONResponse(status_code=400, content={"error": f"Connection detected from {last_client}, not {req.app}"})
+                            
+            return JSONResponse(status_code=400, content={"error": "No recent connection detected"})
+        except Exception as e:
+            logger.error(f"Test connection error: {e}")
+            return JSONResponse(status_code=500, content={"error": "Database error"})
     @app.post("/api/maintainer/dashboard")
     def maintainer_dashboard(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
