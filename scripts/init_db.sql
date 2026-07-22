@@ -332,6 +332,9 @@ CREATE TABLE IF NOT EXISTS timetables (
 );
 
 ALTER TABLE timetables
+    ADD COLUMN IF NOT EXISTS course_type VARCHAR(100);
+
+ALTER TABLE timetables
     ADD COLUMN IF NOT EXISTS search_vector tsvector
     GENERATED ALWAYS AS (
         setweight(to_tsvector('english', coalesce(course_code, '')), 'A') ||
