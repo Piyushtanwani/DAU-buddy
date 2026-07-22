@@ -430,11 +430,11 @@ def create_app() -> FastAPI:
 
             try:
                 if system == "windows":
-                    os.startfile(path)
+                    os.startfile(folder)
                 elif system == "darwin":
-                    subprocess.Popen(["open", path])
+                    subprocess.Popen(["open", folder])
                 else:
-                    subprocess.Popen(["xdg-open", path])
+                    subprocess.Popen(["xdg-open", folder])
                 return {"status": "success"}
             except Exception as e:
                 logger.error(f"Failed to open path: {e}")
