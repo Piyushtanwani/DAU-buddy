@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Keys — DAU Buddy</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <title>API Keys — DAU Buddy</title>
     <meta name="description" content="DAU Buddy Setup — manage your API key and connect your app">
 
     <!-- Google Fonts -->
@@ -154,8 +155,7 @@
 
             <!-- STEP 1: CHOOSE APP -->
             <div class="setup-card">
-                <div class="setup-eyebrow"><span class="num">Step 1 of 2</span><span class="txt">— pick where you want
-                        to use DAU Buddy</span></div>
+                <div class="setup-eyebrow"><span class="num">Step 1 of 3</span><span class="txt">— pick where you want to use DAU Buddy</span></div>
                 <h2>Choose your app</h2>
                 <p class="setup-sub">Don't have one yet? Tap download — each is free and installs in a minute.</p>
 
@@ -242,7 +242,7 @@
 
             <!-- STEP 2: SETUP -->
             <div class="setup-card">
-                <div class="setup-eyebrow"><span class="num">Step 2 of 2</span><span class="txt">— quick setup for <b
+                <div class="setup-eyebrow"><span class="num">Step 2 of 3</span><span class="txt">— quick setup for <b
                             id="appLabel" style="color:var(--setup-muted)">Claude Desktop</b></span></div>
 
                 <div class="setup-steps">
@@ -294,9 +294,19 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-
-
+            <!-- STEP 3: READY -->
+            <div class="setup-card">
+                <div class="setup-eyebrow" style="margin-bottom: 12px"><span class="num">Step 3 of 3</span><span class="txt">— start asking!</span></div>
+                <div class="setup-test" style="align-items: center; justify-content: center; text-align: center; padding: 24px; border: 1px solid #d1d5db; background-color: #f3f4f6; border-radius: 8px;">
+                    <div style="font-size: 16px; color: #111; font-weight: 500; margin-bottom: 8px;">
+                        Done! You have done all the steps and you are connected, just go and ask <span id="readyAppName" style="font-weight: 700;">Claude Desktop</span>
+                    </div>
+                    <div style="font-size: 14px; color: #4b5563; font-style: italic;" id="readyAppExample">
+                        E.g. "When are the next midsem dates?"
+                    </div>
+                </div>
             </div>
 
         </div><!-- /.setup-page -->

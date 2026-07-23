@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation - DAU Buddy</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <title>Documentation - DAU Buddy</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -280,7 +281,9 @@ Service Service Service   Service    Service    Service
                             <p style="margin: 0 0 8px 0; color: #555;"><code
                                     style="color: #d90429; font-size: 13px;">list_faculty()</code>, <code
                                     style="color: #d90429; font-size: 13px;">search_faculty(query)</code>, <code
-                                    style="color: #d90429; font-size: 13px;">get_faculty_details(name_or_email)</code>
+                                    style="color: #d90429; font-size: 13px;">get_faculty_details(name_or_email)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">search_faculty_by_expertise(expertise)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">sync_faculty_data()</code>
                             </p>
                             <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Who
                                 is the faculty expert in Machine Learning?"</div>
@@ -292,7 +295,8 @@ Service Service Service   Service    Service    Service
                             <p style="margin: 0 0 8px 0; color: #555;"><code
                                     style="color: #d90429; font-size: 13px;">list_staff()</code>, <code
                                     style="color: #d90429; font-size: 13px;">search_staff(query)</code>, <code
-                                    style="color: #d90429; font-size: 13px;">get_staff_details(name_or_email)</code></p>
+                                    style="color: #d90429; font-size: 13px;">get_staff_details(name_or_email)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">sync_staff_data()</code></p>
                             <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example: "Who
                                 is the placement coordinator?"</div>
                         </div>
@@ -303,7 +307,8 @@ Service Service Service   Service    Service    Service
                             <p style="margin: 0 0 8px 0; color: #555;"><code
                                     style="color: #d90429; font-size: 13px;">list_scholars()</code>, <code
                                     style="color: #d90429; font-size: 13px;">search_scholars(query)</code>, <code
-                                    style="color: #d90429; font-size: 13px;">get_scholar_details(name)</code></p>
+                                    style="color: #d90429; font-size: 13px;">get_scholar_details(name)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">sync_scholar_data()</code></p>
                             <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
                                 "Find Ph.D. scholars researching Machine Learning."</div>
                         </div>
@@ -325,8 +330,10 @@ Service Service Service   Service    Service    Service
                             <p style="margin: 0 0 8px 0; color: #555;"><code
                                     style="color: #d90429; font-size: 13px;">get_faculty_schedule(name, day)</code>,
                                 <code style="color: #d90429; font-size: 13px;">find_faculty_free_time(name, day)</code>,
-                                <code
-                                    style="color: #d90429; font-size: 13px;">get_program_timetable(program, day)</code>
+                                <code style="color: #d90429; font-size: 13px;">get_faculty_location(name, time, day)</code>,
+                                <code style="color: #d90429; font-size: 13px;">get_program_timetable(program, day)</code>,
+                                <code style="color: #d90429; font-size: 13px;">get_course_schedule(course_code)</code>,
+                                <code style="color: #d90429; font-size: 13px;">list_programs()</code>
                             </p>
                             <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
                                 "When is Prof. Manish Khare free on Tuesday?"</div>
@@ -337,10 +344,27 @@ Service Service Service   Service    Service    Service
                             <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Calendar</h5>
                             <p style="margin: 0 0 8px 0; color: #555;"><code
                                     style="color: #d90429; font-size: 13px;">get_next_holiday()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_upcoming_holidays()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_all_holidays()</code>, <code
                                     style="color: #d90429; font-size: 13px;">get_midsem_dates()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_endsem_dates()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_next_academic_event()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_events_by_date(date)</code>, <code
                                     style="color: #d90429; font-size: 13px;">search_calendar(query, semester)</code></p>
                             <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
                                 "When are the mid-semester exams?"</div>
+                        </div>
+
+                        <div class="tool-card"
+                            style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 8px 0; color: #0f3b73; font-size: 16px;">Academic Documents</h5>
+                            <p style="margin: 0 0 8px 0; color: #555;"><code
+                                    style="color: #d90429; font-size: 13px;">search_academic_requirements(query)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">list_academic_documents()</code>, <code
+                                    style="color: #d90429; font-size: 13px;">get_academic_document_pages(filename)</code>, <code
+                                    style="color: #d90429; font-size: 13px;">sync_academic_documents()</code></p>
+                            <div class="example" style="font-size: 13px; color: #222; font-style: italic;">Example:
+                                "What are the core requirements for B.Tech ICT?"</div>
                         </div>
                     </section>
 
