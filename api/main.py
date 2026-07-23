@@ -525,6 +525,10 @@ def create_app() -> FastAPI:
         app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
         app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
         
+        assets_dir = os.path.join(frontend_dir, "assets")
+        if os.path.exists(assets_dir):
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+        
         @app.get("/")
         def serve_index():
             return FileResponse(os.path.join(frontend_dir, "html", "index.html"))

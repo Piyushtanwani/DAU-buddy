@@ -601,6 +601,17 @@ document.addEventListener("DOMContentLoaded", () => {
             configFileNameEl.innerHTML = '<b style="font-family:var(--setup-mono);">' + configName + '</b>';
         }
 
+        const readyAppNameEl = document.getElementById('readyAppName');
+        if (readyAppNameEl) readyAppNameEl.textContent = name;
+
+        const readyAppExampleEl = document.getElementById('readyAppExample');
+        if (readyAppExampleEl) {
+            if (currentApp === 'claude') readyAppExampleEl.textContent = 'E.g. "When are the next midsem dates?"';
+            else if (currentApp === 'cursor') readyAppExampleEl.textContent = 'E.g. "Who is the professor for Data Structures?"';
+            else if (currentApp === 'opencode') readyAppExampleEl.textContent = 'E.g. "Show me the upcoming holidays."';
+            else if (currentApp === 'codex') readyAppExampleEl.textContent = 'E.g. "Can you check the timetable for my program?"';
+        }
+
         // Toggle Node.js step
         const nodejsStep = document.getElementById('step-nodejs');
         if (nodejsStep) {
