@@ -116,9 +116,6 @@ def create_app() -> FastAPI:
     class KeyRequest(BaseModel):
         credential: str
 
-    class TestConnectionRequest(BaseModel):
-        credential: str
-        app: str
 
     @app.get("/api/config-info")
     def get_config_info():
@@ -442,36 +439,7 @@ def create_app() -> FastAPI:
         else:
             return JSONResponse(status_code=400, content={"error": "Unsupported app or OS for direct folder opening"})
 
-    @app.post("/api/test-connection")
-    def test_connection(req: TestConnectionRequest):
-        email = verify_google_token(req.credential)
-        try:
-            with db_connection() as conn:
-                with conn.cursor() as cursor:
-                    # Check if the active key was used in the last 2 minutes (120 seconds)
-                    cursor.execute("""
-                        SELECT EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - last_used)), last_client
-                        FROM api_keys 
-                        WHERE email = %s AND status = 'Active' 
-                        ORDER BY created_at DESC LIMIT 1
-                    """, (email,))
-                    row = cursor.fetchone()
-                    
-                    if row and row[0] is not None:
-                        delta_seconds = float(row[0])
-                        last_client = row[1] or ""
-                        
-                        if delta_seconds < 3600:
-                            # Verify that the connecting client matches the app we are testing
-                            if req.app.lower() in last_client.lower():
-                                return {"status": "success", "message": "Connection verified"}
-                            else:
-                                return JSONResponse(status_code=400, content={"error": f"Connection detected from {last_client}, not {req.app}"})
-                            
-            return JSONResponse(status_code=400, content={"error": "No recent connection detected"})
-        except Exception as e:
-            logger.error(f"Test connection error: {e}")
-            return JSONResponse(status_code=500, content={"error": "Database error"})
+
     @app.post("/api/maintainer/dashboard")
     def maintainer_dashboard(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
@@ -572,6 +540,10 @@ def create_app() -> FastAPI:
         @app.get("/maintainer")
         def serve_maintainer():
             return FileResponse(os.path.join(frontend_dir, "html", "maintainer.html"))
+            
+        @app.get("/setup-guide")
+        def serve_setup_guide():
+            return FileResponse(os.path.join(frontend_dir, "html", "setup-guide.html"))
     else:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 

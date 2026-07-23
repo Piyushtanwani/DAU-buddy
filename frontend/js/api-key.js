@@ -588,7 +588,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         currentApp = el.getAttribute('data-app');
         updateConfigSnippet(currentKey); // Refresh code block
-        resetTest();
 
         // Update config file name dynamically
         let configName = 'your config file';
@@ -681,56 +680,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } else { n.style.display = 'none'; }
     }
 
-    var tested = false;
-    window.testConn = function () {
-        var b = document.getElementById('testBtn'), banner = document.getElementById('testBanner'), msg = document.getElementById('testMsg'), icon = document.getElementById('testIcon');
-        b.disabled = true; b.textContent = 'Checking…'; msg.textContent = 'Reaching ' + window.location.host + '…';
-
-        fetch('/api/test-connection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ credential: currentCredential, app: currentApp })
-        })
-            .then(res => {
-                if (!res.ok) throw new Error('No recent connection detected');
-                return res.json();
-            })
-            .then(data => {
-                banner.classList.add('ok');
-                if (icon) {
-                    icon.classList.remove('fa-satellite-dish', 'fa-triangle-exclamation');
-                    icon.classList.add('fa-check-circle');
-                    icon.style.color = '';
-                }
-                msg.innerHTML = 'Connected — DAU Buddy is ready to use in your app.';
-                b.textContent = 'Check again';
-                b.disabled = false;
-                tested = true;
-                toastSetup('Connection successful');
-            })
-            .catch(e => {
-                msg.innerHTML = 'No connection detected yet. Make sure your app is open and the config is saved.';
-                b.textContent = 'Try again';
-                b.disabled = false;
-                banner.classList.remove('ok');
-                if (icon) {
-                    icon.classList.remove('fa-satellite-dish', 'fa-check-circle');
-                    icon.classList.add('fa-triangle-exclamation');
-                    icon.style.color = 'var(--setup-warn)';
-                }
-            });
-    }
-    window.resetTest = function () {
-        if (!tested) return; tested = false;
-        var banner = document.getElementById('testBanner'), b = document.getElementById('testBtn'), msg = document.getElementById('testMsg'), icon = document.getElementById('testIcon');
-        banner.classList.remove('ok');
-        if (icon) {
-            icon.classList.add('fa-satellite-dish');
-            icon.classList.remove('fa-check-circle', 'fa-triangle-exclamation');
-            icon.style.color = '';
+    window.markNodejsDone = function() {
+        const step = document.getElementById('step-nodejs');
+        if (step) {
+            step.classList.add('done');
+            const marker = step.querySelector('.setup-step-marker');
+            if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
         }
-        msg.textContent = 'Once you\'ve saved the file, check the connection.';
-        b.style.display = ''; b.disabled = false; b.textContent = 'Test connection';
     }
 
     window.openDownload = function (app) {
