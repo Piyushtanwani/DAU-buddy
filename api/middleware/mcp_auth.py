@@ -37,28 +37,6 @@ class MCPAuthMiddleware:
         api_key = auth_header.split(" ", 1)[1].strip()
         hashed_k = hash_key(api_key)
 
-        def get_valid_role(h_key: str):
-            try:
-                with db_connection() as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (h_key,))
-                        row = cursor.fetchone()
-                        if row and row[0] == "Active":
-                            cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE hashed_key = %s", (h_key,))
-                            return row[1], row[2]
-            except Exception:
-                pass
-            return None
-
-        auth_data = await run_in_threadpool(get_valid_role, hashed_k)
-
-        if not auth_data:
-            return await send_unauthorized("Invalid, inactive, or expired API key")
-
-        role, email = auth_data
-        scope["user_role"] = role
-        scope["user_email"] = email
-        
         # Determine client name from headers
         client_name = "Unknown"
         x_client_name = headers.get(b"x-client-name")
@@ -68,7 +46,30 @@ class MCPAuthMiddleware:
             user_agent = headers.get(b"user-agent")
             if user_agent:
                 client_name = user_agent.decode("utf-8")
-                
+
+        def get_valid_role(h_key: str, client: str):
+            try:
+                with db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (h_key,))
+                        row = cursor.fetchone()
+                        if row and row[0] == "Active":
+                            cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP, last_client = %s WHERE hashed_key = %s", (client, h_key))
+                            conn.commit()
+                            return row[1], row[2]
+            except Exception as e:
+                logger.error(f"Auth DB error: {e}")
+            return None
+
+        auth_data = await run_in_threadpool(get_valid_role, hashed_k, client_name)
+
+        if not auth_data:
+            return await send_unauthorized("Invalid, inactive, or expired API key")
+
+        role, email = auth_data
+        scope["user_role"] = role
+        scope["user_email"] = email
+        
         # Set ContextVars
         from api.context import user_role_var, user_email_var, client_name_var
         user_role_var.set(role)

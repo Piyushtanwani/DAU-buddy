@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     role VARCHAR(50) DEFAULT 'User',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP,
+    last_client VARCHAR(255),
     status VARCHAR(20) DEFAULT 'Active',
     expires_at TIMESTAMP
 );
@@ -192,6 +193,9 @@ ALTER TABLE api_keys
 
 ALTER TABLE api_keys 
     ADD COLUMN IF NOT EXISTS key_prefix VARCHAR(14);
+
+ALTER TABLE api_keys 
+    ADD COLUMN IF NOT EXISTS last_client VARCHAR(255);
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hashed ON api_keys (hashed_key);
@@ -326,6 +330,19 @@ CREATE TABLE IF NOT EXISTS timetables (
 
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE timetables
+    ADD COLUMN IF NOT EXISTS program VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS semester VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS session_type VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS course_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS course_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS course_type VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS faculty_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS start_time TIME,
+    ADD COLUMN IF NOT EXISTS end_time TIME,
+    ADD COLUMN IF NOT EXISTS room VARCHAR(255);
 
 ALTER TABLE timetables
     ADD COLUMN IF NOT EXISTS search_vector tsvector

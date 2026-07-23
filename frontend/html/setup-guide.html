@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Guide — DAU Buddy</title>
+    <meta name="description"
+        content="Step-by-step guide to connect DAU Buddy MCP server to Claude, Cursor, Opencode, and Codex.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"> <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script> <!-- Stylesheet -->
+    <link rel="stylesheet" href="/css/style.css?v=6">
+    <link rel="stylesheet" href="/css/api-key.css">
+    <link rel="stylesheet" href="/css/setup-guide.css">
+</head>
+
+<body>
+    <div class="app-container" id="app-container">
+        <div class="top-accent-bar"></div> <!-- Dashboard Navigation -->
+        <nav class="app-nav">
+            <div class="nav-brand"> <i class="fa-solid fa-building-columns"></i> <span>DAU Buddy</span> </div>
+            <div class="nav-links">
+                <button onclick="localStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'"
+                    class="nav-docs-btn nav-docs-btn-active">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+                <button onclick="window.location.href='/docs'" class="nav-docs-btn">
+                    <i class="fa-solid fa-book"></i> Docs
+                </button>
+
+                <div class="community-dropdown-container">
+                    <button class="nav-docs-btn">
+                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="community-dropdown-menu">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server"
+                            target="_blank" class="community-dropdown-item">
+                            <i class="fa-brands fa-github"></i> Contribute
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new/choose" target="_blank"
+                            class="community-dropdown-item">
+                            <i class="fa-solid fa-bug"></i> Raise an issue
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
+                            class="community-dropdown-item">
+                            <i class="fa-solid fa-star"></i> Leave a star
+                        </a>
+                    </div>
+                </div>
+
+                <button id="nav-dashboard-link-btn" class="nav-docs-btn" onclick="window.location.href='/api-keys'">
+                    <i class="fa-solid fa-code"></i> Dashboard
+                </button>
+
+                <div class="profile-container" id="profile-container" style="position: relative;">
+                    <img id="nav-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
+                        referrerpolicy="no-referrer" alt="Profile"
+                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
+
+                    <div id="profile-dropdown" class="profile-dropdown"
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        <div class="profile-info"
+                            style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <button id="close-profile-btn"
+                                style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                            <img id="dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user"
+                                referrerpolicy="no-referrer"
+                                style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
+                            <h3 id="dropdown-name"
+                                style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+                                Welcome!</h3>
+                            <p id="dropdown-email"
+                                style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">
+                                Authenticated User</p>
+                            <span id="dropdown-role"
+                                style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
+                        </div>
+                        <div class="profile-actions" style="padding: 8px;">
+                            <button id="nav-dashboard-btn" onclick="window.location.href='/maintainer'"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-chart-line" style="color: #555; font-size: 18px;"></i> Analytics
+                            </button>
+                            <button id="feedback-btn" class="nav-feedback-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-regular fa-comment-dots" style="color: #555; font-size: 18px;"></i>
+                                Feedback
+                            </button>
+                            <button id="logout-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"
+                                    style="color: #555; font-size: 18px;"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <div class="setup-page">
+            <div class="guide-container">
+                <div class="guide-header">
+                    <h1> Connect Your IDE to DAU Buddy MCP Server</h1>
+                    <p>Follow these step-by-step instructions to integrate our MCP server with your favorite AI-powered
+                        coding tools.</p>
+                </div>
+                <div class="guide-content">
+                    <div class="guide-sidebar"> <button class="tab-btn active" data-target="claude"> <img
+                                src="https://www.google.com/s2/favicons?domain=claude.ai&sz=32" alt="Claude" width="18"
+                                height="18"> Claude </button> <button class="tab-btn" data-target="cursor"> <img
+                                src="https://www.google.com/s2/favicons?domain=cursor.sh&sz=32" alt="Cursor" width="18"
+                                height="18"> Cursor </button> <button class="tab-btn" data-target="opencode"> <img
+                                src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=32" alt="Opencode"
+                                width="18" height="18"> Opencode </button> <button class="tab-btn" data-target="codex">
+                            <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=32" alt="Codex"
+                                width="18" height="18"> Codex </button> </div>
+                    <div class="guide-main"> <!-- Claude Setup -->
+                        <div class="tab-content active" id="claude">
+                            <h2>Connecting to Claude Desktop</h2>
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-details">
+                                    <h3>Open Claude Configuration</h3>
+                                    <p>Open <strong>Claude Desktop</strong>, go to <strong>Settings</strong> &gt;
+                                        <strong>Developer</strong>, and click <strong>Edit Config</strong>. </p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-details">
+                                    <h3>Add the MCP Server Settings</h3>
+                                    <p>This will open your <code>claude_desktop_config.json</code> file. Next, go to
+                                        your <a href="/api-keys">API Keys Dashboard</a> to create an API key.</p>
+                                    <p>Copy the configuration settings and replace <code>YOUR_API_KEY_HERE</code> with
+                                        your new key. <strong>Keep your API key safe!</strong> It is shown only once. If
+                                        you forget it, you will need to regenerate it and update this file again.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-details">
+                                    <h3>Restart Claude</h3>
+                                    <p>Force quit Claude (make sure to also quit it from your background
+                                        processes/system tray) and then start Claude again.</p>
+                                    <p>You will see DAU Buddy running in the Developer options. You can now start asking
+                                        questions to DAU Buddy!</p>
+                                </div>
+                            </div>
+                        </div> <!-- Cursor Setup -->
+                        <div class="tab-content" id="cursor">
+                            <h2>Connecting to Cursor IDE</h2>
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-details">
+                                    <h3>Open Cursor Settings</h3>
+                                    <p>Open <strong>Cursor</strong> and go to <strong>Settings</strong>. In the
+                                        settings, find the option for <strong>Tools & MCPs</strong> and navigate to it.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-details">
+                                    <h3>Add Custom MCP Server</h3>
+                                    <p>Click on <strong>+ Add New MCP Server</strong> (or <strong>Add Custom MCP
+                                            Server</strong>). This will open your <code>mcp.json</code> file.</p>
+                                    <p>Next, go to your <a href="/api-keys">API Keys Dashboard</a> to create a new API
+                                        key. Copy the configuration settings below and paste them into the file.</p>
+                                    <p><strong>Keep your API key safe!</strong> It is shown only once. If you forget it,
+                                        you will need to regenerate it and repeat this setup.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-details">
+                                    <h3>Refresh Tools</h3>
+                                    <p>Just click the <strong>Refresh</strong> button located above the "Add New MCP
+                                        Server" option to apply your new configuration and connect DAU Buddy.</p>
+                                </div>
+                            </div>
+                        </div> <!-- Opencode Setup -->
+                        <div class="tab-content" id="opencode">
+                            <h2>Connecting to Opencode</h2>
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-details">
+                                    <h3>Ask AI to Setup MCP Server</h3>
+                                    <p>Open <strong>Opencode</strong> and simply tell the AI to "setup MCP server" for
+                                        you.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-details">
+                                    <h3>Paste the Configuration</h3>
+                                    <p>Go to your <a href="/api-keys">API Keys Dashboard</a> to create an API key, then
+                                        copy the configuration settings provided there.</p>
+                                    <p>Paste these configs when the AI prompts you. <strong>Keep your API key
+                                            safe!</strong> It is shown only once. If you forget it, you will need to
+                                        regenerate it and do this setup again (changing API keys, etc.).</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-details">
+                                    <h3>Restart Opencode</h3>
+                                    <p>Just close Opencode and open it again for the changes to take effect!</p>
+                                </div>
+                            </div>
+                        </div> <!-- Codex Setup -->
+                        <div class="tab-content" id="codex">
+                            <h2>Connecting to Codex</h2>
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-details">
+                                    <h3>Open Configuration</h3>
+                                    <p>Open <strong>ChatGPT</strong>, click on your profile and go to
+                                        <strong>Settings</strong>. You will find the <strong>Configuration</strong>
+                                        option; click on that and open <code>config.toml</code>. </p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-details">
+                                    <h3>Add API Key Settings</h3>
+                                    <p>After opening the config file, go to your <a href="/api-keys">API Keys
+                                            Dashboard</a> and create an API key. Copy the configuration settings and
+                                        paste them in.</p>
+                                    <p><strong>Keep your API key safe!</strong> It is shown only once. If you forget it,
+                                        you will need to regenerate it and repeat this setup.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-details">
+                                    <h3>Ask Questions</h3>
+                                    <p>Just ask a question, and it will now give you answers directly from DAU Buddy!
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.setup-page -->
+        <footer class="landing-footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h4>DAU</h4>
+                    <p>Dhirubhai Ambani University (formerly DA-IICT)</p>
+                    <p>Gandhinagar, Gujarat</p>
+                </div>
+                <div class="footer-links"> <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank">About
+                        Us</a> <a href="/setup-guide">Setup Guide</a> </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with ❤️ by DAU Students</p>
+            </div>
+        </footer>
+    </div>
+    <script src="/js/setup-guide.js"></script>
+</body>
+
+</html>
