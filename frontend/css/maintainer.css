@@ -161,3 +161,113 @@ body {
 .sortable-table th:hover {
     background: #f1f1f1;
 }
+
+/* Feedback Monitoring Styles */
+.feedback-tabs {
+    display: flex;
+    gap: 10px;
+}
+
+.feedback-tab {
+    padding: 8px 16px;
+    border: 1px solid #0f3b73;
+    background: transparent;
+    color: #0f3b73;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Open Sans', sans-serif;
+    transition: all 0.2s;
+}
+
+.feedback-tab.active {
+    background: #0f3b73;
+    color: white;
+}
+
+.feedback-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.feedback-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.feedback-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.feedback-category {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.feedback-date {
+    font-size: 12px;
+    color: #888;
+}
+
+.feedback-subject {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+    margin: 0 0 8px 0;
+}
+
+.feedback-desc {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    flex-grow: 1;
+}
+
+.feedback-meta {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.feedback-meta i {
+    width: 16px;
+    color: #0f3b73;
+}
+
+.feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+}
+
+.btn-resolve {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-resolve:hover {
+    background: #059669;
+}

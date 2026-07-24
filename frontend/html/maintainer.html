@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
-  <title>Maintainer Dashboard - DAU Buddy</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <title>Maintainer Dashboard - DAU Buddy</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -27,10 +28,44 @@
                 <span>Maintainer Dashboard</span>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
-                <button onclick="window.location.href='/'" class="nav-docs-btn"
+                <button onclick="window.location.href='/api-keys'" class="nav-docs-btn"
                     style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-house"></i>
+                    <i class="fa-solid fa-code"></i> Dashboard
                 </button>
+
+                <div class="profile-container" id="profile-container" style="position: relative;">
+                    <img id="nav-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
+                        referrerpolicy="no-referrer" alt="Profile"
+                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
+
+                    <div id="profile-dropdown" class="profile-dropdown"
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        <div class="profile-info"
+                            style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <button id="close-profile-btn"
+                                style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                            <img id="dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user"
+                                referrerpolicy="no-referrer"
+                                style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
+                            <h3 id="dropdown-name"
+                                style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+                                Welcome!</h3>
+                            <p id="dropdown-email"
+                                style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">
+                                Authenticated User</p>
+                            <span id="dropdown-role"
+                                style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
+                        </div>
+                        <div class="profile-actions" style="padding: 8px;">
+                            <button id="logout-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"
+                                    style="color: #555; font-size: 18px;"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </nav>
 
@@ -123,6 +158,30 @@
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <div id="feedback-monitoring" style="display: none; margin-top: 40px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #0f3b73; font-size: 22px; font-weight: 700; margin: 0;">Feedback Monitoring <span
+                            id="total-feedback-count"
+                            style="font-size: 14px; color: #666; font-weight: normal; margin-left: 10px;"></span></h2>
+                    <div class="feedback-tabs">
+                        <button class="feedback-tab active" data-tab="pending"
+                            onclick="switchFeedbackTab('pending')">Pending (<span id="pending-count">0</span>)</button>
+                        <button class="feedback-tab" data-tab="resolved"
+                            onclick="switchFeedbackTab('resolved')">Resolved (<span
+                                id="resolved-count">0</span>)</button>
+                    </div>
+                </div>
+
+                <div id="feedback-loading" class="loading-state" style="display: none;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Loading Feedback...
+                </div>
+
+                <div id="feedback-error" class="error-message" style="display: none;"></div>
+
+                <div id="pending-feedbacks" class="feedback-grid"></div>
+                <div id="resolved-feedbacks" class="feedback-grid" style="display: none;"></div>
             </div>
         </div>
     </div>

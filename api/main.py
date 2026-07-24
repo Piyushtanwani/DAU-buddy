@@ -1,7 +1,7 @@
 import os
 import hashlib
 import secrets
-from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -507,6 +507,61 @@ def create_app() -> FastAPI:
                     }
         except Exception as e:
             logger.error(f"Dashboard Error: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
+    @app.post("/api/admin/feedbacks")
+    def get_feedbacks(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
+        if email not in config.get_feedback_recipient_emails():
+            raise HTTPException(status_code=403, detail="Maintainer access required")
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id, user_email, role, category, subject, description, priority, status, created_at FROM feedback ORDER BY created_at DESC")
+                    feedbacks = []
+                    for row in cursor.fetchall():
+                        feedbacks.append({
+                            "id": row[0],
+                            "user_email": row[1],
+                            "role": row[2],
+                            "category": row[3],
+                            "subject": row[4],
+                            "description": row[5],
+                            "priority": row[6],
+                            "status": row[7],
+                            "created_at": str(row[8])
+                        })
+                    return feedbacks
+        except Exception as e:
+            logger.error(f"Error fetching feedbacks: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
+    @app.post("/api/admin/feedbacks/{feedback_id}/resolve")
+    def resolve_feedback(feedback_id: int, request: Request, req: KeyRequest, background_tasks: BackgroundTasks):
+        email = verify_google_token(req.credential)
+        if email not in config.get_feedback_recipient_emails():
+            raise HTTPException(status_code=403, detail="Maintainer access required")
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT user_email, subject, category FROM feedback WHERE id = %s", (feedback_id,))
+                    row = cursor.fetchone()
+                    if not row:
+                        raise HTTPException(status_code=404, detail="Feedback not found")
+                    user_email, subject, category = row[0], row[1], row[2]
+                    
+                    cursor.execute("UPDATE feedback SET status = 'Resolved' WHERE id = %s", (feedback_id,))
+                    conn.commit()
+                    
+                    from core.email_service import send_feedback_resolution_email_async
+                    if background_tasks:
+                        background_tasks.add_task(send_feedback_resolution_email_async, user_email, subject, category)
+                        
+                    return {"status": "success", "message": "Feedback resolved successfully"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error resolving feedback: {e}")
             raise HTTPException(status_code=500, detail="Database error")
 
     app.include_router(api_router, prefix="/api")
