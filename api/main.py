@@ -413,6 +413,10 @@ def create_app() -> FastAPI:
         
         if path:
             folder = os.path.dirname(path) if is_file else path
+            
+            if not os.path.exists(folder):
+                raise HTTPException(status_code=400, detail=f"{req.app.capitalize()} is not installed on this system. We couldn't find its directory. Please download and install the app first.")
+                
             os.makedirs(folder, exist_ok=True)
             
             if is_file and not os.path.exists(path):

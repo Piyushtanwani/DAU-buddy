@@ -753,6 +753,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         const marker = step.querySelector('.setup-step-marker');
                         if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
                     }
+                } else if (data.detail) {
+                    alert(data.detail);
                 } else {
                     toastSetup('Could not open folder directly. You may need to open it manually.');
                 }
@@ -980,5 +982,11 @@ document.addEventListener("DOMContentLoaded", () => {
             cachedDisplayKey = authData.key_prefix + "••••••••••••••••••••••••••••••••";
         }
         showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, cachedDisplayKey);
+    }
+
+    // Initialize setup guide UI for the default selected app (Claude)
+    const defaultApp = document.querySelector('.setup-app.selected');
+    if (defaultApp && typeof window.pickApp === 'function') {
+        window.pickApp(defaultApp);
     }
 });
