@@ -734,34 +734,45 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show') }, 1800);
     }
 
-    // Open config button
+    // Open config button — resolve the path on the CLIENT, not the server.
+    // A hosted web page can't open the user's native file explorer, so we copy
+    // the correct per-app / per-OS folder path for them to paste in.
     const openConfigBtn = document.getElementById('openConfigBtn');
     if (openConfigBtn) {
+        // folder paths keyed by app, then OS (mirrors the old server logic)
+        const CONFIG_FOLDERS = {
+            claude: {
+                Windows: '%APPDATA%\\Claude\\',
+                Mac: '~/Library/Application Support/Claude/',
+                Linux: '~/.config/Claude/'
+            },
+            cursor: { Windows: '~\\.cursor\\', Mac: '~/.cursor/', Linux: '~/.cursor/' },
+            opencode: {
+                Windows: '~\\.config\\opencode\\',
+                Mac: '~/Library/Application Support/OpenCode/',
+                Linux: '~/.config/opencode/'
+            },
+            codex: { Windows: '~\\.codex\\', Mac: '~/.codex/', Linux: '~/.codex/' }
+        };
+
         openConfigBtn.addEventListener('click', function () {
-            toastSetup('Opening config folder...');
-            fetch('/api/open-config-folder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ app: currentApp })
-            }).then(res => res.json()).then(data => {
-                if (data.status === 'success') {
-                    toastSetup('Config folder opened');
-                    // Mark step as done
-                    const step = openConfigBtn.closest('.setup-step');
-                    if (step) {
-                        step.classList.add('done');
-                        const marker = step.querySelector('.setup-step-marker');
-                        if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    }
-                } else if (data.detail) {
-                    alert(data.detail);
-                } else {
-                    toastSetup('Could not open folder directly. You may need to open it manually.');
-                }
-            }).catch(e => {
-                console.error(e);
-                toastSetup('Could not open folder directly. You may need to open it manually.');
-            });
+            const folder = (CONFIG_FOLDERS[currentApp] || {})[OS.name];
+            if (!folder) {
+                toastSetup('No known config folder for this app on ' + OS.name);
+                return;
+            }
+            // Copy the path so the user can paste it into their file manager
+            navigator.clipboard.writeText(folder)
+                .then(function () { toastSetup('Config folder path copied — paste it into your file manager: ' + folder); })
+                .catch(function () { toastSetup('Open this folder manually: ' + folder); });
+
+            // Mark step as done
+            const step = openConfigBtn.closest('.setup-step');
+            if (step) {
+                step.classList.add('done');
+                const marker = step.querySelector('.setup-step-marker');
+                if (marker) marker.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
         });
     }
 
