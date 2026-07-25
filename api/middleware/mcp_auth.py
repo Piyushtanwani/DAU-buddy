@@ -21,18 +21,18 @@ class MCPAuthMiddleware:
         headers = dict(scope.get("headers", []))
         auth_header = headers.get(b"authorization", b"").decode("utf-8")
 
-        async def send_unauthorized(detail: str):
+        async def send_error(status_code: int, detail: str, ws_code: int = 1008):
             if scope["type"] == "http":
-                response = JSONResponse({"detail": detail}, status_code=401)
+                response = JSONResponse({"detail": detail}, status_code=status_code)
                 await response(scope, receive, send)
             elif scope["type"] == "websocket":
                 await send({
                     "type": "websocket.close",
-                    "code": 1008
+                    "code": ws_code
                 })
 
         if not auth_header.startswith("Bearer "):
-            return await send_unauthorized("Unauthorized")
+            return await send_error(401, "Unauthorized")
 
         api_key = auth_header.split(" ", 1)[1].strip()
         hashed_k = hash_key(api_key)
@@ -48,25 +48,37 @@ class MCPAuthMiddleware:
                 client_name = user_agent.decode("utf-8")
 
         def get_valid_role(h_key: str, client: str):
+            # Returns ("ok", role, email), ("invalid", None, None) or
+            # ("db_error", None, None). Only the SELECT decides auth.
             try:
                 with db_connection() as conn:
                     with conn.cursor() as cursor:
                         cursor.execute("SELECT status, role, email FROM api_keys WHERE hashed_key = %s AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", (h_key,))
                         row = cursor.fetchone()
-                        if row and row[0] == "Active":
-                            cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP, last_client = %s WHERE hashed_key = %s", (client, h_key))
-                            conn.commit()
-                            return row[1], row[2]
             except Exception as e:
                 logger.error(f"Auth DB error: {e}")
-            return None
+                return ("db_error", None, None)
 
-        auth_data = await run_in_threadpool(get_valid_role, hashed_k, client_name)
+            if not row or row[0] != "Active":
+                return ("invalid", None, None)
 
-        if not auth_data:
-            return await send_unauthorized("Invalid, inactive, or expired API key")
+            # Metrics only — a failed last_used update must never fail auth
+            # (e.g. Postgres in read-only recovery after a restart).
+            try:
+                with db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("UPDATE api_keys SET last_used = CURRENT_TIMESTAMP, last_client = %s WHERE hashed_key = %s", (client, h_key))
+            except Exception as e:
+                logger.warning(f"Failed to update last_used (non-fatal): {e}")
 
-        role, email = auth_data
+            return ("ok", row[1], row[2])
+
+        outcome, role, email = await run_in_threadpool(get_valid_role, hashed_k, client_name)
+
+        if outcome == "db_error":
+            return await send_error(503, "Authentication temporarily unavailable", ws_code=1013)
+        if outcome != "ok":
+            return await send_error(401, "Invalid, inactive, or expired API key")
         scope["user_role"] = role
         scope["user_email"] = email
         

@@ -3,9 +3,11 @@ import logging
 from typing import Dict, Any
 from dotenv import load_dotenv
 
-# Load .env from the project root (one level up from core/)
+# Load .env from the project root (one level up from core/).
+# override=False: real environment variables (systemd/docker/k8s) take
+# precedence over .env, which is a local-development fallback only.
 _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
-load_dotenv(dotenv_path=_env_path, override=True)
+load_dotenv(dotenv_path=_env_path, override=False)
 
 # ==============================================================================
 # Logging Configuration
