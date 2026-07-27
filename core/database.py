@@ -18,7 +18,11 @@ def init_pool():
     if _connection_pool is None:
         try:
             _db_config = config.get_db_config()
-            logger.info("Initializing PostgreSQL ThreadedConnectionPool (min=1, max=10)...")
+            logger.info(
+                "Initializing PostgreSQL ThreadedConnectionPool (min=1, max=10) "
+                f"target: host={_db_config['host']} port={_db_config['port']} "
+                f"db={_db_config['database']} user={_db_config['user']}"
+            )
             _connection_pool = ThreadedConnectionPool(1, 10, **_db_config)
             logger.info("PostgreSQL ThreadedConnectionPool initialized successfully.")
         except Exception as e:
