@@ -44,7 +44,7 @@ async def get_faculty_location(faculty_name: str, day: str, time: str) -> str:
 @mcp.tool()
 async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None) -> str:
     """
-    Retrieves the complete timetable for a specific faculty member.
+    Retrieves the complete timetable for a specific faculty member, including lectures, labs, and tutorials.
     
     Args:
         faculty_name: Name or initials of the faculty.
@@ -69,7 +69,7 @@ async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None) -> 
 @mcp.tool()
 async def find_faculty_free_time(faculty_name: str, day: str) -> str:
     """
-    Calculates the gaps between classes to tell you exactly when a faculty member is free to meet.
+    Calculates the gaps between classes (lectures, labs, tutorials) to tell you exactly when a faculty member is free to meet.
     
     Args:
         faculty_name: Name or initials of the faculty.
@@ -109,7 +109,7 @@ async def find_faculty_free_time(faculty_name: str, day: str) -> str:
 @mcp.tool()
 async def get_course_schedule(course_code: str, day: Optional[str] = None) -> str:
     """
-    Finds exactly when and where a particular subject/course is running.
+    Finds exactly when and where a particular subject/course is running (includes both lectures and labs/tutorials).
     
     Args:
         course_code: The course code (e.g., 'CS101') or subject name.
@@ -152,7 +152,7 @@ async def list_programs() -> str:
 @mcp.tool()
 async def get_program_timetable(program_name: str, day: Optional[str] = None, semester: Optional[str] = None) -> str:
     """
-    Retrieves the timetable for an entire program/batch.
+    Retrieves the timetable for an entire program/batch, including both lectures and lab sessions.
     
     Args:
         program_name: The name of the program or batch (e.g., 'Msc-it Semester 2', 'BTech Sem-II').
