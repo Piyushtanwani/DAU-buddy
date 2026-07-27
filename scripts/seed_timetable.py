@@ -32,6 +32,10 @@ POSSIBLE_PATHS = [
     os.path.join(DATA_DIR, "Lecture Data.xlsx"),
     os.path.join(DATA_DIR, "Lecture_TT_Autumn2026-27_v9.xlsx"),
 ]
+POSSIBLE_LAB_PATHS = [
+    os.path.join(DATA_DIR, "Lab Data.xlsx"),
+    os.path.join(DATA_DIR, "Lab_TT_Autumn2026-27.xlsx"),
+]
 
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
@@ -45,6 +49,16 @@ def find_excel_file() -> str:
             if f.endswith(".xlsx") and "lecture" in f.lower():
                 return os.path.join(DATA_DIR, f)
     raise FileNotFoundError(f"No timetable Excel file found in data/ folder ({DATA_DIR}).")
+
+def find_lab_excel_file() -> str | None:
+    for path in POSSIBLE_LAB_PATHS:
+        if os.path.exists(path):
+            return path
+    if os.path.exists(DATA_DIR):
+        for f in os.listdir(DATA_DIR):
+            if f.endswith(".xlsx") and "lab" in f.lower():
+                return os.path.join(DATA_DIR, f)
+    return None
 
 def load_curriculum():
     path = os.path.join(DATA_DIR, "curriculum.json")
@@ -133,6 +147,7 @@ def parse_excel(excel_path: str, curriculum: dict) -> list:
                 
             for meta in meta_list:
                 rec = {
+                    "session_type": "Lecture",
                     "day": day,
                     "start": start,
                     "end": end,
@@ -148,6 +163,86 @@ def parse_excel(excel_path: str, curriculum: dict) -> list:
 
     return records
 
+def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
+    wb = openpyxl.load_workbook(excel_path, data_only=True)
+    sheet_name = wb.sheetnames[0]
+    all_rows = list(wb[sheet_name].iter_rows(values_only=True))
+
+    records = []
+    
+    header_idx = None
+    for i, row in enumerate(all_rows):
+        if any(str(v).strip() == "Time Slot" for v in row if v):
+            header_idx = i
+            break
+            
+    if header_idx is None:
+        logger.warning(f"Could not find 'Time Slot' header in {excel_path}")
+        return []
+
+    day_cols = {}
+    for ci, v in enumerate(all_rows[header_idx]):
+        if v and str(v).strip() in DAYS:
+            day_cols[str(v).strip()] = ci
+
+    if not day_cols:
+        day_cols = {"Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5}
+        
+    time_col, room_col, course_col, faculty_col = 0, 6, 7, 8
+    current_program_header = "Unknown Program"
+    
+    for row in all_rows[header_idx + 1:]:
+        t = row[time_col] if len(row) > time_col else None
+        
+        if t and not re.search(r"\d{1,2}:\d{2}", str(t)):
+            current_program_header = str(t).strip()
+            continue
+            
+        if not t or not str(t).strip():
+            continue
+            
+        start, end = _resolve_slot(t)
+        if not start or not end:
+            continue
+            
+        room = str(row[room_col]).strip() if len(row) > room_col and row[room_col] else ""
+        course = str(row[course_col]).strip() if len(row) > course_col and row[course_col] else ""
+        faculty = str(row[faculty_col]).strip() if len(row) > faculty_col and row[faculty_col] else ""
+        
+        if not course or course in ("-", "—"):
+            continue
+
+        meta_list = curriculum.get(course, [])
+        if not meta_list:
+            meta_list = [{"program": current_program_header}]
+            
+        for day in DAYS:
+            if day not in day_cols:
+                continue
+            dc = day_cols[day]
+            group_val = row[dc] if len(row) > dc else None
+            if group_val and str(group_val).strip():
+                gv = str(group_val).strip()
+                session_type = f"Tutorial ({gv})" if "tut" in gv.lower() else f"Lab ({gv})"
+                
+                for meta in meta_list:
+                    records.append({
+                        "session_type": session_type,
+                        "day": day,
+                        "start": start,
+                        "end": end,
+                        "course_code": course,
+                        "course_name": meta.get("course_name", course),
+                        "course_type": meta.get("course_type", "Unknown"),
+                        "program": meta.get("program", current_program_header),
+                        "semester": str(meta.get("semester", "")),
+                        "faculty": faculty,
+                        "room": room,
+                    })
+                    
+    return records
+
+
 def main():
     try:
         excel_path = find_excel_file()
@@ -157,6 +252,15 @@ def main():
         logger.info(f"Loaded {len(curriculum)} courses from curriculum.json")
         
         records = parse_excel(excel_path, curriculum)
+        
+        lab_excel_path = find_lab_excel_file()
+        if lab_excel_path:
+            logger.info(f"Parsing lab timetable from: {lab_excel_path}")
+            lab_records = parse_lab_excel(lab_excel_path, curriculum)
+            records.extend(lab_records)
+        else:
+            logger.info("No lab timetable file found. Skipping labs.")
+
         logger.info(f"Parsed {len(records)} timetable records.")
 
         with db_connection() as conn:
@@ -175,7 +279,7 @@ def main():
                 for rec in records:
                     prog = rec["program"]
                     cur.execute(INSERT_SQL, (
-                        "Lecture",
+                        rec["session_type"],
                         rec["course_code"],
                         rec["course_name"],
                         rec["course_type"],
