@@ -129,3 +129,17 @@ def get_program_timetable(program_name: str, day: Optional[str] = None, semester
             """
             cur.execute(query, tuple(params))
             return cur.fetchall()
+
+def get_room_availability(room: str, day: str, time: str) -> Optional[Dict[str, Any]]:
+    query = """
+        SELECT session_type, course_code, course_name, faculty_name, start_time, end_time, program
+        FROM timetables
+        WHERE room ILIKE %s
+          AND day_of_week ILIKE %s
+          AND start_time <= %s::TIME
+          AND end_time > %s::TIME
+    """
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (f"%{room}%", f"%{day}%", time, time))
+            return cur.fetchone()

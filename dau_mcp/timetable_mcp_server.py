@@ -178,5 +178,29 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
         logger.error(f"Error in get_program_timetable: {e}")
         return f"Error querying program timetable: {str(e)}"
 
+@mcp.tool()
+async def check_room_availability(room: str, day: str, time: str) -> str:
+    """
+    Checks if a particular classroom or lab is available at a specific time, and if not, returns what class is currently happening there.
+    
+    Args:
+        room: The classroom or lab name (e.g., 'cep-207', 'LT-1').
+        day: Day of the week (e.g., 'Monday').
+        time: Time string (e.g., '14:00:00' or '2:00 PM').
+    """
+    try:
+        result = timetable_service.get_room_availability(room, day, time)
+        if result:
+            batch_info = f" (Batch: {result['program']})" if result['program'] else ""
+            name_info = f" - {result['course_name']}" if result['course_name'] else ""
+            return (f"{room} is NOT available at {time} on {day}. "
+                    f"It is currently booked for a {result['session_type']} ({result['course_code']}{name_info}){batch_info} "
+                    f"with {result['faculty_name']} from {result['start_time']} to {result['end_time']}.")
+        else:
+            return f"Yes, {room} is available at {time} on {day}. There are no scheduled classes."
+    except Exception as e:
+        logger.error(f"Error in check_room_availability: {e}")
+        return f"Error querying room availability: {str(e)}"
+
 if __name__ == "__main__":
     mcp.run()
