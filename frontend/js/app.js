@@ -399,10 +399,13 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, window.location.pathname);
         // Wait just a tiny bit for the UI to be ready
         setTimeout(() => {
-            const loginOverlay = document.getElementById("login-overlay");
-            if (loginOverlay) {
-                if (loginOverlay) loginOverlay.style.display = "flex";
-                setTimeout(() => { if (loginOverlay) loginOverlay.style.opacity = "1"; }, 10);
+            if (window.openLoginModal) {
+                window.openLoginModal();
+            } else {
+                // Fallback in case script order is weird
+                setTimeout(() => {
+                    if (window.openLoginModal) window.openLoginModal();
+                }, 300);
             }
         }, 100);
     }
@@ -449,6 +452,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const decodedPayload = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
 
             const email = decodedPayload.email;
+            const currentLoginError = document.getElementById("login-error");
+            const currentLoginOverlay = document.getElementById("login-overlay");
 
             if (email) {
                 // Successful login
@@ -458,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     picture: decodedPayload.picture,
                     credential: response.credential
                 }));
-                loginError.style.display = "none";
+                if (currentLoginError) currentLoginError.style.display = "none";
                 
                 // Update landing page buttons immediately
                 const btnSignIn = document.getElementById("nav-signin-btn");
@@ -471,19 +476,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
 
                 // Fade out overlay
-                if (loginOverlay) if (loginOverlay) loginOverlay.style.opacity = "0";
+                if (currentLoginOverlay) currentLoginOverlay.style.opacity = "0";
                 setTimeout(() => {
-                    if (loginOverlay) if (loginOverlay) loginOverlay.style.display = "none";
+                    if (currentLoginOverlay) currentLoginOverlay.style.display = "none";
                     window.location.href = '/api-keys';
                 }, 400);
             } else {
                 // Unauthorized domain
-                loginError.style.display = "flex";
+                if (currentLoginError) currentLoginError.style.display = "flex";
             }
         } catch (error) {
             console.error("Error decoding Google JWT:", error);
-            loginError.style.display = "flex";
-            loginError.querySelector("span").textContent = "Error authenticating. Please try again.";
+            const currentLoginError = document.getElementById("login-error");
+            if (currentLoginError) {
+                currentLoginError.style.display = "flex";
+                const span = currentLoginError.querySelector("span");
+                if (span) span.textContent = "Error authenticating. Please try again.";
+            }
         }
     };
 
@@ -513,33 +522,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function openLoginModal() {
-        const storedSession = localStorage.getItem("dau_buddy_auth");
-        if (storedSession) {
-            try {
-                const authData = JSON.parse(storedSession);
-                if (authData.email && authData.credential) {
-                    // Already logged in, just switch back to dashboard
-                    
-                    
-                    window.location.href = "/api-keys";
-                    return;
-                }
-            } catch (e) {}
-        }
 
-        if (loginOverlay) loginOverlay.style.display = "flex";
-        setTimeout(() => { if (loginOverlay) loginOverlay.style.opacity = "1"; }, 10);
-    }
 
-    function closeLoginModal() {
-        if (loginOverlay) if (loginOverlay) loginOverlay.style.opacity = "0";
-        setTimeout(() => { if (loginOverlay) if (loginOverlay) loginOverlay.style.display = "none"; }, 300);
-    }
-
-    if (btnGetStarted) btnGetStarted.addEventListener("click", openLoginModal);
-    if (btnSignIn) btnSignIn.addEventListener("click", openLoginModal);
-    if (btnCloseLogin) btnCloseLogin.addEventListener("click", closeLoginModal);
+    if (btnGetStarted) btnGetStarted.addEventListener("click", window.openLoginModal);
+    if (btnSignIn) btnSignIn.addEventListener("click", window.openLoginModal);
+    if (btnCloseLogin) btnCloseLogin.addEventListener("click", window.closeLoginModal);
 
 
     // Tab Switching functionality

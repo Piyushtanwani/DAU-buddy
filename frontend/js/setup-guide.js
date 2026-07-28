@@ -101,7 +101,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const signInBtn = document.createElement("button");
             signInBtn.className = "nav-signout-btn";
             signInBtn.textContent = "Sign In";
-            signInBtn.onclick = () => window.location.href = "/?view=login";
+            signInBtn.onclick = (e) => {
+                e.preventDefault();
+                if (window.openLoginModal) {
+                    window.openLoginModal();
+                } else {
+                    window.location.href = "/?view=login";
+                }
+            };
             navLinks.appendChild(signInBtn);
         }
     }
