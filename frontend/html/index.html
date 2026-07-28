@@ -165,34 +165,11 @@
         </footer>
     </div>
 
-    <!-- ── Login Container Modal ─────────────────────────────────────── -->
-    <div class="login-overlay" id="login-overlay" style="display: none;">
-        <div class="login-card">
-            <button class="close-modal-btn" id="close-login-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="login-header">
-                <i class="fa-solid fa-graduation-cap login-logo"></i>
-                <h2>DAU Buddy</h2>
-                <p>Sign in with your university account to authenticate.</p>
-            </div>
 
-            <div class="login-error" id="login-error" style="display: none;">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span>Access Restricted: Please use a valid @dau.ac.in email address.</span>
-            </div>
-
-            <div id="g_id_onload"
-                data-client_id="590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
-                data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
-                data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-                data-text="signin_with" data-size="large" data-logo_alignment="left">
-            </div>
-        </div>
-    </div>
 
     <script src="/js/feedback.js"></script>
     <script src="/js/app.js"></script>
 
+    <script src="/js/login-modal.js"></script>
 </body>
 </html>

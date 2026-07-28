@@ -56,7 +56,7 @@
                         </a>
                     </div>
                 </div>
-                <button onclick="window.location.href='/?view=login'" class="nav-signout-btn" id="docs-login-btn">Sign
+                <button onclick="event.preventDefault(); if(window.openLoginModal) window.openLoginModal(); else window.location.href='/?view=login';" class="nav-signout-btn" id="docs-login-btn">Sign
                     In</button>
                 <div class="profile-container" id="landing-profile-container"
                     style="position: relative; display: none;">
@@ -453,6 +453,6 @@ Service Service Service   Service    Service    Service
                 }
             });
         </script>
+        <script src="/js/login-modal.js?v=2"></script>
 </body>
-
 </html>
