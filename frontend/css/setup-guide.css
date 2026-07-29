@@ -213,3 +213,24 @@
 .nav-docs-btn i.fa-chevron-down {
     font-size: 10px;
 }
+
+
+/* Mobile overrides for code blocks and layout */
+@media (max-width: 768px) {
+    .setup-container {
+        padding: 15px;
+    }
+    pre, code, .code-block-wrapper, .bash-block {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-x: auto;
+    }
+    .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .setup-card {
+        padding: 15px;
+    }
+}

@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const newUsers = document.getElementById("new-users");
     const totalQueries = document.getElementById("total-queries");
     const activeUsers = document.getElementById("active-users");
+    const chatUsers = document.getElementById("chat-users");
     
     const queriesUserTableBody = document.querySelector("#queries-user-table tbody");
 
@@ -65,6 +66,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         newUsers.textContent = data.users.new_last_7_days;
         totalQueries.textContent = data.platform.total_queries;
         activeUsers.textContent = data.platform.active_users;
+        if (chatUsers && data.platform.chat_users !== undefined) {
+            chatUsers.textContent = data.platform.chat_users;
+        }
 
         // Initialize Charts
         initCharts(data);

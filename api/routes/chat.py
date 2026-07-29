@@ -1,5 +1,6 @@
 import os
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
 from core import config
 import hashlib
@@ -221,6 +222,17 @@ async def chat_endpoint(request: Request, body: ChatRequest):
     try:
         cleaned = body.message.strip().lower()
 
+        if getattr(body, "user_email", None):
+            try:
+                with db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "INSERT INTO mcp_analytics (tool_name, user_email, client_name) VALUES (%s, %s, %s)",
+                            ('Web Chat', body.user_email, 'DAU Web Chat')
+                        )
+            except Exception as e:
+                logger.error(f"Failed to log web chat analytics: {e}")
+
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
         api_key = os.getenv("GEMINI_API_KEY")
         if _is_library_query(body.message) and not (api_key and is_gemini_available()):
@@ -327,6 +339,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
                 faculty_database=faculty_db,
                 staff_database=staff_db,
+                current_day=datetime.now().strftime("%A"),
             )
             try:
                 response_text, token_usage = call_gemini_api(api_key, system_instruction, body.history)

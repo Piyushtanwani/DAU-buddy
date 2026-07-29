@@ -570,6 +570,7 @@ a {
 }
 
 .docs-content {
+        padding: 15px !important;
     flex: 1;
     padding: 3rem;
 }
@@ -839,6 +840,7 @@ a {
     }
 
     .docs-content {
+        padding: 15px !important;
         padding: 20px 15px !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -1237,4 +1239,64 @@ a {
     gap: 8px;
     transition: all 0.2s;
     text-decoration: none;
+}
+
+/* ==========================================================================
+   Comprehensive Mobile Overrides (added for full responsiveness)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .nav-brand {
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .features-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .landing-nav {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 15px;
+    }
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .community-dropdown-menu {
+        position: static;
+        transform: none;
+        box-shadow: none;
+        border: none;
+        width: 100%;
+    }
+    .landing-hero {
+        padding: 20px;
+    }
+    .hero-text h1 {
+        font-size: 32px;
+    }
+    .hero-text p {
+        font-size: 16px;
+    }
+    /* Docs and general overrides */
+    .docs-layout {
+        padding: 10px;
+        flex-direction: column;
+    }
+    .docs-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+    }
+    .docs-content {
+        padding: 15px !important;
+        width: 100%;
+        padding: 10px;
+    }
+    pre, code {
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
 }

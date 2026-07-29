@@ -336,3 +336,28 @@ details.setup-sec[open] summary .setup-chev { transform: rotate(90deg); }
   .setup-keyrow { flex-direction: column; }
   .setup-hero h1 { font-size: 22px; }
 }
+
+
+/* Comprehensive Mobile Overrides */
+@media (max-width: 768px) {
+    .setup-box {
+        padding: 20px;
+        margin: 10px;
+        width: auto;
+    }
+    .setup-apps {
+        grid-template-columns: 1fr;
+    }
+    .setup-step {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .setup-test {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    #codeBlock {
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+}
