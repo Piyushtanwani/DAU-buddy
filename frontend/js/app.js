@@ -284,7 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (loginOverlay) if (loginOverlay) loginOverlay.style.opacity = "0";
             if (loginOverlay) if (loginOverlay) loginOverlay.style.display = "none";
             
-            window.location.href = "/api-keys";
+          setTimeout(() => {
+            window.location.href = "/chat";
+        }, 1500);
         }
 
         let displayName = name || "User";
@@ -421,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const shouldShowDashboard = (currentView === "dashboard");
 
                 if (shouldShowDashboard && window.location.pathname === "/") {
-                    window.location.href = "/api-keys";
+                    window.location.href = "/chat";
                     return;
                 }
 
@@ -430,10 +432,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Update landing page buttons to indicate they lead to the dashboard
                 const btnSignIn = document.getElementById("nav-signin-btn");
+                const btnDocsLogin = document.getElementById("docs-login-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
                     btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnSignIn.className = 'nav-docs-btn';
+                    btnSignIn.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    if (landingProfileContainer) landingProfileContainer.style.display = "block";
+                }
+                if (btnDocsLogin) {
+                    btnDocsLogin.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
+                    btnDocsLogin.className = 'nav-docs-btn';
+                    btnDocsLogin.style.display = 'inline-block';
+                    btnDocsLogin.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -467,10 +478,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Update landing page buttons immediately
                 const btnSignIn = document.getElementById("nav-signin-btn");
+                const btnDocsLogin = document.getElementById("docs-login-btn");
                 const btnGetStarted = document.getElementById("hero-get-started-btn");
                 if (btnSignIn) {
                     btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnSignIn.className = 'nav-docs-btn';
+                    btnSignIn.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    if (landingProfileContainer) landingProfileContainer.style.display = "block";
+                }
+                if (btnDocsLogin) {
+                    btnDocsLogin.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
+                    btnDocsLogin.className = 'nav-docs-btn';
+                    btnDocsLogin.style.display = 'inline-block';
+                    btnDocsLogin.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -479,8 +499,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (currentLoginOverlay) currentLoginOverlay.style.opacity = "0";
                 setTimeout(() => {
                     if (currentLoginOverlay) currentLoginOverlay.style.display = "none";
-                    window.location.href = '/api-keys';
-                }, 400);
+                    window.location.href = "/chat";
+                }, 100);
             } else {
                 // Unauthorized domain
                 if (currentLoginError) currentLoginError.style.display = "flex";

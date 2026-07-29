@@ -14,6 +14,9 @@ from api.services import (
     record_gemini_failure,
     SYSTEM_INSTRUCTIONS_TEMPLATE,
 )
+from api.services.openai_service import (
+    call_openai_api, is_openai_available, record_openai_failure
+)
 from api.services.retrieval import PostgresFullTextRetriever
 from api.services.context_builder import build_faculty_context, build_staff_context
 from api.services.faculty_service import list_all_faculty_db
@@ -234,9 +237,11 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                 logger.error(f"Failed to log web chat analytics: {e}")
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
-        api_key = os.getenv("GEMINI_API_KEY")
-        if _is_library_query(body.message) and not (api_key and is_gemini_available()):
-            logger.info("Chat trigger: library search detected (Gemini unavailable).")
+        gemini_available = bool(os.getenv("GEMINI_API_KEY") and is_gemini_available())
+        openai_available = bool(os.getenv("OPENAI_API_KEY") and is_openai_available())
+        
+        if _is_library_query(body.message) and not (gemini_available or openai_available):
+            logger.info("Chat trigger: library search detected (No AI APIs available).")
             book_query = _extract_book_query(body.message)
             return ChatResponse(response=await handle_library_fallback(book_query))
 
@@ -306,7 +311,10 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             return ChatResponse(response=list_all_faculty_db())
 
         # Strategy A: Informational Queries (RAG)
-        if api_key and is_gemini_available():
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+
+        if (gemini_api_key and is_gemini_available()) or (openai_api_key and is_openai_available()):
             logger.info("Processing via RAG pipeline (Strategy A)...")
             retriever = PostgresFullTextRetriever()
             limit = config.get_retrieval_limit()
@@ -341,18 +349,36 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                 staff_database=staff_db,
                 current_day=datetime.now().strftime("%A"),
             )
-            try:
-                response_text, token_usage = call_gemini_api(api_key, system_instruction, body.history)
-                return ChatResponse(response=response_text)
-            except Exception:
-                logger.exception("Gemini RAG failed — falling back to local NLP engine/library.")
-                record_gemini_failure()
-                if _is_library_query(body.message):
-                    return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
-                return ChatResponse(response=process_fallback_message(body.message))
+            
+            response_text = None
+            
+            # Attempt 1: Gemini
+            if gemini_api_key and is_gemini_available():
+                try:
+                    response_text, token_usage = call_gemini_api(gemini_api_key, system_instruction, body.history)
+                    return ChatResponse(response=response_text)
+                except Exception:
+                    logger.exception("Gemini RAG failed.")
+                    record_gemini_failure()
+            
+            # Attempt 2: OpenAI Fallback
+            if not response_text and openai_api_key and is_openai_available():
+                try:
+                    logger.info("Falling back to OpenAI RAG...")
+                    response_text, token_usage = call_openai_api(openai_api_key, system_instruction, body.history)
+                    return ChatResponse(response=response_text)
+                except Exception:
+                    logger.exception("OpenAI RAG failed.")
+                    record_openai_failure()
+            
+            # If both fail or are skipped, fall through to NLP fallback
+            logger.warning("RAG engines unavailable or failed — falling back to local NLP engine/library.")
+            if _is_library_query(body.message):
+                return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
+            return ChatResponse(response=process_fallback_message(body.message))
 
         # ── 3. Local NLP Fallback ──────────────────────────────────────────────
-        logger.info("Gemini unavailable or in cooldown — using local NLP engine.")
+        logger.info("No AI APIs available or in cooldown — using local NLP engine.")
         if _is_library_query(body.message):
             return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
         return ChatResponse(response=process_fallback_message(body.message))

@@ -1,5 +1,5 @@
 /* ==============================================================================
-   DA-IICT Faculty & Staff AI Buddy — Premium Dark Theme
+   DA-IICT Faculty & Staff AI Buddy
    ============================================================================== */
 
 /* Google Fonts are loaded in HTML */
@@ -43,7 +43,7 @@
 
 /* Light Theme */
 [data-theme="light"] {
-    --bg-app: #ffffff;
+    --bg-app: #0f3b73;
     --bg-sidebar: #ffffff;
     --bg-main: #ffffff;
     --bg-surface: #ffffff;
@@ -1208,7 +1208,8 @@ a {
     font-size: 16px;
 }
 
-.mobile-menu-btn, .theme-toggle {
+.mobile-menu-btn,
+.theme-toggle {
     background: transparent;
     border: none;
     color: var(--txt-secondary);
@@ -1222,7 +1223,8 @@ a {
     justify-content: center;
 }
 
-.mobile-menu-btn:hover, .theme-toggle:hover {
+.mobile-menu-btn:hover,
+.theme-toggle:hover {
     background: var(--bg-body);
     color: var(--txt-primary);
 }
@@ -1236,16 +1238,20 @@ a {
         grid-template-columns: 1fr !important;
         gap: 10px;
     }
+
     .chat-bubble {
         max-width: 95%;
         padding: 12px 16px;
     }
+
     .input-wrapper {
         padding: 10px;
     }
+
     .user-input {
         min-height: 40px;
     }
+
     .top-nav {
         padding: 10px 15px;
     }
@@ -1257,16 +1263,20 @@ a {
     background-color: rgb(15 59 115 / 10%) !important;
     color: #0f3b73 !important;
 }
+
 #profile-dropdown .profile-actions button:hover i {
     color: #0f3b73 !important;
 }
+
 #profile-dropdown .profile-actions #logout-btn:hover {
     background-color: #fee2e2 !important;
     color: #dc2626 !important;
 }
+
 #profile-dropdown .profile-actions #logout-btn:hover i {
     color: #dc2626 !important;
 }
+
 #close-profile-btn:hover i {
     color: #111 !important;
 }

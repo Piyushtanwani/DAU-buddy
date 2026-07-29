@@ -1,8 +1,15 @@
 /* ==============================================================================
-   DA-IICT Faculty AI Buddy - Frontend Logic (app.js)
+   DA-IICT Faculty AI Buddy - Chat Logic (chat.js)
    ============================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Require authentication to view chat page
+    const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
+    if (!authData || !authData.credential) {
+        window.location.href = '/?view=login';
+        return;
+    }
+
     // DOM Elements
     const form = document.getElementById("input-form");
     const userInput = document.getElementById("user-input");
@@ -63,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Toggle Theme (Dark / Light)
-    if(themeToggle) themeToggle.addEventListener("click", () => {
+    if (themeToggle) themeToggle.addEventListener("click", () => {
         const currentTheme = document.body.getAttribute("data-theme");
         const newTheme = currentTheme === "light" ? "dark" : "light";
         document.body.setAttribute("data-theme", newTheme);
@@ -85,10 +92,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (authData && authData.email) {
                 userKey = authData.email.split('@')[0];
             }
-        } catch(e) {}
-        
+        } catch (e) { }
+
         const storageKey = "dau_buddy_chats_" + userKey;
-        
+
         if (userKey !== "guest") {
             const legacyChats = localStorage.getItem("dau_buddy_chats");
             if (legacyChats && !localStorage.getItem(storageKey)) {
@@ -96,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 localStorage.removeItem("dau_buddy_chats");
             }
         }
-        
+
         return storageKey;
     }
 
@@ -269,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Clear Active Chat contents (from top right header action)
-    if(clearChatBtn) clearChatBtn.addEventListener("click", () => {
+    if (clearChatBtn) clearChatBtn.addEventListener("click", () => {
         const activeSession = chatSessions.find(s => s.id === activeChatId);
         if (activeSession && activeSession.messages.length > 0) {
             if (confirm("Clear messages in this chat session?")) {
@@ -285,6 +292,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // Submit user question
     async function handleSend(text) {
         if (!text.trim() || isResponding) return;
+
+        // Require authentication to chat
+        const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
+        if (!authData || !authData.credential) {
+            if (window.openLoginModal) {
+                window.openLoginModal();
+            } else {
+                window.location.href = '/?view=login';
+            }
+            return;
+        }
 
         setInputState(false);
 
@@ -326,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (authData && authData.email) {
                     userEmail = authData.email;
                 }
-            } catch(e) {}
+            } catch (e) { }
 
             const response = await fetch("/api/chat", {
                 method: "POST",
@@ -715,11 +733,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 overlay.classList.remove("active");
             }
         };
-        if(sidebarToggle) sidebarToggle.addEventListener("click", handleToggle);
-        if(sidebarToggle) sidebarToggle.addEventListener("touchstart", handleToggle, { passive: false });
+        if (sidebarToggle) sidebarToggle.addEventListener("click", handleToggle);
+        if (sidebarToggle) sidebarToggle.addEventListener("touchstart", handleToggle, { passive: false });
     }
 
-    if(overlay) {
+    if (overlay) {
         overlay.addEventListener("click", closeMobileSidebar);
         overlay.addEventListener("touchstart", (e) => {
             e.preventDefault();

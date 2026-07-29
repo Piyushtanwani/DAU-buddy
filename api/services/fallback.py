@@ -184,6 +184,36 @@ def _extract_topic(query: str) -> str:
 
 
 # ==============================================================================
+# Academic Query Fallback
+# ==============================================================================
+def handle_academic_query(query: str) -> str:
+    from api.services.gemini import search_academic_requirements
+    results = search_academic_requirements(query)
+    
+    if isinstance(results, str) and results.startswith("Error"):
+        return f"Error searching academic documents: {results}"
+        
+    if not results or isinstance(results, str):
+        return "I could not find any academic rules or regulations matching your query."
+        
+    out = [f"### Academic Guidelines & Requirements", f"Found {len(results)} relevant section(s) in rulebooks:", ""]
+    for i, res in enumerate(results, 1):
+        if not isinstance(res, dict): continue
+        title = res.get('title', 'Document')
+        program = res.get('program', '')
+        page = res.get('page', '')
+        content = res.get('content', '')
+        
+        prog_str = f" ({program})" if program else ""
+        page_str = f" [Page {page}]" if page else ""
+        
+        out.append(f"#### {i}. {title}{prog_str}{page_str}")
+        out.append(f"> {content}\n")
+        
+    return "\n".join(out)
+
+
+# ==============================================================================
 # Main Fallback Routing Engine
 # ==============================================================================
 def process_fallback_message(prompt: str) -> str:
@@ -329,6 +359,12 @@ def process_fallback_message(prompt: str) -> str:
                     return "\n".join(out)
             except Exception as e:
                 logger.error(f"Intent routing failed for '{cat_name}': {e}")
+
+    # ── Pass 1b: Academic Rules Intent ──────────────────────────────────────
+    academic_keywords = ["cpi", "graduation", "credit", "semester", "attendance", "rule", "regulation", "requirement", "pass", "fail", "spi", "degree"]
+    if any(re.search(r'\b' + kw + r'\b', cleaned) for kw in academic_keywords):
+        logger.info("Fallback trigger: Academic query detected.")
+        return handle_academic_query(cleaned)
 
     # ── Pass 2: Count Queries ─────────────────────────────────────────────────
     count_kw = ["how many", "total count", "total number", "count of", "number of"]
