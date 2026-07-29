@@ -393,6 +393,8 @@ def create_app() -> FastAPI:
                     total_queries = cursor.fetchone()[0]
                     cursor.execute("SELECT COUNT(DISTINCT user_email) FROM mcp_analytics")
                     active_users = cursor.fetchone()[0]
+                    cursor.execute("SELECT COUNT(DISTINCT user_email) FROM mcp_analytics WHERE client_name = 'DAU Web Chat'")
+                    chat_users = cursor.fetchone()[0]
                     
                     # Signups Over Time (Last 30 Days)
                     cursor.execute("""
@@ -427,7 +429,7 @@ def create_app() -> FastAPI:
                     
                     return {
                         "users": {"total": total_users, "new_last_7_days": new_users},
-                        "platform": {"total_queries": total_queries, "active_users": active_users},
+                        "platform": {"total_queries": total_queries, "active_users": active_users, "chat_users": chat_users},
                         "tools": tools_data,
                         "clients": clients_data,
                         "roles": roles_data,
@@ -536,6 +538,10 @@ def create_app() -> FastAPI:
         @app.get("/setup-guide")
         def serve_setup_guide():
             return FileResponse(os.path.join(frontend_dir, "html", "setup-guide.html"))
+            
+        @app.get("/chat")
+        def serve_chat():
+            return FileResponse(os.path.join(frontend_dir, "html", "chat.html"))
     else:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 

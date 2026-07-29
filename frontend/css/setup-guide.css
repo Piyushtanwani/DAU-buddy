@@ -1,13 +1,28 @@
-.guide-container { max-width: 2000px; margin: 0 auto; width: 100%; padding-bottom: 40px; }
+.guide-container {
+    max-width: 2000px;
+    margin: 0 auto;
+    width: 100%;
+    padding-bottom: 40px;
+}
 
 .guide-header {
     margin-bottom: 40px;
     text-align: center;
 }
 
-.guide-header h1 { color: #ffffff; font-family: 'Outfit', sans-serif; font-size: 32px; margin-bottom: 12px; }
+.guide-header h1 {
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    margin-bottom: 12px;
+}
 
-.guide-header p { color: #e0f2fe; font-size: 16px; max-width: 600px; margin: 0 auto; }
+.guide-header p {
+    color: #e0f2fe;
+    font-size: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+}
 
 .guide-content {
     display: flex;
@@ -19,7 +34,14 @@
     border: 1px solid #e0e0e0;
 }
 
-.guide-sidebar { flex: 0 0 220px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #eee; padding-right: 20px; }
+.guide-sidebar {
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+}
 
 .tab-btn {
     background: transparent;
@@ -153,17 +175,31 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 768px) {
     .guide-content {
         flex-direction: column;
     }
-    
-    .guide-sidebar { flex: 0 0 220px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #eee; padding-right: 20px; }
-    
+
+    .guide-sidebar {
+        flex: 0 0 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-right: 1px solid #eee;
+        padding-right: 20px;
+    }
+
     .tab-btn {
         white-space: nowrap;
     }
@@ -172,44 +208,136 @@
 
 /* Added Refactored Styles */
 .app-container {
-    display: flex; flex-direction: column; background-color: #0f3b73; min-height: 100vh; overflow-y: auto; box-sizing: border-box; text-align: left; color: #333; font-family: 'Open Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    background-color: #0f3b73;
+    min-height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    text-align: left;
+    color: #333;
+    font-family: 'Open Sans', sans-serif;
 }
+
 .app-nav {
-    background: #ffffff; border-bottom: 3px solid #0f3b73; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 40px;
+    background: #ffffff;
+    border-bottom: 3px solid #072247;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 0;
 }
+
 .nav-brand {
-    display: flex; align-items: center; gap: 12px; color: #0f3b73; font-size: 22px; font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #0f3b73;
+    font-size: 22px;
+    font-weight: 700;
 }
+
 .nav-links {
-    display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
 }
+
 .nav-docs-btn {
-    padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;
+    padding: 8px 16px;
+    background: transparent;
+    color: #0f3b73;
+    border: 1px solid #0f3b73;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Open Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
 }
+
 .setup-page {
-    max-width: 1400px; margin: 0 auto; width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
 }
+
 .guide-main {
     flex: 1;
 }
+
 .landing-footer {
     margin-top: auto;
 }
+
 .footer-links {
-    display: flex; flex-direction: column; gap: 12px; text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: right;
 }
+
 .footer-links a {
-    color: #cccccc; text-decoration: none; font-size: 14px; transition: color 0.2s;
+    color: #cccccc;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
 }
+
 .footer-links a:hover {
     color: #ffffff !important;
 }
+
 .guide-sidebar img {
     border-radius: 4px;
 }
+
 .community-dropdown-item i {
-    width: 16px; text-align: center;
+    width: 16px;
+    text-align: center;
 }
+
 .nav-docs-btn i.fa-chevron-down {
     font-size: 10px;
+}
+
+
+/* Mobile overrides for code blocks and layout */
+@media (max-width: 768px) {
+    .setup-container {
+        padding: 15px;
+    }
+
+    pre,
+    code,
+    .code-block-wrapper,
+    .bash-block {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-x: auto;
+    }
+
+    .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .setup-card {
+        padding: 15px;
+    }
+}
+
+.setup-page {
+    background-color: #072247;
+    min-height: 100vh;
+    padding-top: 40px;
 }

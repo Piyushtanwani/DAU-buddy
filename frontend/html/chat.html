@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <title>DA-IICT Faculty &amp; Staff AI Buddy</title>
+    <meta name="description" content="DAU Buddy Chat — Ask anything about DA-IICT faculty and staff">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Chat Stylesheet (only) -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/chat.css">
+
+    <script>
+        if (window.location.search.includes('embedded=true')) {
+            window.addEventListener('DOMContentLoaded', () => {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) sidebar.style.display = 'none';
+                document.body.style.background = 'transparent';
+                document.querySelector('.chat-app-container').style.marginTop = '0';
+                const nav = document.getElementById('chat-top-nav'); if (nav) nav.style.display = 'none';
+                const bar = document.querySelector('.top-accent-bar'); if (bar) bar.style.display = 'none';
+                const navCenter = document.getElementById('chat-nav-center'); if (navCenter) navCenter.style.display = 'block';
+                document.querySelector('.chat-app-container').style.borderRadius = '0';
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div style="display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
+        <div class="top-accent-bar"></div>
+        <nav class="landing-nav" id="chat-top-nav">
+            <div class="nav-brand">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>DAU Buddy</span>
+            </div>
+            <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
+                <button onclick="localStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'"
+                    class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+                <button onclick="window.location.href='/docs'" class="nav-docs-btn "
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-book"></i> Docs
+                </button>
+                <div class="community-dropdown-container">
+                    <button class="nav-docs-btn"
+                        style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down"
+                            style="font-size: 10px;"></i>
+                    </button>
+                    <div class="community-dropdown-menu">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server"
+                            target="_blank" class="community-dropdown-item">
+                            <i class="fa-brands fa-github" style="width: 16px; text-align: center;"></i> Contribute
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new/choose" target="_blank"
+                            class="community-dropdown-item">
+                            <i class="fa-solid fa-bug" style="width: 16px; text-align: center;"></i> Raise an issue
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
+                            class="community-dropdown-item">
+                            <i class="fa-solid fa-star" style="width: 16px; text-align: center;"></i> Leave a star
+                        </a>
+                    </div>
+                </div>
+                <button
+                    onclick="event.preventDefault(); if(window.openLoginModal) window.openLoginModal(); else window.location.href='/?view=login';"
+                    class="nav-signout-btn" id="docs-login-btn">Sign
+                    In</button>
+                <div class="profile-container" id="landing-profile-container"
+                    style="position: relative; display: none;">
+                    <img id="landing-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
+                        referrerpolicy="no-referrer" alt="Profile"
+                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
+
+                    <div id="landing-profile-dropdown" class="profile-dropdown"
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        <div class="profile-info"
+                            style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <button id="landing-close-profile-btn"
+                                style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                            <img id="landing-dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user"
+                                referrerpolicy="no-referrer"
+                                style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
+                            <h3 id="landing-dropdown-name"
+                                style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+                                Welcome!</h3>
+                            <p id="landing-dropdown-email"
+                                style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">
+                                Authenticated User</p>
+                            <span id="landing-dropdown-role"
+                                style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
+                        </div>
+                        <div class="profile-actions" style="padding: 8px;">
+                            <button id="landing-nav-dashboard-btn" onclick="window.location.href='/maintainer'"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-code" style="color: #555; font-size: 18px;"></i> Analytics
+                            </button>
+                            <button id="landing-feedback-btn" class="nav-feedback-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-regular fa-comment-dots" style="color: #555; font-size: 18px;"></i>
+                                Feedback
+                            </button>
+                            <button id="landing-logout-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"
+                                    style="color: #555; font-size: 18px;"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="chat-app-container" style="flex: 1; height: 0; margin-top: 16px;">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-content">
+                    <button class="new-chat-btn" id="new-chat-btn">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>New Chat</span>
+                    </button>
+                    <div class="chat-history-list" id="chat-history-list">
+                        <!-- Dynamically rendered -->
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <!-- Clear History -->
+                    <button class="clear-history-btn" id="clear-history-btn">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Clear History</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Chat Area -->
+            <main class="chat-area">
+                <header class="top-nav">
+                    <button class="mobile-menu-btn" id="mobile-menu-btn">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="nav-center" id="chat-nav-center" style="display: none;">DAU Buddy</div>
+                </header>
+
+                <!-- Viewport -->
+                <div class="chat-viewport" id="chat-viewport">
+
+                    <!-- Welcome screen -->
+                    <div class="welcome-screen" id="welcome-screen">
+                        <div class="welcome-icon">
+                            <i class="fa-solid fa-comments"></i>
+                        </div>
+                        <h2>How can I help you today?</h2>
+                        <p class="welcome-sub">
+                            Ask anything about timetable, academic requirements, library books, faculties and staff.
+                        </p>
+
+                        <div class="prompt-grid">
+                            <button class="prompt-card" data-prompt="I want a faculty for machine learning">
+                                <i class="fa-solid fa-robot card-icon"></i>
+                                <div class="card-text">
+                                    <h4>Find Experts</h4>
+                                    <p>"Faculty for machine learning"</p>
+                                </div>
+                            </button>
+                            <button class="prompt-card" data-prompt="When is the next holiday?">
+                                <i class="fa-solid fa-calendar-days card-icon"></i>
+                                <div class="card-text">
+                                    <h4>Upcoming Holidays</h4>
+                                    <p>"When is the next holiday?"</p>
+                                </div>
+                            </button>
+                            <button class="prompt-card" data-prompt="What is Prof. Anil Agarwal's schedule on Monday?">
+                                <i class="fa-solid fa-clock card-icon"></i>
+                                <div class="card-text">
+                                    <h4>Faculty Timetable</h4>
+                                    <p>"Prof. Agarwal's schedule on Monday"</p>
+                                </div>
+                            </button>
+                            <button class="prompt-card" data-prompt="Find me a book on computer networks">
+                                <i class="fa-solid fa-book card-icon"></i>
+                                <div class="card-text">
+                                    <h4>Library Search</h4>
+                                    <p>"Book on computer networks"</p>
+                                </div>
+                            </button>
+                            <button class="prompt-card"
+                                data-prompt="What is the minimum CPI required for BTech graduation?">
+                                <i class="fa-solid fa-file-lines card-icon"></i>
+                                <div class="card-text">
+                                    <h4>Academic Rules</h4>
+                                    <p>"Minimum CPI for graduation"</p>
+                                </div>
+                            </button>
+                            <button class="prompt-card" data-prompt="Search PhD scholars working on Machine Learning">
+                                <i class="fa-solid fa-user-graduate card-icon"></i>
+                                <div class="card-text">
+                                    <h4>PhD Scholars</h4>
+                                    <p>"Scholars working on Machine Learning"</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="messages-container" id="messages-container"></div>
+                </div>
+
+                <!-- Input -->
+                <footer class="input-area">
+                    <form class="input-form" id="input-form">
+                        <div class="input-wrapper">
+                            <input type="text" id="user-input"
+                                placeholder="Ask about a faculty member, specialization, or staff role…"
+                                autocomplete="off">
+                            <button type="submit" class="send-btn" id="send-btn" title="Send">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="input-disclaimer">
+                        <p>DAU Buddy answers based on real-time data scraped from
+                            <a href="https://www.daiict.ac.in" target="_blank" rel="noopener">daiict.ac.in</a>
+                        </p>
+                    </div>
+                </footer>
+            </main>
+        </div>
+
+        <!-- Chat JS (loaded once) -->
+        <script src="/js/feedback.js"></script>
+        <script src="/js/app.js"></script>
+        <script src="/js/login-modal.js"></script>
+        <script src="/js/chat.js"></script>
+
+    </div>
+</body>
+
+</html>

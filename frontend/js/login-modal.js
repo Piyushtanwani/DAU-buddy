@@ -5,7 +5,7 @@ window.openLoginModal = function () {
             const authData = JSON.parse(storedSession);
             if (authData.email && authData.credential) {
                 // Already logged in, go to dashboard
-                window.location.href = "/api-keys";
+                window.location.href = "/chat";
                 return;
             }
         } catch (e) { }
@@ -131,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (currentLoginOverlay) currentLoginOverlay.style.opacity = "0";
                     setTimeout(() => {
                         if (currentLoginOverlay) currentLoginOverlay.style.display = "none";
-                        window.location.href = "/api-keys";
+                        window.location.href = "/chat";
                     }, 400);
                 } else {
                     const loginError = document.getElementById("login-error");

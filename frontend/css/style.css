@@ -286,7 +286,7 @@ a {
     font-size: 22px;
     font-weight: 700;
     color: var(--brand);
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
 }
 
 .nav-links {
@@ -530,7 +530,7 @@ a {
 .docs-sidebar h3 {
     margin-bottom: 1rem;
     font-size: 14px;
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
     letter-spacing: 1px;
     color: var(--txt-tertiary);
 }
@@ -570,6 +570,7 @@ a {
 }
 
 .docs-content {
+        padding: 15px !important;
     flex: 1;
     padding: 3rem;
 }
@@ -839,6 +840,7 @@ a {
     }
 
     .docs-content {
+        padding: 15px !important;
         padding: 20px 15px !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -1237,4 +1239,136 @@ a {
     gap: 8px;
     transition: all 0.2s;
     text-decoration: none;
+}
+
+/* ==========================================================================
+   Comprehensive Mobile Overrides (added for full responsiveness)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .nav-brand {
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .features-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .landing-nav {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 15px;
+    }
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .community-dropdown-menu {
+        position: static;
+        transform: none;
+        box-shadow: none;
+        border: none;
+        width: 100%;
+    }
+    .landing-hero {
+        padding: 20px;
+    }
+    .hero-text h1 {
+        font-size: 32px;
+    }
+    .hero-text p {
+        font-size: 16px;
+    }
+    /* Docs and general overrides */
+    .docs-layout {
+        padding: 10px;
+        flex-direction: column;
+    }
+    .docs-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+    }
+    .docs-content {
+        padding: 15px !important;
+        width: 100%;
+        padding: 10px;
+    }
+    pre, code {
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+}
+
+
+/* Docs Page Specific Styles */
+.docs-sidebar {
+    width: 260px;
+    position: sticky;
+    top: 100px;
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    border: 1px solid #eaeaea;
+    border-top: 3px solid #f97316;
+}
+
+.docs-sidebar h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #0f3b73;
+    font-family: 'Inter', sans-serif;
+}
+
+.docs-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.docs-nav li {
+    margin-bottom: 14px;
+}
+
+.docs-nav a {
+    text-decoration: none;
+    color: #555;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    display: block;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+.docs-nav a:hover {
+    color: #0f3b73;
+    font-weight: 600;
+    background: #f4f6f9;
+    border-left: 3px solid #0f3b73;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.docs-nav a:hover {
+    color: #0f3b73;
+    font-weight: 600;
+}
+
+/* Adjustments for responsive */
+@media (max-width: 768px) {
+    .docs-layout {
+        flex-direction: column;
+    }
+    .docs-sidebar {
+        width: 100%;
+        position: relative;
+        top: 0;
+        margin-bottom: 32px;
+    }
 }

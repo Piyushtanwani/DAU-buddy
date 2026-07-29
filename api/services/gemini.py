@@ -1,4 +1,5 @@
 import time
+import json
 import requests
 import asyncio
 from typing import List, Optional, Tuple, Dict, Any
@@ -6,6 +7,9 @@ from typing import List, Optional, Tuple, Dict, Any
 from core import config
 from core.schemas import ChatMessage
 from api.services.library_service import LibraryService
+from api.services import calendar_service, timetable_service
+from api.services.scholar_service import search_scholars as _search_scholars_db, get_scholar_by_id
+from api.services.document_service import DocumentService
 
 logger = config.get_logger("api.services.gemini")
 
@@ -44,52 +48,50 @@ def record_gemini_failure() -> None:
 # Gemini RAG System Instructions Template
 # ==============================================================================
 SYSTEM_INSTRUCTIONS_TEMPLATE = """\
-You are the DA-IICT Faculty & Staff AI Buddy, a highly intelligent conversational \
-search assistant for Dhirubhai Ambani Institute of Information and Communication Technology (DA-IICT).\
-You are helping students, researchers, and visitors search, discover, and analyze faculty \
-and staff profiles based on official university records.
+You are DAU Buddy, the official AI assistant for Dhirubhai Ambani Institute of \
+Information and Communication Technology (DA-IICT). You help students, faculty, \
+researchers, and visitors with everything about the university — people, schedules, \
+holidays, library books, academic rules, PhD scholars, and more.
 
-Below is the complete database of all DA-IICT Faculty members. Use this as your primary \
-source of ground-truth information:
+**CURRENT CONTEXT**
+Today's Day of the Week: {current_day}
+
+Below is the database of DA-IICT Faculty and Staff members:
 === DA-IICT FACULTY DATABASE ===
 {faculty_database}
 ================================
-
-Below is the complete database of all DA-IICT Staff members. Use this as your primary \
-source of ground-truth information:
 === DA-IICT STAFF DATABASE ===
 {staff_database}
 ==============================
 
-Guidelines for Conversation Flow:
-1. Ground your answers strictly on the databases provided above. If you cannot find a relevant person or the answer in the databases, you MUST clearly state that you cannot find the information. DO NOT make up, guess, or hallucinate names, roles, or contact details under any circumstances.
-2. CRITICAL RULE: If the user just types a name (e.g. "Minal Bhise") or asks a basic query, you MUST ONLY reply using exactly this template:
-"[Full Name] works at DA-IICT as [Designation] (holding credentials in [Education]).
+You also have access to these TOOLS that you can call to look up live data:
+- **Library**: `search_library_books`, `get_book_details` — search the OPAC catalog
+- **Calendar**: `get_next_holiday`, `get_upcoming_holidays`, `get_midsem_dates`, `get_endsem_dates`, `search_calendar` — holidays and academic events
+- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `get_course_schedule`, `get_program_timetable`, `check_room_availability`, `list_programs` — class schedules, room checks
+- **Scholars**: `search_scholars`, `get_scholar_details` — PhD/doctoral scholar lookup
+- **Academic Docs**: `search_academic_requirements` — rules, regulations, CPI requirements, graduation criteria
 
-Their primary role involves [describe their role briefly based on their designation/specialization].
-
-*(If you need their contact info or full details, just ask for \"details of [First Name]\"!)*"
-3. DO NOT list their email, phone, office, or any extra text unless the user explicitly typed the word "details", "contact", or asked for it.
-4. For general queries adopt a friendly, conversational approach — name relevant people and briefly explain why they match, then invite a follow-up.
-5. If the user is just saying hello, giving a compliment (like "you are best"), or chatting casually, respond naturally and graciously. DO NOT say "I cannot find a person" for casual chit-chat.
-6. When suggesting professors/staff, explain *why* based on specializations, designations, and education.
-7. If the user wants to email someone, draft a polished, professional email referencing their actual role.
-8. Use clean markdown. Keep initial responses concise and interactive.
-9. Whenever you are asked to provide details or list out information about a faculty or staff member (like their email, phone, office, specialization, etc.), you MUST format the response using clear, markdown bullet points. Do not present details in a dense paragraph.
-10. Domain Mapping Rule: If a user asks about "WiFi", "Internet", or "Network" problems, you must look for and suggest staff members whose designation involves "IT & SYSTEMS" or "NETWORK".
-11. Domain Mapping Rule: If a user asks about "light", "AC", "fan", or "electricity" problems, you must look for and suggest staff members whose designation involves "Electrician" or "Electrical".
-12. Library Rule: If the user asks about books, use the library search tools. When you receive the book results, you MUST use the `get_book_details` tool to check their availability. Then, present the results using exactly this format for each book:
-- **[Book Title]**
-  - Author: [Author]
-  - Availability: [Available Copies / Total Copies]
-  - Link: [OPAC Link]
+Guidelines:
+1. Ground your answers on the databases and tool results. NEVER fabricate names, dates, or details.
+2. For faculty/staff name lookups, give a brief intro first. Only show email/phone/office if the user asks for "details" or "contact".
+3. For casual greetings or chit-chat, respond naturally and warmly.
+4. When suggesting people, explain *why* they match based on their specialization/designation.
+5. Use clean markdown with bullet points for structured data.
+6. For library queries, ALWAYS use `search_library_books` then `get_book_details` to check availability.
+7. For holiday/exam date questions, use the calendar tools.
+8. For timetable/schedule questions, use the timetable tools.
+9. For academic rules (CPI, graduation, credits), use `search_academic_requirements` with 2-4 keywords.
+10. For PhD scholar queries, use `search_scholars`.
+11. WiFi/Internet/Network issues → suggest IT & Systems staff. Light/AC/Fan issues → suggest Electrical staff.
+12. Keep responses concise and invite follow-up questions.
+13. Timetable Rule: The database uses strict names like "MSc (IT)", "B Tech (CS)". If a user asks for a program schedule (e.g. "msc it"), you MUST call `list_programs` first to find the exact matching name, then pass that exact name to `get_program_timetable`. Also, use the `current_day` provided above when the user asks for "today's" schedule. You MUST ALWAYS include the exact start and end times for each class/session in your final response.
 """
 
 
 
 
 # ==============================================================================
-# Gemini Tools (Library)
+# Gemini Tools
 # ==============================================================================
 _library_svc = LibraryService()
 
@@ -113,6 +115,21 @@ def _run_async_in_thread(coro):
         raise exception
     return result
 
+def _serialize_dates(obj):
+    """Convert date/time objects to strings for JSON serialization."""
+    if obj is None:
+        return obj
+    if isinstance(obj, dict):
+        return {k: _serialize_dates(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_serialize_dates(item) for item in obj]
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    if hasattr(obj, 'strftime'):
+        return str(obj)
+    return obj
+
+# ── Library Tools ─────────────────────────────────────────────────────────────
 def search_library_books(query: str, limit: int = 3) -> list[dict]:
     """Search the DA-IICT Resource Centre (Koha OPAC) catalog. Use this tool when the user asks to find a book."""
     try:
@@ -124,7 +141,6 @@ def get_book_details(biblionumber: str) -> dict:
     """Fetch the full catalog record and real-time copy availability for a book. Use this tool to check if a book is available, using the biblionumber from the search results."""
     try:
         details = _run_async_in_thread(_library_svc.get_book_details(biblionumber=biblionumber))
-        # Return only essential info to save tokens
         return {
             "title": details.get("title"),
             "author": details.get("author"),
@@ -133,6 +149,128 @@ def get_book_details(biblionumber: str) -> dict:
         }
     except Exception as e:
         return {"error": str(e)}
+
+# ── Calendar Tools ────────────────────────────────────────────────────────────
+def get_next_holiday() -> dict:
+    """Returns the next upcoming holiday at DA-IICT. Use when the user asks about the next holiday or day off."""
+    try:
+        result = calendar_service.get_next_holiday()
+        return _serialize_dates(result) if result else {"message": "No upcoming holidays found."}
+    except Exception as e:
+        return {"error": str(e)}
+
+def get_upcoming_holidays(limit: int = 5) -> list[dict]:
+    """Returns a list of upcoming DA-IICT holidays. Use when the user asks about upcoming holidays or the holiday list."""
+    try:
+        results = calendar_service.get_upcoming_holidays(limit)
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_midsem_dates() -> list[dict]:
+    """Returns mid-semester exam dates and related academic events. Use when the user asks about midsem exams."""
+    try:
+        results = calendar_service.get_midsem_dates()
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_endsem_dates() -> list[dict]:
+    """Returns end-semester exam dates and related academic events. Use when the user asks about endsem or final exams."""
+    try:
+        results = calendar_service.get_endsem_dates()
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def search_calendar(query: str) -> dict:
+    """Search the academic calendar and holiday calendar by keyword. Use when the user asks about specific events, registration, convocation, etc."""
+    try:
+        results = calendar_service.search_calendar(query)
+        return _serialize_dates(results)
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Timetable Tools ───────────────────────────────────────────────────────────
+def get_faculty_schedule(faculty_name: str, day: str = None) -> list[dict]:
+    """Returns the class schedule for a faculty member. Optionally filter by day of week. Use when the user asks about a professor's timetable or classes."""
+    try:
+        results = timetable_service.get_faculty_schedule(faculty_name, day)
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_faculty_location(faculty_name: str, day: str, time: str) -> dict:
+    """Finds what class a faculty is teaching and in which room at a specific day and time. Use when the user asks 'where is professor X right now'."""
+    try:
+        result = timetable_service.get_faculty_location(faculty_name, day, time)
+        return _serialize_dates(result) if result else {"message": f"{faculty_name} has no class at {time} on {day}."}
+    except Exception as e:
+        return {"error": str(e)}
+
+def find_faculty_free_time(faculty_name: str, day: str) -> list[dict]:
+    """Returns the occupied time slots for a faculty on a given day so you can calculate free time. Use when the user asks when a professor is free."""
+    try:
+        results = timetable_service.find_faculty_free_time(faculty_name, day)
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_course_schedule(course_code: str, day: str = None) -> list[dict]:
+    """Returns the schedule for a specific course (by code or name). Use when the user asks about a course timetable."""
+    try:
+        results = timetable_service.get_course_schedule(course_code, day)
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_program_timetable(program_name: str, day: str = None, semester: str = None) -> list[dict]:
+    """Returns the full timetable for a program/batch (e.g. 'BTech', 'MSc IT'). Use when the user asks about their batch or program schedule."""
+    try:
+        results = timetable_service.get_program_timetable(program_name, day, semester)
+        return _serialize_dates(results)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def check_room_availability(room: str, day: str, time: str) -> dict:
+    """Checks if a classroom or lab is available at a given day and time. Use when the user asks if a room is free."""
+    try:
+        result = timetable_service.get_room_availability(room, day, time)
+        if result:
+            return _serialize_dates({"available": False, **result})
+        return {"available": True, "message": f"{room} is available at {time} on {day}."}
+    except Exception as e:
+        return {"error": str(e)}
+
+def list_programs() -> list[str]:
+    """Returns a list of all program/batch names available in the timetable database. Use this to discover valid program names before calling get_program_timetable."""
+    try:
+        return timetable_service.list_programs()
+    except Exception as e:
+        return [f"Error: {str(e)}"]
+
+# ── Scholar Tools ─────────────────────────────────────────────────────────────
+def search_scholars(query: str, limit: int = 5) -> list[dict]:
+    """Search DA-IICT PhD/doctoral scholars by name, research topic, or advisor. Use when the user asks about PhD students or researchers."""
+    try:
+        return _search_scholars_db(query, limit)
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def get_scholar_details(scholar_id: int) -> dict:
+    """Get full profile of a PhD scholar by their ID (from search results). Includes thesis topic, publications, awards, and employment."""
+    try:
+        return get_scholar_by_id(scholar_id)
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Academic Document Tools ───────────────────────────────────────────────────
+def search_academic_requirements(query: str, program: str = None) -> str:
+    """Search academic requirement documents for rules, regulations, CPI requirements, graduation criteria, etc. IMPORTANT: Pass 2-4 keywords only, NOT full sentences."""
+    try:
+        return DocumentService.search_documents("academic_requirements", query, program, limit=5)
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 # ==============================================================================
@@ -157,11 +295,25 @@ def call_gemini_api(
     genai.configure(api_key=gemini_key)
     
     # Using 2.5 flash
+    all_tools = [
+        # Library
+        search_library_books, get_book_details,
+        # Calendar
+        get_next_holiday, get_upcoming_holidays, get_midsem_dates, get_endsem_dates, search_calendar,
+        # Timetable
+        get_faculty_schedule, get_faculty_location, find_faculty_free_time,
+        get_course_schedule, get_program_timetable, check_room_availability, list_programs,
+        # Scholars
+        search_scholars, get_scholar_details,
+        # Academic Documents
+        search_academic_requirements,
+    ]
+    
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash",
         system_instruction=system_instruction,
-        tools=[search_library_books, get_book_details],
-        generation_config={"temperature": 0.3, "max_output_tokens": 800}
+        tools=all_tools,
+        generation_config={"temperature": 0.3, "max_output_tokens": 1200}
     )
     
     # Format history
@@ -213,11 +365,30 @@ def call_gemini_api(
             
             logger.info(f"Gemini requested tool call: {function_name}({args})")
             
-            tool_result = None
-            if function_name == "search_library_books":
-                tool_result = search_library_books(**args)
-            elif function_name == "get_book_details":
-                tool_result = get_book_details(**args)
+            # Dynamic tool dispatch — look up function by name from locals
+            tool_map = {
+                "search_library_books": search_library_books,
+                "get_book_details": get_book_details,
+                "get_next_holiday": get_next_holiday,
+                "get_upcoming_holidays": get_upcoming_holidays,
+                "get_midsem_dates": get_midsem_dates,
+                "get_endsem_dates": get_endsem_dates,
+                "search_calendar": search_calendar,
+                "get_faculty_schedule": get_faculty_schedule,
+                "get_faculty_location": get_faculty_location,
+                "find_faculty_free_time": find_faculty_free_time,
+                "get_course_schedule": get_course_schedule,
+                "get_program_timetable": get_program_timetable,
+                "check_room_availability": check_room_availability,
+                "list_programs": list_programs,
+                "search_scholars": search_scholars,
+                "get_scholar_details": get_scholar_details,
+                "search_academic_requirements": search_academic_requirements,
+            }
+            
+            tool_fn = tool_map.get(function_name)
+            if tool_fn:
+                tool_result = tool_fn(**args)
             else:
                 tool_result = {"error": f"Unknown tool: {function_name}"}
                 

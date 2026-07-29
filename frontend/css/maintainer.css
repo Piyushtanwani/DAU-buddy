@@ -271,3 +271,34 @@ body {
 .btn-resolve:hover {
     background: #059669;
 }
+
+
+/* ==========================================================================
+   Responsive / Mobile Styles
+   ========================================================================== */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .metrics-grid, .charts-grid, .feedback-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .data-table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .feedback-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .chart-container-large, .chart-container-medium {
+        height: 200px;
+    }
+}

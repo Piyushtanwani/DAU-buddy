@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     """Validated payload for incoming /api/chat requests."""
     message: str
     history: Optional[List[ChatMessage]] = None
+    user_email: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
