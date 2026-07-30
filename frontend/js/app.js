@@ -499,7 +499,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (currentLoginOverlay) currentLoginOverlay.style.opacity = "0";
                 setTimeout(() => {
                     if (currentLoginOverlay) currentLoginOverlay.style.display = "none";
-                    window.location.href = "/chat";
+                    // Redirect based on which page the user is currently on
+                    const currentPath = window.location.pathname;
+                    if (currentPath.includes("api-key")) {
+                        window.location.href = "/api-keys";
+                    } else {
+                        window.location.href = "/chat";
+                    }
                 }, 100);
             } else {
                 // Unauthorized domain
