@@ -190,14 +190,27 @@ async def check_room_availability(room: str, day: str, time: str) -> str:
     """
     try:
         result = timetable_service.get_room_availability(room, day, time)
+        
+        daily_schedule = timetable_service.get_room_schedule_for_day(room, day)
+        schedule_info = "\n\nFull Schedule for the Day:\n"
+        if not daily_schedule:
+            schedule_info += "No classes scheduled for today.\n"
+        else:
+            for c in daily_schedule:
+                b_info = f" (Batch: {c['program']})" if c['program'] else ""
+                n_info = f" - {c['course_name']}" if c['course_name'] else ""
+                schedule_info += f"- {c['start_time']} to {c['end_time']}: {c['session_type']} ({c['course_code']}{n_info}){b_info} with {c['faculty_name']}\n"
+
         if result:
             batch_info = f" (Batch: {result['program']})" if result['program'] else ""
             name_info = f" - {result['course_name']}" if result['course_name'] else ""
-            return (f"{room} is NOT available at {time} on {day}. "
+            base_msg = (f"{room} is NOT available at {time} on {day}. "
                     f"It is currently booked for a {result['session_type']} ({result['course_code']}{name_info}){batch_info} "
                     f"with {result['faculty_name']} from {result['start_time']} to {result['end_time']}.")
         else:
-            return f"Yes, {room} is available at {time} on {day}. There are no scheduled classes."
+            base_msg = f"Yes, {room} is available at {time} on {day}. There are no scheduled classes at this exact time."
+            
+        return base_msg + schedule_info
     except Exception as e:
         logger.error(f"Error in check_room_availability: {e}")
         return f"Error querying room availability: {str(e)}"
