@@ -13,7 +13,8 @@ from api.services.gemini import (
     get_midsem_dates, get_endsem_dates, search_calendar, get_faculty_schedule,
     get_faculty_location, find_faculty_free_time, get_course_schedule,
     get_program_timetable, check_room_availability, list_programs,
-    search_scholars, get_scholar_details, search_academic_requirements
+    search_scholars, get_scholar_details, search_academic_requirements,
+    get_creators_info
 )
 
 logger = config.get_logger("api.services.openai")

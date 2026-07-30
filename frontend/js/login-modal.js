@@ -4,8 +4,13 @@ window.openLoginModal = function () {
         try {
             const authData = JSON.parse(storedSession);
             if (authData.email && authData.credential) {
-                // Already logged in, go to dashboard
-                window.location.href = "/chat";
+                // Already logged in, redirect based on current page
+                const currentPath = window.location.pathname;
+                if (currentPath.includes("api-key")) {
+                    window.location.href = "/api-keys";
+                } else {
+                    window.location.href = "/chat";
+                }
                 return;
             }
         } catch (e) { }
@@ -131,7 +136,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (currentLoginOverlay) currentLoginOverlay.style.opacity = "0";
                     setTimeout(() => {
                         if (currentLoginOverlay) currentLoginOverlay.style.display = "none";
-                        window.location.href = "/chat";
+                        // Redirect based on which page the user is currently on
+                        const currentPath = window.location.pathname;
+                        if (currentPath.includes("api-key")) {
+                            window.location.href = "/api-keys";
+                        } else {
+                            window.location.href = "/chat";
+                        }
                     }, 400);
                 } else {
                     const loginError = document.getElementById("login-error");

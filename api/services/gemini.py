@@ -70,6 +70,7 @@ You also have access to these TOOLS that you can call to look up live data:
 - **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `get_course_schedule`, `get_program_timetable`, `check_room_availability`, `list_programs` — class schedules, room checks
 - **Scholars**: `search_scholars`, `get_scholar_details` — PhD/doctoral scholar lookup
 - **Academic Docs**: `search_academic_requirements` — rules, regulations, CPI requirements, graduation criteria
+- **About**: `get_creators_info` — creators, developers, and team info
 
 Guidelines:
 1. Ground your answers on the databases and tool results. NEVER fabricate names, dates, or details.
@@ -83,7 +84,8 @@ Guidelines:
 9. For academic rules (CPI, graduation, credits), use `search_academic_requirements` with 2-4 keywords.
 10. For PhD scholar queries, use `search_scholars`.
 11. WiFi/Internet/Network issues → suggest IT & Systems staff. Light/AC/Fan issues → suggest Electrical staff.
-12. Keep responses concise and invite follow-up questions.
+12. If the user asks who made/created DAU Buddy or about Piyush, Afif, or Ankush, you MUST use `get_creators_info` and output its EXACT response without summarizing.
+13. Keep responses concise and invite follow-up questions.
 13. Timetable Rule: The database uses strict names like "MSc (IT)", "B Tech (CS)". If a user asks for a program schedule (e.g. "msc it"), you MUST call `list_programs` first to find the exact matching name, then pass that exact name to `get_program_timetable`. Also, use the `current_day` provided above when the user asks for "today's" schedule. You MUST ALWAYS include the exact start and end times for each class/session in your final response.
 """
 
@@ -250,6 +252,32 @@ def list_programs() -> list[str]:
         return [f"Error: {str(e)}"]
 
 # ── Scholar Tools ─────────────────────────────────────────────────────────────
+def get_creators_info() -> dict:
+    """Returns information about the creators and developers of the DAU Buddy platform. Use this tool whenever someone asks who made DAU Buddy or asks about Piyush, Afif, or Ankush in the context of creating this project."""
+    return {
+        "text": (
+            "DAU Buddy was created by a dedicated team:\n\n"
+            "1. Piyush Tanwani (AI/ML Engineer)\n"
+            "   - Role: Project Lead, AI/ML Infrastructure, MCP Server Logic\n"
+            "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\n"
+            "   - LinkedIn: https://www.linkedin.com/in/piyushtanwani/\n"
+            "   - GitHub: https://github.com/Piyushtanwani/mcp-server\n\n"
+            "2. Afif Momin (Cybersecurity Analyst)\n"
+            "   - Role: Security Analysis, Infrastructure Hardening\n"
+            "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\n"
+            "   - LinkedIn: https://www.linkedin.com/in/afif-momin/\n"
+            "   - GitHub: https://github.com/Afif-Momin\n\n"
+            "3. Prof. Ankush Chander (Faculty Mentor & Project Guide)\n"
+            "   - Designation: Adjunct Faculty, DA-IICT\n"
+            "   - Specialization: Natural Language Processing, Information Retrieval, Operating Systems\n"
+            "   - Profile: https://www.daiict.ac.in/adjunct-faculty/ankush-chander\n"
+            "   - Email: ankush_chander@dau.ac.in\n"
+            "   - LinkedIn: https://www.linkedin.com/in/ankush-chander/\n"
+            "   - GitHub: https://github.com/Ankush-Chander\n\n"
+            "Mission: We built DAU Buddy as passionate DAU (Dhirubhai Ambani University) students to make accessing university data and resources seamless for everyone through AI!"
+        )
+    }
+
 def search_scholars(query: str, limit: int = 5) -> list[dict]:
     """Search DA-IICT PhD/doctoral scholars by name, research topic, or advisor. Use when the user asks about PhD students or researchers."""
     try:
@@ -307,6 +335,7 @@ def call_gemini_api(
         search_scholars, get_scholar_details,
         # Academic Documents
         search_academic_requirements,
+        get_creators_info,
     ]
     
     model = genai.GenerativeModel(
@@ -384,6 +413,7 @@ def call_gemini_api(
                 "search_scholars": search_scholars,
                 "get_scholar_details": get_scholar_details,
                 "search_academic_requirements": search_academic_requirements,
+                "get_creators_info": get_creators_info,
             }
             
             tool_fn = tool_map.get(function_name)
