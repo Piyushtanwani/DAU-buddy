@@ -72,7 +72,33 @@ def _parse_time(t) -> str | None:
     if not t:
         return None
     m = re.match(r"(\d{1,2}):(\d{2})", str(t))
-    return f"{int(m.group(1)):02d}:{m.group(2)}:00" if m else None
+    if not m:
+        return None
+    hour = int(m.group(1))
+    # Timetable labels are 12-hour without AM/PM; campus day runs 08:00-19:00,
+    # so hours 1-7 are afternoon (13:00-19:00).
+    if 1 <= hour <= 7:
+        hour += 12
+    return f"{hour:02d}:{m.group(2)}:00"
+
+def _normalize_room(room: str) -> str:
+    r = re.sub(r"\s+", " ", room.strip())
+    # Canonical forms differ by building: CEP/LT are hyphenated (CEP-102, LT-2),
+    # LAB is not (LAB004).
+    m = re.match(r"^(CEP|LT)\s*-?\s*(\d+[A-Z]?)$", r, re.IGNORECASE)
+    if m:
+        return f"{m.group(1).upper()}-{m.group(2).upper()}"
+    m = re.match(r"^LAB\s*-?\s*(\d+[A-Z]?)$", r, re.IGNORECASE)
+    if m:
+        return f"LAB{m.group(1).upper()}"
+    return r
+
+def split_rooms(room_str: str) -> list:
+    """Split compound room strings ("CEP-102 & CEP-110", "LAB207, LAB112 & LAB009")
+    into normalized individual rooms. Returns [""] when no room is given so callers
+    still emit one record."""
+    parts = [p for p in re.split(r"\s*[&,]\s*", room_str or "") if p.strip()]
+    return [_normalize_room(p) for p in parts] or [""]
 
 def _resolve_slot(slot) -> tuple:
     if not slot:
@@ -146,20 +172,21 @@ def parse_excel(excel_path: str, curriculum: dict) -> list:
                 meta_list = [{}]  # fallback for unknown courses
                 
             for meta in meta_list:
-                rec = {
-                    "session_type": "Lecture",
-                    "day": day,
-                    "start": start,
-                    "end": end,
-                    "course_code": cs,
-                    "course_name": meta.get("course_name", cs),
-                    "course_type": meta.get("course_type", "Unknown"),
-                    "program": meta.get("program", "Unknown Program"),
-                    "semester": str(meta.get("semester", "")),
-                    "faculty": faculty_full,
-                    "room": rs,
-                }
-                records.append(rec)
+                for room_name in split_rooms(rs):
+                    rec = {
+                        "session_type": "Lecture",
+                        "day": day,
+                        "start": start,
+                        "end": end,
+                        "course_code": cs,
+                        "course_name": meta.get("course_name", cs),
+                        "course_type": meta.get("course_type", "Unknown"),
+                        "program": meta.get("program", "Unknown Program"),
+                        "semester": str(meta.get("semester", "")),
+                        "faculty": faculty_full,
+                        "room": room_name,
+                    }
+                    records.append(rec)
 
     return records
 
@@ -226,19 +253,20 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
                 session_type = f"Tutorial ({gv})" if "tut" in gv.lower() else f"Lab ({gv})"
                 
                 for meta in meta_list:
-                    records.append({
-                        "session_type": session_type,
-                        "day": day,
-                        "start": start,
-                        "end": end,
-                        "course_code": course,
-                        "course_name": meta.get("course_name", course),
-                        "course_type": meta.get("course_type", "Unknown"),
-                        "program": meta.get("program", current_program_header),
-                        "semester": str(meta.get("semester", "")),
-                        "faculty": faculty,
-                        "room": room,
-                    })
+                    for room_name in split_rooms(room):
+                        records.append({
+                            "session_type": session_type,
+                            "day": day,
+                            "start": start,
+                            "end": end,
+                            "course_code": course,
+                            "course_name": meta.get("course_name", course),
+                            "course_type": meta.get("course_type", "Unknown"),
+                            "program": meta.get("program", current_program_header),
+                            "semester": str(meta.get("semester", "")),
+                            "faculty": faculty,
+                            "room": room_name,
+                        })
                     
     return records
 

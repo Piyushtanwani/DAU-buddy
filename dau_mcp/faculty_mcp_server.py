@@ -76,17 +76,12 @@ def search_faculty(query: str) -> str:
                 rows = cursor.fetchall()
                 if not rows:
                     return f"No faculty matched: '{query}'."
-                out = [f"### Search Results for '{query}'", f"Found {len(rows)} record(s):", ""]
-                for i, (name, email, phone, addr, edu, spec, url, ftype) in enumerate(rows, 1):
-                    out.append(f"#### {i}. {name}")
-                    out.append(f"- **Designation:** {ftype} Faculty")
-                    if email: out.append(f"- **Email:** {email}")
-                    if phone: out.append(f"- **Phone:** {phone}")
-                    if addr:  out.append(f"- **Office:** {addr}")
-                    if edu:   out.append(f"- **Education:** {edu}")
-                    if spec:  out.append(f"- **Specialization:** {spec}")
-                    if url:   out.append(f"- **Profile:** [{url}]({url})")
-                    out.append("")
+                # Compact one-liners; full profile available via get_faculty_details.
+                out = [f"{len(rows)} match(es) for '{query}' (name | type | email | phone | office):"]
+                for name, email, phone, addr, edu, spec, url, ftype in rows:
+                    office = addr.split(",")[0].strip() if addr else "-"
+                    out.append(f"- {name} | {ftype} | {email or '-'} | {phone or '-'} | {office}")
+                out.append("Use get_faculty_details for education/specialization/profile.")
                 return "\n".join(out)
     except Exception as e:
         logger.error(f"search_faculty error: {e}")
@@ -165,14 +160,9 @@ def search_faculty_by_expertise(expertise: str) -> str:
                 if not rows:
                     return f"No faculty found specialized in '{expertise}'."
                 header = " & ".join(f"'{t}'" for t in terms)
-                out = [f"### Faculty specialized in {header}", f"Found {len(rows)} member(s):", ""]
-                for i, (name, email, phone, addr, edu, spec, url, ftype) in enumerate(rows, 1):
-                    out.append(f"#### {i}. {name}")
-                    out.append(f"- **Designation:** {ftype} Faculty")
-                    if email: out.append(f"- **Email:** {email}")
-                    if edu:   out.append(f"- **Education:** {edu}")
-                    if spec:  out.append(f"- **Specialization:** {spec}")
-                    out.append("")
+                out = [f"{len(rows)} faculty in {header} (name | type | email | specialization):"]
+                for name, email, phone, addr, edu, spec, url, ftype in rows:
+                    out.append(f"- {name} | {ftype} | {email or '-'} | {spec or '-'}")
                 return "\n".join(out)
     except Exception as e:
         logger.error(f"search_faculty_by_expertise error: {e}")

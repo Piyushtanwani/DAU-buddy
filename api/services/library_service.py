@@ -60,10 +60,8 @@ class LibraryService:
                     rows = cur.fetchall()
 
                     for r in rows:
-                        opac_link = f"https://opac.daiict.ac.in/cgi-bin/koha/opac-search.pl?q={r['isbn'] or r['title']}"
                         books.append({
                             "title": r["title"] or "",
-                            "link": opac_link,
                             "biblionumber": r["acc_no"] or "",
                             "author": r["author_editor"] or "",
                             "publisher": r["place_publisher"] or "",
