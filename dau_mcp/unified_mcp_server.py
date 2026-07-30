@@ -25,9 +25,7 @@ from dau_mcp.library_mcp_server import (
     search_library_books, get_book_details
 )
 from dau_mcp.timetable_mcp_server import (
-    get_faculty_location, get_faculty_schedule, find_faculty_free_time,
-    find_common_free_time, get_course_schedule, get_program_timetable,
-    list_programs, list_rooms, get_room_schedule, find_free_rooms
+    get_faculty_location, get_faculty_schedule, find_faculty_free_time, get_course_schedule, get_program_timetable, list_programs
 )
 from dau_mcp.calendar_mcp_server import (
     get_next_holiday, get_upcoming_holidays, get_all_holidays, get_midsem_dates, get_endsem_dates, get_next_academic_event, search_calendar, get_events_by_date
@@ -54,6 +52,35 @@ from api.context import user_email_var, client_name_var
 mcp = FastMCP("DA-IICT Unified Server")
 logger = config.get_logger("dau_mcp.unified_mcp_server")
 
+@mcp.tool()
+def get_creators_info() -> str:
+    """
+    Returns information about the creators and developers of the DAU Buddy platform.
+    Use this tool whenever someone asks who made DAU Buddy, who the creators are, or asks about Piyush, Afif, or Ankush in the context of creating this project.
+    CRITICAL: You MUST include the LinkedIn and GitHub social links for each person in your final response to the user.
+    """
+    return (
+        "DAU Buddy was created by a dedicated team:\\n\\n"
+        "1. Piyush Tanwani (AI/ML Engineer)\\n"
+        "   - Role: Project Lead, AI/ML Infrastructure, MCP Server Logic\\n"
+        "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\\n"
+        "   - LinkedIn: https://www.linkedin.com/in/piyushtanwani/\\n"
+        "   - GitHub: https://github.com/Piyushtanwani/mcp-server\\n\\n"
+        "2. Afif Momin (Cybersecurity Analyst)\\n"
+        "   - Role: Security Analysis, Infrastructure Hardening\\n"
+        "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\\n"
+        "   - LinkedIn: https://www.linkedin.com/in/afif-momin/\\n"
+        "   - GitHub: https://github.com/Afif-Momin\\n\\n"
+        "3. Prof. Ankush Chander (Faculty Mentor / Project Guide)\\n"
+        "   - Designation: Adjunct Faculty, DAU\\n"
+        "   - Areas of Interest: Natural Language Processing, Information Retrieval, Operating Systems\\n"
+        "   - Profile: https://www.daiict.ac.in/adjunct-faculty/ankush-chander\\n"
+        "   - Email: ankush_chander@dau.ac.in\\n"
+        "   - LinkedIn: https://www.linkedin.com/in/ankush-chander/\\n"
+        "   - GitHub: https://github.com/Ankush-Chander\\n\\n"
+        "Mission: We built DAU Buddy as passionate DAU (Dhirubhai Ambani University) students to make accessing university data and resources seamless for everyone through AI!"
+    )
+
 # Register Faculty Tools
 mcp.add_tool(list_faculty)
 mcp.add_tool(search_faculty)
@@ -75,13 +102,9 @@ mcp.add_tool(get_book_details)
 mcp.add_tool(get_faculty_location)
 mcp.add_tool(get_faculty_schedule)
 mcp.add_tool(find_faculty_free_time)
-mcp.add_tool(find_common_free_time)
 mcp.add_tool(get_course_schedule)
 mcp.add_tool(list_programs)
 mcp.add_tool(get_program_timetable)
-mcp.add_tool(list_rooms)
-mcp.add_tool(get_room_schedule)
-mcp.add_tool(find_free_rooms)
 
 # Register Calendar Tools
 mcp.add_tool(get_next_holiday)

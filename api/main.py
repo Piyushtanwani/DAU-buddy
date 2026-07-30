@@ -18,6 +18,7 @@ from dau_mcp.unified_mcp_server import mcp
 # Google Auth
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+import google.auth.exceptions
 import requests
 
 global_session = requests.Session()
@@ -72,6 +73,9 @@ def verify_google_token(credential: str) -> str:
     except ValueError as e:
         logger.error(f"Google Token Verification Error (ValueError): {e}")
         raise HTTPException(status_code=401, detail="Invalid Google token")
+    except google.auth.exceptions.TransportError as e:
+        logger.error(f"Google Token Verification Error (TransportError): {e}")
+        raise HTTPException(status_code=503, detail="Failed to connect to Google authentication servers. Please try again.")
 
 def create_app() -> FastAPI:
     logger.info("Starting DA-IICT Faculty & Staff AI Buddy (Production)...")
