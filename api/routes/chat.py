@@ -18,8 +18,6 @@ from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
 )
 from api.context import user_role_var
-from api.services.faculty_service import list_all_faculty_db
-from api.services.staff_service import list_all_staff_db
 from api.services.library_service import LibraryService
 
 from scrapers import faculty_scraper, staff_scraper
@@ -300,16 +298,12 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                 return ChatResponse(response=f"[Error during synchronization]: {e}")
 
         # ── 2. Retrieval Strategy Selection ──────────────────────────────────────
-        api_key = os.getenv("GEMINI_API_KEY")
+        # (The old keyword bypass for "list all ..." queries is gone: it fired on
+        # any query containing "list all" — e.g. "list all phd scholars in ML"
+        # returned the faculty directory. list_faculty/list_staff/search_scholars
+        # are bridged tools now; the model routes list queries correctly.)
 
-        # Strategy B: List/Intent Queries (Bypass RAG)
-        if any(k in cleaned for k in ["list all staff", "show all staff", "staff directory", "all staff"]):
-            return ChatResponse(response=list_all_staff_db())
-        if any(k in cleaned for k in ["list all", "show all", "directory", "all faculty", "all faculties"]) and \
-           not any(k in cleaned for k in ["specializ", "expert", "teach", "research", "subject"]):
-            return ChatResponse(response=list_all_faculty_db())
-
-        # Strategy A: Informational Queries (RAG)
+        # Strategy A: Informational Queries (tool calling)
         gemini_api_key = os.getenv("GEMINI_API_KEY")
         openai_api_key = os.getenv("OPENAI_API_KEY")
 
