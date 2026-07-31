@@ -260,7 +260,7 @@ OPENAI_TOOLS = [
         "type": "function",
         "function": {
             "name": "get_scholar_details",
-            "description": "Retrieves the full profile details of a scholar by their ID.",
+            "description": "Retrieves the full profile of a PhD scholar. Pass the numeric `id` from search_scholars results (preferred) or the scholar's name. Faculty members are NOT scholars — use faculty tools for professors.",
             "parameters": {
                 "type": "object",
                 "properties": {

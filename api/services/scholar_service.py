@@ -46,16 +46,25 @@ def search_scholars(query: str, limit: int = 10) -> List[Dict[str, Any]]:
                 for r in rows
             ]
 
-def get_scholar_by_id(scholar_id: int) -> Dict[str, Any]:
+def get_scholar_by_id(scholar_id) -> Dict[str, Any]:
+    """Fetch one scholar by numeric id, or by name when callers (LLM tool calls)
+    pass a name instead of an id — never feed a non-integer into the id column."""
+    ident = str(scholar_id).strip()
+    if ident.isdigit():
+        where, param = "id = %s", int(ident)
+    else:
+        where, param = "name ILIKE %s", f"%{ident}%"
     with db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, name, image_url, year_of_joining, year_of_graduation, 
-                       advisor, thesis_topic, areas_of_research, publications, 
+            cur.execute(f"""
+                SELECT id, name, image_url, year_of_joining, year_of_graduation,
+                       advisor, thesis_topic, areas_of_research, publications,
                        awards, post_phd_employment, personal_webpage, scraped_at
-                FROM doctoral_scholars 
-                WHERE id = %s
-            """, (scholar_id,))
+                FROM doctoral_scholars
+                WHERE {where}
+                ORDER BY id
+                LIMIT 1
+            """, (param,))
             row = cur.fetchone()
             if not row:
                 return {}

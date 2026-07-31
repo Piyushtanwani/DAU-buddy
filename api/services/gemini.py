@@ -307,10 +307,11 @@ def search_scholars(query: str, limit: int = 5) -> list[dict]:
     except Exception as e:
         return [{"error": str(e)}]
 
-def get_scholar_details(scholar_id: int) -> dict:
-    """Get full profile of a PhD scholar by their ID (from search results). Includes thesis topic, publications, awards, and employment."""
+def get_scholar_details(scholar_id: str) -> dict:
+    """Get full profile of a PhD scholar. Pass the numeric `id` from search_scholars results (preferred) or the scholar's name. Includes thesis topic, publications, awards, and employment. Note: faculty members are NOT scholars — use faculty tools for professors."""
     try:
-        return get_scholar_by_id(scholar_id)
+        result = get_scholar_by_id(scholar_id)
+        return result if result else {"message": f"No PhD scholar found for '{scholar_id}'. Use search_scholars first, or faculty tools if this is a professor."}
     except Exception as e:
         return {"error": str(e)}
 
