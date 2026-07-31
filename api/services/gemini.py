@@ -67,7 +67,7 @@ Below is the database of DA-IICT Faculty and Staff members:
 You also have access to these TOOLS that you can call to look up live data:
 - **Library**: `search_library_books`, `get_book_details` — search the OPAC catalog
 - **Calendar**: `get_next_holiday`, `get_upcoming_holidays`, `get_midsem_dates`, `get_endsem_dates`, `search_calendar` — holidays and academic events
-- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `get_course_schedule`, `get_program_timetable`, `check_room_availability`, `list_programs` — class schedules, room checks
+- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `get_faculty_busy_slots`, `get_course_schedule`, `get_program_timetable`, `check_room_availability`, `list_programs` — class schedules, room checks
 - **Scholars**: `search_scholars`, `get_scholar_details` — PhD/doctoral scholar lookup
 - **Academic Docs**: `search_academic_requirements` — rules, regulations, CPI requirements, graduation criteria
 - **About**: `get_creators_info` — creators, developers, and team info
@@ -210,10 +210,10 @@ def get_faculty_location(faculty_name: str, day: str, time: str) -> dict:
     except Exception as e:
         return {"error": str(e)}
 
-def find_faculty_free_time(faculty_name: str, day: str) -> list[dict]:
+def get_faculty_busy_slots(faculty_name: str, day: str) -> list[dict]:
     """Returns the occupied time slots for a faculty on a given day so you can calculate free time. Use when the user asks when a professor is free."""
     try:
-        results = timetable_service.find_faculty_free_time(faculty_name, day)
+        results = timetable_service.get_busy_slots(faculty_name, day)
         return _serialize_dates(results)
     except Exception as e:
         return [{"error": str(e)}]
@@ -329,7 +329,7 @@ def call_gemini_api(
         # Calendar
         get_next_holiday, get_upcoming_holidays, get_midsem_dates, get_endsem_dates, search_calendar,
         # Timetable
-        get_faculty_schedule, get_faculty_location, find_faculty_free_time,
+        get_faculty_schedule, get_faculty_location, get_faculty_busy_slots,
         get_course_schedule, get_program_timetable, check_room_availability, list_programs,
         # Scholars
         search_scholars, get_scholar_details,
@@ -405,7 +405,7 @@ def call_gemini_api(
                 "search_calendar": search_calendar,
                 "get_faculty_schedule": get_faculty_schedule,
                 "get_faculty_location": get_faculty_location,
-                "find_faculty_free_time": find_faculty_free_time,
+                "get_faculty_busy_slots": get_faculty_busy_slots,
                 "get_course_schedule": get_course_schedule,
                 "get_program_timetable": get_program_timetable,
                 "check_room_availability": check_room_availability,

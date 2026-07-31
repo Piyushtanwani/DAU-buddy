@@ -158,6 +158,24 @@ def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, An
             return cur.fetchall()
 
 
+def get_room_availability(room: str, day: str, time: str) -> Optional[Dict[str, Any]]:
+    """Point-in-time room check: the session occupying `room` at `time`, or None if free."""
+    query = """
+        SELECT session_type, course_code, course_name, faculty_name, start_time, end_time,
+               array_agg(DISTINCT program) AS programs
+        FROM timetables
+        WHERE REPLACE(REPLACE(room, '-', ''), ' ', '') ILIKE REPLACE(REPLACE(%s, '-', ''), ' ', '')
+          AND day_of_week ILIKE %s
+          AND start_time <= %s::TIME
+          AND end_time > %s::TIME
+        GROUP BY session_type, course_code, course_name, faculty_name, start_time, end_time
+    """
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (f"%{room}%", f"%{day}%", time, time))
+            return cur.fetchone()
+
+
 def find_free_rooms(day: str, time: str) -> List[str]:
     """Rooms with no session covering `time` on `day` (among rooms seen in the timetable)."""
     query = """

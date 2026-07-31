@@ -11,7 +11,7 @@ from core.schemas import ChatMessage
 from api.services.gemini import (
     search_library_books, get_book_details, get_next_holiday, get_upcoming_holidays,
     get_midsem_dates, get_endsem_dates, search_calendar, get_faculty_schedule,
-    get_faculty_location, find_faculty_free_time, get_course_schedule,
+    get_faculty_location, get_faculty_busy_slots, get_course_schedule,
     get_program_timetable, check_room_availability, list_programs,
     search_scholars, get_scholar_details, search_academic_requirements,
     get_creators_info
@@ -159,7 +159,7 @@ OPENAI_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "find_faculty_free_time",
+            "name": "get_faculty_busy_slots",
             "description": "Returns the occupied time slots for a faculty on a given day.",
             "parameters": {
                 "type": "object",
@@ -282,7 +282,7 @@ TOOL_FUNCTIONS = {
     "search_calendar": search_calendar,
     "get_faculty_schedule": get_faculty_schedule,
     "get_faculty_location": get_faculty_location,
-    "find_faculty_free_time": find_faculty_free_time,
+    "get_faculty_busy_slots": get_faculty_busy_slots,
     "get_course_schedule": get_course_schedule,
     "get_program_timetable": get_program_timetable,
     "check_room_availability": check_room_availability,

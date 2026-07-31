@@ -330,16 +330,15 @@ async def check_room_availability(room: str, day: str, time: str) -> str:
     try:
         result = timetable_service.get_room_availability(room, day, time)
         if result:
-            batch_info = f" (Batch: {result['program']})" if result['program'] else ""
-            name_info = f" - {result['course_name']}" if result['course_name'] else ""
-            return (f"{room} is NOT available at {time} on {day}. "
-                    f"It is currently booked for a {result['session_type']} ({result['course_code']}{name_info}){batch_info} "
-                    f"with {result['faculty_name']} from {result['start_time']} to {result['end_time']}.")
-        else:
-            return f"Yes, {room} is available at {time} on {day}. There are no scheduled classes."
+            progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
+            name_info = f" - {result['course_name']}" if result.get("course_name") else ""
+            return (f"{room} NOT available at {time} {day}: {result['session_type']} "
+                    f"{result['course_code']}{name_info}{progs} with {result['faculty_name']}, "
+                    f"{_hhmm(result['start_time'])}-{_hhmm(result['end_time'])}.")
+        return f"{room} is free at {time} on {day} (no scheduled class; caveat: unknown room names also report free — see list_rooms)."
     except Exception as e:
         logger.error(f"Error in check_room_availability: {e}")
-        return f"Error querying room availability: {str(e)}"
+        return "Error querying room availability."
 
 if __name__ == "__main__":
     mcp.run()
