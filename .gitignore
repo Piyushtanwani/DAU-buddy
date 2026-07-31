@@ -40,3 +40,4 @@ Thumbs.db
 
 # Downloaded Data
 data/documents/
+*.orig

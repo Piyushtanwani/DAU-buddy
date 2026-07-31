@@ -17,6 +17,7 @@ from core import config
 from core.database import db_connection
 from scrapers import staff_scraper
 from api.context import user_role_var
+from api.services.pagination import envelope
 
 # ==============================================================================
 # Server Setup
@@ -29,27 +30,30 @@ logger = config.get_logger("dau_mcp.staff_mcp_server")
 # Staff MCP Tools
 # ==============================================================================
 @mcp.tool()
-def list_staff() -> str:
+def list_staff(limit: int = 50, offset: int = 0) -> dict:
     """
-    List all DA-IICT staff members with their names, emails, and designations.
-    Use this to get a general directory of all staff.
+    List DA-IICT staff members (name | email | designation), alphabetical.
+
+    Returns {total_matches, showing, more_available, results}. For more,
+    advance offset by limit; if more_available is false, the list is complete.
     """
-    logger.info("Tool 'list_staff' invoked.")
+    logger.info(f"Tool 'list_staff' invoked (limit={limit}, offset={offset}).")
     try:
         with db_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT name, email, designation FROM staff ORDER BY name;")
+                cursor.execute(
+                    "SELECT name, email, designation, count(*) OVER () FROM staff ORDER BY name LIMIT %s OFFSET %s;",
+                    (limit, offset),
+                )
                 rows = cursor.fetchall()
-                if not rows:
-                    return "No staff members found. Please run sync_staff_data first."
-                out = ["### DA-IICT Staff Directory", f"Total Staff Members: {len(rows)}", ""]
-                for i, (name, email, desig) in enumerate(rows, 1):
-                    desig_str = f" - *{desig}*" if desig else ""
-                    out.append(f"{i}. **{name}** ({email or 'N/A'}){desig_str}")
-                return "\n".join(out)
+                total = rows[0][3] if rows else 0
+                return envelope(
+                    [f"{name} | {email or '-'} | {desig or '-'}" for name, email, desig, _ in rows],
+                    total, offset,
+                )
     except Exception as e:
         logger.error(f"list_staff error: {e}")
-        return f"Error retrieving staff directory: {e}"
+        return {"error": "Error retrieving staff directory."}
 
 
 @mcp.tool()

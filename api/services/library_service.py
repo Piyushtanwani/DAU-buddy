@@ -10,6 +10,7 @@ from psycopg2.extras import RealDictCursor
 
 from core import config
 from core.database import db_connection
+from api.services.pagination import envelope
 
 logger = config.get_logger("api.services.library_service")
 
@@ -21,7 +22,7 @@ class LibraryService:
     def __init__(self) -> None:
         pass
 
-    async def search_books(self, query: str, limit: int = 10) -> list[dict]:
+    async def search_books(self, query: str, limit: int = 10, offset: int = 0) -> dict:
         """
         Search the local library database for books matching *query*.
 
@@ -42,22 +43,25 @@ class LibraryService:
             raise ValueError("search query must be at least 2 characters")
 
         books = []
+        total = 0
         try:
             with db_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     # Parse the search string to a tsquery
                     words = [w for w in query.strip().split() if w]
                     tsquery = " & ".join([f"{w}:*" for w in words])
-                    
+
                     sql = """
-                        SELECT acc_no, title, author_editor, place_publisher, year, isbn, description, poster_url, book_url
+                        SELECT acc_no, title, author_editor, place_publisher, year, isbn,
+                               count(*) OVER () AS total
                         FROM library_books
                         WHERE search_vector @@ to_tsquery('english', %s)
                         ORDER BY ts_rank(search_vector, to_tsquery('english', %s)) DESC
-                        LIMIT %s
+                        LIMIT %s OFFSET %s
                     """
-                    cur.execute(sql, (tsquery, tsquery, limit))
+                    cur.execute(sql, (tsquery, tsquery, limit, offset))
                     rows = cur.fetchall()
+                    total = rows[0]["total"] if rows else 0
 
                     for r in rows:
                         books.append({
@@ -72,8 +76,8 @@ class LibraryService:
             logger.error(f"Failed to search books: {e}")
             raise
 
-        logger.info(f"Local DB search returned {len(books)} results for query={query!r}")
-        return books
+        logger.info(f"Local DB search returned {len(books)}/{total} results for query={query!r}")
+        return envelope(books, total, offset)
 
     async def get_book_details(self, biblionumber: str) -> dict:
         """

@@ -90,11 +90,11 @@ async def search_library(
     """Search the DAIICT library OPAC and return a list of matching books."""
     logger.info(f"Library search: q={q!r}, limit={limit}")
     try:
-        raw_results = await _library_service.search_books(query=q, limit=limit)
-        books = [BookSummary(**item) for item in raw_results]
+        raw = await _library_service.search_books(query=q, limit=limit)
+        books = [BookSummary(**item) for item in raw["results"]]
         return SearchResponse(
             query=q,
-            total_found=len(books),
+            total_found=raw["total_matches"],
             results=books,
         )
     except ValueError as exc:
