@@ -17,8 +17,7 @@ from api.services import (
 from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
 )
-from api.services.retrieval import PostgresFullTextRetriever
-from api.services.context_builder import build_faculty_context, build_staff_context
+from api.context import user_role_var
 from api.services.faculty_service import list_all_faculty_db
 from api.services.staff_service import list_all_staff_db
 from api.services.library_service import LibraryService
@@ -315,38 +314,14 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         openai_api_key = os.getenv("OPENAI_API_KEY")
 
         if (gemini_api_key and is_gemini_available()) or (openai_api_key and is_openai_available()):
-            logger.info("Processing via RAG pipeline (Strategy A)...")
-            retriever = PostgresFullTextRetriever()
-            limit = config.get_retrieval_limit()
-            
-            # Query Expansion to ensure retriever fetches correct staff
-            search_query = body.message
-            if any(k in cleaned for k in ["wifi", "internet", "network", "router"]):
-                search_query += " IT SYSTEMS"
-                
-            if any(k in cleaned for k in ["light", "fan", "ac"]) and any(w in cleaned for w in ["not work", "stop", "broken", "problem", "problems", "issue", "issues", "fix"]):
-                search_query += " electrician electrical maintenance"
-            
-            faculty_records = retriever.retrieve_faculty(search_query, limit=limit)
-            staff_records = retriever.retrieve_staff(search_query, limit=limit)
-            
-            user_role = get_role_from_request(request)
-            if user_role in ("Faculty", "Staff", "Admin"):
-                faculty_db = build_faculty_context(faculty_records)
-                staff_db = build_staff_context(staff_records)
-            else:
-                faculty_db = "Limited Directory Data (Students):\n"
-                staff_db = "Limited Directory Data (Students):\n"
-                for r in faculty_records:
-                    faculty_db += f"- {r.get('name', '')} (Specialization: {r.get('specialization', '')})\n"
-                for r in staff_records:
-                    staff_db += f"- {r.get('name', '')} (Designation: {r.get('designation', '')})\n"
-            
-            logger.info(f"Context Size - Faculty chars: {len(faculty_db)}, Staff chars: {len(staff_db)}")
+            logger.info("Processing via tool-calling pipeline (Strategy A)...")
+            # Directory data is no longer injected into the prompt — the model
+            # reaches it through the bridged directory tools. The user's role is
+            # published via contextvar so tool dispatch can redact contact
+            # details for non-privileged users.
+            user_role_var.set(get_role_from_request(request))
 
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-                faculty_database=faculty_db,
-                staff_database=staff_db,
                 current_day=datetime.now().strftime("%A"),
             )
             

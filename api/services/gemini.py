@@ -10,6 +10,7 @@ from api.services.library_service import LibraryService
 from api.services import calendar_service, timetable_service
 from api.services.scholar_service import search_scholars as _search_scholars_db, get_scholar_by_id
 from api.services.document_service import DocumentService
+from api.services import tool_bridge
 
 logger = config.get_logger("api.services.gemini")
 
@@ -56,24 +57,17 @@ holidays, library books, academic rules, PhD scholars, and more.
 **CURRENT CONTEXT**
 Today's Day of the Week: {current_day}
 
-Below is the database of DA-IICT Faculty and Staff members:
-=== DA-IICT FACULTY DATABASE ===
-{faculty_database}
-================================
-=== DA-IICT STAFF DATABASE ===
-{staff_database}
-==============================
-
-You also have access to these TOOLS that you can call to look up live data:
+You answer by calling TOOLS — you have no built-in directory. Available tools:
+- **Directory**: `search_faculty`, `get_faculty_details`, `search_faculty_by_expertise`, `list_faculty`, `search_staff`, `get_staff_details`, `list_staff` — ALWAYS use these for any question about a person; never answer people questions from memory.
 - **Library**: `search_library_books`, `get_book_details` — search the OPAC catalog
 - **Calendar**: `get_next_holiday`, `get_upcoming_holidays`, `get_midsem_dates`, `get_endsem_dates`, `search_calendar` — holidays and academic events
-- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `get_faculty_free_time`, `find_common_free_time`, `get_course_schedule`, `get_program_timetable`, `check_room_availability`, `list_programs` — class schedules, free-slot lookup, room checks. For "when is professor X free" or meeting scheduling, ALWAYS use `get_faculty_free_time` / `find_common_free_time` and relay their `free_slots` verbatim — never derive free time from a schedule yourself.
-- **Scholars**: `search_scholars`, `get_scholar_details` — PhD/doctoral scholar lookup
+- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `find_common_free_time`, `get_course_schedule`, `get_program_timetable`, `get_room_schedule`, `check_room_availability`, `find_free_rooms`, `list_programs`, `list_rooms` — class schedules, free-slot lookup, room checks. For "when is professor X free" or meeting scheduling, ALWAYS use `find_faculty_free_time` / `find_common_free_time` and relay their free windows verbatim — never derive free time from a schedule yourself.
+- **Scholars**: `search_scholars`, `get_scholar_details` — PhD/doctoral scholar lookup (professors are faculty, NOT scholars)
 - **Academic Docs**: `search_academic_requirements` — rules, regulations, CPI requirements, graduation criteria
 - **About**: `get_creators_info` — creators, developers, and team info
 
 Guidelines:
-1. Ground your answers on the databases and tool results. NEVER fabricate names, dates, or details.
+1. Ground your answers on tool results. NEVER fabricate names, dates, or details.
 2. For faculty/staff name lookups, give a brief intro first. Only show email/phone/office if the user asks for "details" or "contact".
 3. For casual greetings or chit-chat, respond naturally and warmly.
 4. When suggesting people, explain *why* they match based on their specialization/designation.
@@ -345,21 +339,8 @@ def call_gemini_api(
     
     genai.configure(api_key=gemini_key)
     
-    # Using 2.5 flash
-    all_tools = [
-        # Library
-        search_library_books, get_book_details,
-        # Calendar
-        get_next_holiday, get_upcoming_holidays, get_midsem_dates, get_endsem_dates, search_calendar,
-        # Timetable
-        get_faculty_schedule, get_faculty_location, get_faculty_free_time, find_common_free_time,
-        get_course_schedule, get_program_timetable, check_room_availability, list_programs,
-        # Scholars
-        search_scholars, get_scholar_details,
-        # Academic Documents
-        search_academic_requirements,
-        get_creators_info,
-    ]
+    # Tool surface derived from the unified MCP server (single source of truth).
+    all_tools = tool_bridge.gemini_tool_config()
     
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash",
@@ -417,34 +398,7 @@ def call_gemini_api(
             
             logger.info(f"Gemini requested tool call: {function_name}({args})")
             
-            # Dynamic tool dispatch — look up function by name from locals
-            tool_map = {
-                "search_library_books": search_library_books,
-                "get_book_details": get_book_details,
-                "get_next_holiday": get_next_holiday,
-                "get_upcoming_holidays": get_upcoming_holidays,
-                "get_midsem_dates": get_midsem_dates,
-                "get_endsem_dates": get_endsem_dates,
-                "search_calendar": search_calendar,
-                "get_faculty_schedule": get_faculty_schedule,
-                "get_faculty_location": get_faculty_location,
-                "get_faculty_free_time": get_faculty_free_time,
-                "find_common_free_time": find_common_free_time,
-                "get_course_schedule": get_course_schedule,
-                "get_program_timetable": get_program_timetable,
-                "check_room_availability": check_room_availability,
-                "list_programs": list_programs,
-                "search_scholars": search_scholars,
-                "get_scholar_details": get_scholar_details,
-                "search_academic_requirements": search_academic_requirements,
-                "get_creators_info": get_creators_info,
-            }
-            
-            tool_fn = tool_map.get(function_name)
-            if tool_fn:
-                tool_result = tool_fn(**args)
-            else:
-                tool_result = {"error": f"Unknown tool: {function_name}"}
+            tool_result = tool_bridge.dispatch(function_name, args)
                 
             logger.info(f"Returning tool result to Gemini...")
             response = chat.send_message(
