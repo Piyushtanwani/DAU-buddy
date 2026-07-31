@@ -11,7 +11,7 @@ from core.schemas import ChatMessage
 from api.services.gemini import (
     search_library_books, get_book_details, get_next_holiday, get_upcoming_holidays,
     get_midsem_dates, get_endsem_dates, search_calendar, get_faculty_schedule,
-    get_faculty_location, get_faculty_busy_slots, get_course_schedule,
+    get_faculty_location, get_faculty_free_time, find_common_free_time, get_course_schedule,
     get_program_timetable, check_room_availability, list_programs,
     search_scholars, get_scholar_details, search_academic_requirements,
     get_creators_info
@@ -159,8 +159,8 @@ OPENAI_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "get_faculty_busy_slots",
-            "description": "Returns the occupied time slots for a faculty on a given day.",
+            "name": "get_faculty_free_time",
+            "description": "Returns pre-computed FREE meeting windows (free_slots) for a faculty on a given day. Use when the user asks when a professor is free. Relay free_slots as-is; do NOT recompute.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -168,6 +168,21 @@ OPENAI_TOOLS = [
                     "day": {"type": "string"}
                 },
                 "required": ["faculty_name", "day"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_common_free_time",
+            "description": "Returns pre-computed common FREE meeting windows when ALL listed faculty can meet on a given day. Use for multi-person meeting scheduling. Relay free_slots as-is.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "faculty_names": {"type": "array", "items": {"type": "string"}},
+                    "day": {"type": "string"}
+                },
+                "required": ["faculty_names", "day"]
             }
         }
     },
@@ -282,7 +297,8 @@ TOOL_FUNCTIONS = {
     "search_calendar": search_calendar,
     "get_faculty_schedule": get_faculty_schedule,
     "get_faculty_location": get_faculty_location,
-    "get_faculty_busy_slots": get_faculty_busy_slots,
+    "get_faculty_free_time": get_faculty_free_time,
+    "find_common_free_time": find_common_free_time,
     "get_course_schedule": get_course_schedule,
     "get_program_timetable": get_program_timetable,
     "check_room_availability": check_room_availability,

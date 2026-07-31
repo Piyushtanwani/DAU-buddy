@@ -31,6 +31,87 @@ def resolve_faculty(faculty_name: str) -> List[str]:
             return [r[0] for r in cur.fetchall()]
 
 
+DAY_START = "08:00"
+DAY_END = "18:00"
+
+
+def _hhmm(t) -> str:
+    return t.strftime("%H:%M") if hasattr(t, "strftime") else str(t)[:5]
+
+
+def _minutes(hhmm: str) -> int:
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
+
+
+def compute_free_slots(busy_rows: List[Dict[str, Any]], min_minutes: int = 0) -> List[str]:
+    """Merge busy intervals, return free 'HH:MM-HH:MM' gaps within the campus day.
+
+    min_minutes drops gaps too short to be useful (e.g. 10-min class changeovers).
+    Shared by the MCP tools and the web-chat (Gemini/OpenAI) tool wrappers so
+    free/busy inversion never has to happen inside a model.
+    """
+    slots = []
+    current = DAY_START
+    for row in sorted(busy_rows, key=lambda r: _hhmm(r["start_time"])):
+        start, end = _hhmm(row["start_time"]), _hhmm(row["end_time"])
+        if current < start and _minutes(start) - _minutes(current) >= min_minutes:
+            slots.append(f"{current}-{start}")
+        current = max(current, end)
+    if current < DAY_END and _minutes(DAY_END) - _minutes(current) >= min_minutes:
+        slots.append(f"{current}-{DAY_END}")
+    return slots
+
+
+def resolve_single(faculty_name: str) -> tuple[Optional[str], List[str]]:
+    """Resolve a query to exactly one faculty.
+
+    Returns (name, matches): name is set only on an unambiguous match;
+    matches is the full candidate list (empty = no match at all).
+    """
+    matches = resolve_faculty(faculty_name)
+    return (matches[0] if len(matches) == 1 else None), matches
+
+
+def get_free_time(faculty_name: str, day: str, min_minutes: int = 20) -> Dict[str, Any]:
+    """Free meeting windows for one faculty on a day.
+
+    Returns {faculty, day, free_slots, busy_slots} on success, or
+    {query, candidates} when the name is missing/ambiguous. Callers format;
+    all free/busy semantics live here so no model ever has to invert them.
+    """
+    name, matches = resolve_single(faculty_name)
+    if not name:
+        return {"query": faculty_name, "candidates": matches}
+    busy = get_busy_slots(name, day)
+    return {
+        "faculty": name,
+        "day": day,
+        "free_slots": compute_free_slots(busy, min_minutes),
+        "busy_slots": [f"{_hhmm(b['start_time'])}-{_hhmm(b['end_time'])}" for b in busy],
+    }
+
+
+def get_common_free_time(faculty_names: List[str], day: str, min_minutes: int = 20) -> Dict[str, Any]:
+    """Common free windows when ALL listed faculty can meet on a day.
+
+    Same contract as get_free_time; resolution failure of any name returns
+    {query, candidates} for that name.
+    """
+    resolved, all_busy = [], []
+    for fname in faculty_names:
+        name, matches = resolve_single(fname)
+        if not name:
+            return {"query": fname, "candidates": matches}
+        resolved.append(name)
+        all_busy.extend(get_busy_slots(name, day))
+    return {
+        "faculty": resolved,
+        "day": day,
+        "free_slots": compute_free_slots(all_busy, min_minutes),
+    }
+
+
 def get_faculty_location(faculty_name: str, day: str, time: str) -> Optional[Dict[str, Any]]:
     query = """
         SELECT session_type, course_code, course_name, room, start_time, end_time,

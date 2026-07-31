@@ -36,36 +36,22 @@ def _fmt_programs(row) -> str:
     return f" [{', '.join(progs)}]" if progs else ""
 
 
+def _resolution_error(query: str, candidates: list) -> str:
+    if not candidates:
+        return f"No faculty matching '{query}' in timetable. Check spelling/initials."
+    return f"{len(candidates)} faculty match '{query}': {', '.join(candidates)}. Specify one."
+
+
 def _resolve_single(faculty_name: str) -> tuple[Optional[str], Optional[str]]:
     """Resolve query to exactly one faculty. Returns (name, error_message)."""
-    matches = timetable_service.resolve_faculty(faculty_name)
-    if not matches:
-        return None, f"No faculty matching '{faculty_name}' in timetable. Check spelling/initials."
-    if len(matches) > 1:
-        return None, f"{len(matches)} faculty match '{faculty_name}': {', '.join(matches)}. Specify one."
-    return matches[0], None
+    name, matches = timetable_service.resolve_single(faculty_name)
+    if name:
+        return name, None
+    return None, _resolution_error(faculty_name, matches)
 
 
-def _minutes(hhmm: str) -> int:
-    h, m = hhmm.split(":")
-    return int(h) * 60 + int(m)
-
-
-def _free_slots(busy_rows: list, min_minutes: int = 0) -> List[str]:
-    """Merge busy intervals, return free gaps within the campus day.
-
-    min_minutes drops gaps too short to be useful (e.g. 10-min class changeovers).
-    """
-    slots = []
-    current = DAY_START
-    for row in sorted(busy_rows, key=lambda r: _hhmm(r["start_time"])):
-        start, end = _hhmm(row["start_time"]), _hhmm(row["end_time"])
-        if current < start and _minutes(start) - _minutes(current) >= min_minutes:
-            slots.append(f"{current}-{start}")
-        current = max(current, end)
-    if current < DAY_END and _minutes(DAY_END) - _minutes(current) >= min_minutes:
-        slots.append(f"{current}-{DAY_END}")
-    return slots
+# Gap computation is shared with the web-chat wrappers via the service layer.
+_free_slots = timetable_service.compute_free_slots
 
 
 @mcp.tool()
@@ -135,16 +121,15 @@ async def find_faculty_free_time(faculty_name: str, day: str) -> str:
         day: Day of the week (e.g., 'Monday').
     """
     try:
-        name, err = _resolve_single(faculty_name)
-        if err:
-            return err
-        busy = timetable_service.get_busy_slots(name, day)
-        if not busy:
+        data = timetable_service.get_free_time(faculty_name, day)
+        if "candidates" in data:
+            return _resolution_error(data["query"], data["candidates"])
+        name = data["faculty"]
+        if not data["busy_slots"]:
             return f"{name}: no classes on {day} — free all day (timetable only; other commitments not tracked)."
-        slots = _free_slots(busy, min_minutes=20)
-        if not slots:
+        if not data["free_slots"]:
             return f"{name}: no free time on {day}."
-        return f"{name} free on {day}: " + ", ".join(slots)
+        return f"{name} free on {day}: " + ", ".join(data["free_slots"])
     except Exception as e:
         logger.error(f"Error in find_faculty_free_time: {e}")
         return "Error querying faculty free time."
@@ -161,18 +146,13 @@ async def find_common_free_time(faculty_names: List[str], day: str) -> str:
         day: Day of the week.
     """
     try:
-        resolved, all_busy = [], []
-        for fname in faculty_names:
-            name, err = _resolve_single(fname)
-            if err:
-                return err
-            resolved.append(name)
-            all_busy.extend(timetable_service.get_busy_slots(name, day))
-        slots = _free_slots(all_busy, min_minutes=20)
-        who = ", ".join(resolved)
-        if not slots:
+        data = timetable_service.get_common_free_time(faculty_names, day)
+        if "candidates" in data:
+            return _resolution_error(data["query"], data["candidates"])
+        who = ", ".join(data["faculty"])
+        if not data["free_slots"]:
             return f"No common free time on {day} for {who}."
-        return f"Common free on {day} ({who}): " + ", ".join(slots)
+        return f"Common free on {day} ({who}): " + ", ".join(data["free_slots"])
     except Exception as e:
         logger.error(f"Error in find_common_free_time: {e}")
         return "Error querying common free time."
