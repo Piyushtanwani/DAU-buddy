@@ -37,22 +37,21 @@ _svc   = LibraryService()   # stateless singleton — safe to share
 # ==============================================================================
 
 @mcp.tool()
-async def search_library_books(query: str, limit: int = 10) -> dict:
+async def search_library_books(query: str, limit: int = 10, offset: int = 0) -> dict:
     """
     Search the DA-IICT Resource Centre (Koha OPAC) catalog.
     query: title, author, keyword, or ISBN. limit: 1-50 (default 10).
 
-    Returns {books: [{title, biblionumber, author, publisher, year, isbn}], opac_url_template}.
+    Returns {total_matches, showing, more_available, results, opac_url_template}.
+    If the user asks for more books, call again with offset advanced by limit;
+    if more_available is false, tell the user the list is complete.
     Real-time availability: substitute a book's isbn (or title) into opac_url_template.
     """
-    logger.info(f"Tool 'search_library_books' invoked — query={query!r}, limit={limit}")
+    logger.info(f"Tool 'search_library_books' invoked — query={query!r}, limit={limit}, offset={offset}")
     try:
-        results = await _svc.search_books(query=query, limit=limit)
-        logger.info(f"search_library_books: {len(results)} results")
-        return {
-            "books": results,
-            "opac_url_template": "https://opac.daiict.ac.in/cgi-bin/koha/opac-search.pl?q={isbn}",
-        }
+        result = await _svc.search_books(query=query, limit=limit, offset=offset)
+        result["opac_url_template"] = "https://opac.daiict.ac.in/cgi-bin/koha/opac-search.pl?q={isbn}"
+        return result
     except ValueError as exc:
         logger.warning(f"search_library_books validation error: {exc}")
         return {"error": str(exc)}

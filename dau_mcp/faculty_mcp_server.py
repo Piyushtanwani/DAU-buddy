@@ -16,6 +16,7 @@ Tools exposed:
 from mcp.server.fastmcp import FastMCP
 from core import config
 from core.database import db_connection
+from api.services.pagination import envelope
 from scrapers import faculty_scraper
 from api.context import user_role_var
 
@@ -30,26 +31,30 @@ logger = config.get_logger("dau_mcp.faculty_mcp_server")
 # Faculty MCP Tools
 # ==============================================================================
 @mcp.tool()
-def list_faculty() -> str:
+def list_faculty(limit: int = 50, offset: int = 0) -> dict:
     """
-    List all DA-IICT faculty members with their names, emails, and type (Regular/Adjunct).
-    Use this to get a general directory of the faculty.
+    List DA-IICT faculty members (name | email | type), alphabetical.
+
+    Returns {total_matches, showing, more_available, results}. For more,
+    advance offset by limit; if more_available is false, the list is complete.
     """
-    logger.info("Tool 'list_faculty' invoked.")
+    logger.info(f"Tool 'list_faculty' invoked (limit={limit}, offset={offset}).")
     try:
         with db_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT name, email, faculty_type FROM faculty ORDER BY name;")
+                cursor.execute(
+                    "SELECT name, email, faculty_type, count(*) OVER () FROM faculty ORDER BY name LIMIT %s OFFSET %s;",
+                    (limit, offset),
+                )
                 rows = cursor.fetchall()
-                if not rows:
-                    return "No faculty members found. Please run sync_faculty_data first."
-                out = ["### DA-IICT Faculty Directory", f"Total Faculty Members: {len(rows)}", ""]
-                for i, (name, email, ftype) in enumerate(rows, 1):
-                    out.append(f"{i}. **{name}** ({email or 'N/A'}) - *{ftype} Faculty*")
-                return "\n".join(out)
+                total = rows[0][3] if rows else 0
+                return envelope(
+                    [f"{name} | {email or '-'} | {ftype}" for name, email, ftype, _ in rows],
+                    total, offset,
+                )
     except Exception as e:
         logger.error(f"list_faculty error: {e}")
-        return f"Error retrieving faculty directory: {e}"
+        return {"error": "Error retrieving faculty directory."}
 
 
 @mcp.tool()

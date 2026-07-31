@@ -390,17 +390,22 @@ class TestLibraryAPIEndpoints:
         """GET /api/v1/library/search?q=python must return 200 with result list."""
         mocker.patch(
             "api.routes.library._library_service.search_books",
-            new=AsyncMock(return_value=[
-                {
-                    "title": "Python Programming",
-                    "link": "https://opac.daiict.ac.in/cgi-bin/koha/opac-detail.pl?biblionumber=1234",
-                    "biblionumber": "1234",
-                    "author": "Test Author",
-                    "publisher": "Test Pub",
-                    "year": "2020",
-                    "isbn": "1234567890",
-                }
-            ]),
+            new=AsyncMock(return_value={
+                "total_matches": 1,
+                "showing": "1-1",
+                "more_available": False,
+                "results": [
+                    {
+                        "title": "Python Programming",
+                        "link": "https://opac.daiict.ac.in/cgi-bin/koha/opac-detail.pl?biblionumber=1234",
+                        "biblionumber": "1234",
+                        "author": "Test Author",
+                        "publisher": "Test Pub",
+                        "year": "2020",
+                        "isbn": "1234567890",
+                    }
+                ],
+            }),
         )
         resp = client.get("/api/v1/library/search?q=python")
         assert resp.status_code == 200

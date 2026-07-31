@@ -140,7 +140,7 @@ def _extract_book_query(text: str) -> str:
 async def handle_library_fallback(book_query: str) -> str:
     """Helper to process library fallback logic and return the formatted markdown string."""
     try:
-        results = await _library_svc.search_books(query=book_query, limit=5)
+        results = (await _library_svc.search_books(query=book_query, limit=5))["results"]
         if not results:
             return (
                 f"📚 I searched the DA-IICT Resource Centre for **\"{book_query}\"** "
