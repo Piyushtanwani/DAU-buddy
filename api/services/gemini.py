@@ -277,7 +277,7 @@ def get_creators_info() -> dict:
             "   - Role: Project Lead, AI/ML Infrastructure, MCP Server Logic\n"
             "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\n"
             "   - LinkedIn: https://www.linkedin.com/in/piyushtanwani/\n"
-            "   - GitHub: https://github.com/Piyushtanwani/mcp-server\n\n"
+            "   - GitHub: https://github.com/Piyushtanwani/\n\n"
             "2. Afif Momin (Cybersecurity Analyst)\n"
             "   - Role: Security Analysis, Infrastructure Hardening\n"
             "   - Education: M.Sc. IT Student, DAU (Dhirubhai Ambani University)\n"
