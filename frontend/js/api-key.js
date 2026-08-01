@@ -729,13 +729,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 Mac: '~/Library/Application Support/Claude/',
                 Linux: '~/.config/Claude/'
             },
-            cursor: { Windows: '~\\.cursor\\', Mac: '~/.cursor/', Linux: '~/.cursor/' },
+            cursor: { Windows: '%USERPROFILE%\\.cursor\\', Mac: '~/.cursor/', Linux: '~/.cursor/' },
             opencode: {
-                Windows: '~\\.config\\opencode\\',
+                Windows: '%USERPROFILE%\\.config\\opencode\\',
                 Mac: '~/Library/Application Support/OpenCode/',
                 Linux: '~/.config/opencode/'
             },
-            codex: { Windows: '~\\.codex\\', Mac: '~/.codex/', Linux: '~/.codex/' }
+            codex: { Windows: '%USERPROFILE%\\.codex\\', Mac: '~/.codex/', Linux: '~/.codex/' }
         };
 
         openConfigBtn.addEventListener('click', function () {
