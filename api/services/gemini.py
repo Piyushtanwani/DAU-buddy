@@ -74,13 +74,13 @@ Guidelines:
 5. Use clean markdown with bullet points for structured data.
 6. For library queries, ALWAYS use `search_library_books` then `get_book_details` to check availability.
 7. For holiday/exam date questions, use the calendar tools.
-8. For timetable/schedule questions, use the timetable tools.
-9. For academic rules (CPI, graduation, credits), use `search_academic_requirements` with 2-4 keywords.
+8. For timetable/schedule questions (who is teaching where/when), use the timetable tools.
+9. For academic rules, curriculum, or list of courses for a semester/program (e.g. 'all courses for sem 2 in mscit'), use `search_academic_requirements` with 2-4 keywords.
 10. For PhD scholar queries, use `search_scholars`.
 11. WiFi/Internet/Network issues → suggest IT & Systems staff. Light/AC/Fan issues → suggest Electrical staff.
 12. If the user asks who made/created DAU Buddy or about Piyush, Afif, or Ankush, you MUST use `get_creators_info` and output its EXACT response without summarizing.
 13. Keep responses concise and invite follow-up questions.
-13. Timetable Rule: The database uses strict names like "MSc (IT)", "B Tech (CS)". If a user asks for a program schedule (e.g. "msc it"), you MUST call `list_programs` first to find the exact matching name, then pass that exact name to `get_program_timetable`. Also, use the `current_day` provided above when the user asks for "today's" schedule. You MUST ALWAYS include the exact start and end times for each class/session in your final response.
+14. Timetable Rule: The database uses strict names like "MSc (IT)", "B Tech (CS)". If a user asks for a program schedule (e.g. "msc it"), you MUST call `list_programs` first to find the exact matching name, then pass that exact name to `get_program_timetable`. Also, use the `current_day` provided above when the user asks for "today's" schedule. You MUST ALWAYS include the exact start and end times for each class/session in your final response.
 """
 
 
@@ -243,7 +243,7 @@ def get_course_schedule(course_code: str, day: str = None) -> list[dict]:
         return [{"error": str(e)}]
 
 def get_program_timetable(program_name: str, day: str = None, semester: str = None) -> list[dict]:
-    """Returns the full timetable for a program/batch (e.g. 'BTech', 'MSc IT'). Use when the user asks about their batch or program schedule."""
+    """Returns the daily class schedule with timings for a program/batch (e.g. 'BTech', 'MSc IT'). Use when the user asks about daily timetables. DO NOT use this tool when the user asks for the curriculum or a list of all courses in a semester (use search_academic_requirements instead)."""
     try:
         results = timetable_service.get_program_timetable(program_name, day, semester)
         return _serialize_dates(results)
@@ -311,9 +311,42 @@ def get_scholar_details(scholar_id: str) -> dict:
 
 # ── Academic Document Tools ───────────────────────────────────────────────────
 def search_academic_requirements(query: str, program: str = None) -> str:
-    """Search academic requirement documents for rules, regulations, CPI requirements, graduation criteria, etc. IMPORTANT: Pass 2-4 keywords only, NOT full sentences."""
+    """Search academic requirement documents for rules, regulations, CPI requirements, graduation criteria, etc. IMPORTANT: Pass 2-4 keywords only. If searching for a semester curriculum, use roman numerals for the semester (e.g., 'Semester-II' instead of 'Semester 2'). DO NOT include the program name inside the `query` string (put it ONLY in the `program` argument). If passing a program name, you MUST use official spacing (e.g. 'MSc IT' instead of 'mscit')."""
     try:
-        return DocumentService.search_documents("academic_requirements", query, program, limit=5)
+        query_lower = query.lower()
+        
+        # Auto-extract program if AI fails to separate it
+        if not program:
+            if "msc it" in query_lower or "mscit" in query_lower:
+                program = "MSc IT"
+            elif "btech" in query_lower:
+                if "mnc" in query_lower: program = "BTech MnC"
+                elif "cs" in query_lower: program = "BTech ICT CS"
+                else: program = "BTech ICT"
+                
+        # Auto-correct semester numbers to roman numerals
+        if "sem 2" in query_lower or "semester 2" in query_lower or "2nd sem" in query_lower:
+            query = "Semester-II curriculum"
+        elif "sem 1" in query_lower or "semester 1" in query_lower or "1st sem" in query_lower:
+            query = "Semester-I curriculum"
+        elif "sem 3" in query_lower or "semester 3" in query_lower or "3rd sem" in query_lower:
+            query = "Semester-III curriculum"
+        elif "sem 4" in query_lower or "semester 4" in query_lower or "4th sem" in query_lower:
+            query = "Semester-IV curriculum"
+            
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"DEBUG TOOL CALL: search_academic_requirements(query='{query}', program='{program}')\n")
+        if program:
+            program = program.replace('(', '').replace(')', '')
+        results = DocumentService.search_documents("academic_requirements", query, program, limit=5)
+        if not results:
+            return "No documents found matching the query."
+        
+        formatted = []
+        for r in results:
+            formatted.append(f"Title: {r.get('document_title')} (Program: {r.get('program')}, Year: {r.get('effective_year')})\nContent:\n{r.get('content')}\n---")
+        
+        return "\n".join(formatted)
     except Exception as e:
         return f"Error: {str(e)}"
 
