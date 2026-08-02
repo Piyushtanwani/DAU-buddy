@@ -13,7 +13,11 @@ DAY_ORDER_SQL = """
         WHEN 'Wednesday' THEN 3
         WHEN 'Thursday' THEN 4
         WHEN 'Friday' THEN 5
-        ELSE 6
+        WHEN 'Saturday' THEN 6
+        WHEN 'Sunday' THEN 7
+        -- Unknown/malformed day values sort first so bad data is visible
+        -- rather than silently blending in with the weekend.
+        ELSE 0
     END
 """
 

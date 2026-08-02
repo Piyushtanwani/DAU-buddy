@@ -26,10 +26,12 @@ cached_google_request = google_requests.Request(session=global_session)
 
 oauth_codes = {}
 
-# SlowAPI Rate Limiting
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+# SlowAPI Rate Limiting — the limiter itself lives in core.rate_limit so route
+# modules can decorate endpoints with it without importing api.main.
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+from core.rate_limit import limiter
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -51,9 +53,8 @@ class PayloadLimitMiddleware:
         await self.app(scope, receive, send)
 
 logger = config.get_logger("api.main")
+# TODO: move it out of code into config file
 CLIENT_ID = "590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
-
-limiter = Limiter(key_func=get_remote_address)
 
 def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()

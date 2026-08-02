@@ -5,7 +5,11 @@ from fastapi import APIRouter, HTTPException, Request
 from core import config
 import hashlib
 from core.database import db_connection
-from core.schemas import ChatRequest, ChatResponse
+from core.rate_limit import limiter
+from core.schemas import (
+    ChatRequest, ChatResponse, ChatMessage,
+    MAX_HISTORY_TURNS, MAX_HISTORY_CHARS, MAX_MESSAGE_CHARS,
+)
 from api.services import (
     call_gemini_api,
     process_fallback_message,
@@ -195,6 +199,50 @@ async def handle_library_fallback(book_query: str) -> str:
         )
 
 
+# ── Blocking-work budgets ─────────────────────────────────────────────────────
+# Every LLM/scraper call below is synchronous. It is dispatched to a worker
+# thread so it cannot block the event loop, and it is given a hard deadline so a
+# single wedged request can never hold a connection open indefinitely. Keep
+# LLM_TIMEOUT_S comfortably under the reverse proxy's read timeout so the client
+# gets a real response instead of a dropped connection.
+LLM_TIMEOUT_S = 45
+SCRAPE_TIMEOUT_S = 120
+
+
+async def _run_blocking(fn, *args, timeout: int = LLM_TIMEOUT_S):
+    """Run a blocking callable off the event loop under a hard deadline."""
+    return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=timeout)
+
+
+def sanitize_history(history) -> list[ChatMessage]:
+    """
+    Trim and sanitize client-supplied conversation history.
+
+    The browser posts back whatever is in its localStorage, so history is
+    untrusted input: a caller can forge assistant turns to walk the model past
+    its instructions. Pydantic already coerces unknown senders to 'user'
+    (core/schemas.py); here we additionally drop empties, cap per-message
+    length, and keep only the most recent turns within a total character
+    budget — which also bounds prompt cost and latency.
+    """
+    if not history:
+        return []
+
+    kept: list[ChatMessage] = []
+    total = 0
+    for msg in reversed(history):          # newest first, so caps drop old turns
+        text = (msg.text or "").strip()
+        if not text:
+            continue
+        text = text[:MAX_MESSAGE_CHARS]
+        if len(kept) >= MAX_HISTORY_TURNS or total + len(text) > MAX_HISTORY_CHARS:
+            break
+        total += len(text)
+        kept.append(ChatMessage(sender=msg.sender, text=text))
+
+    return list(reversed(kept))
+
+
 def get_role_from_request(request: Request) -> str:
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Bearer "):
@@ -214,6 +262,7 @@ def get_role_from_request(request: Request) -> str:
     return "Student"
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
 async def chat_endpoint(request: Request, body: ChatRequest):
     """
     Main conversational endpoint.
@@ -221,6 +270,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
     """
     try:
         cleaned = body.message.strip().lower()
+        history = sanitize_history(body.history)
 
         if getattr(body, "user_email", None):
             try:
@@ -246,10 +296,14 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         if any(k in cleaned for k in ["sync staff", "scrape staff", "reload staff", "update staff database"]):
             logger.info("Chat trigger: manual staff synchronization initiated.")
             try:
-                staff_data = staff_scraper.scrape_staff_data()
+                staff_data = await _run_blocking(
+                    staff_scraper.scrape_staff_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 if not staff_data:
                     return ChatResponse(response="[FAILED]: Could not scrape the live staff directory. Please check the logs.")
-                staff_scraper.save_to_database(staff_data)
+                await _run_blocking(
+                    staff_scraper.save_to_database, staff_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 clear_context_caches()
                 return ChatResponse(response=(
                     f"**Staff Database synchronized successfully!**\n\n"
@@ -263,10 +317,14 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         elif any(k in cleaned for k in ["sync faculty", "sync faculties", "scrape faculty", "scrape faculties", "reload faculty", "reload faculties", "update faculty database"]):
             logger.info("Chat trigger: manual faculty synchronization initiated.")
             try:
-                faculty_data = faculty_scraper.scrape_faculty_data()
+                faculty_data = await _run_blocking(
+                    faculty_scraper.scrape_faculty_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 if not faculty_data:
                     return ChatResponse(response="[FAILED]: Could not scrape the live faculty directory. Please check the logs.")
-                faculty_scraper.save_to_database(faculty_data)
+                await _run_blocking(
+                    faculty_scraper.save_to_database, faculty_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 clear_context_caches()
                 return ChatResponse(response=(
                     f"**Faculty Database synchronized successfully!**\n\n"
@@ -280,12 +338,20 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         elif any(k in cleaned for k in ["sync", "scrape", "reload", "update database", "sync latest"]):
             logger.info("Chat trigger: full synchronization initiated.")
             try:
-                faculty_data = faculty_scraper.scrape_faculty_data()
+                faculty_data = await _run_blocking(
+                    faculty_scraper.scrape_faculty_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 if faculty_data:
-                    faculty_scraper.save_to_database(faculty_data)
-                staff_data = staff_scraper.scrape_staff_data()
+                    await _run_blocking(
+                        faculty_scraper.save_to_database, faculty_data, timeout=SCRAPE_TIMEOUT_S
+                    )
+                staff_data = await _run_blocking(
+                    staff_scraper.scrape_staff_data, timeout=SCRAPE_TIMEOUT_S
+                )
                 if staff_data:
-                    staff_scraper.save_to_database(staff_data)
+                    await _run_blocking(
+                        staff_scraper.save_to_database, staff_data, timeout=SCRAPE_TIMEOUT_S
+                    )
                 clear_context_caches()
                 return ChatResponse(response=(
                     f"**Full Database synchronized successfully!**\n\n"
@@ -320,22 +386,36 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             )
             
             response_text = None
-            
+
+            # Both clients are synchronous: they are run in a worker thread under
+            # a deadline so one slow call cannot stall the single uvicorn worker
+            # (which would take the whole site down, not just this request).
+
             # Attempt 1: Gemini
             if gemini_api_key and is_gemini_available():
                 try:
-                    response_text, token_usage = call_gemini_api(gemini_api_key, system_instruction, body.history)
+                    response_text, token_usage = await _run_blocking(
+                        call_gemini_api, gemini_api_key, system_instruction, history
+                    )
                     return ChatResponse(response=response_text)
+                except asyncio.TimeoutError:
+                    logger.error(f"Gemini RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
+                    record_gemini_failure()
                 except Exception:
                     logger.exception("Gemini RAG failed.")
                     record_gemini_failure()
-            
+
             # Attempt 2: OpenAI Fallback
             if not response_text and openai_api_key and is_openai_available():
                 try:
                     logger.info("Falling back to OpenAI RAG...")
-                    response_text, token_usage = call_openai_api(openai_api_key, system_instruction, body.history)
+                    response_text, token_usage = await _run_blocking(
+                        call_openai_api, openai_api_key, system_instruction, history
+                    )
                     return ChatResponse(response=response_text)
+                except asyncio.TimeoutError:
+                    logger.error(f"OpenAI RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
+                    record_openai_failure()
                 except Exception:
                     logger.exception("OpenAI RAG failed.")
                     record_openai_failure()
@@ -344,14 +424,29 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             logger.warning("RAG engines unavailable or failed — falling back to local NLP engine/library.")
             if _is_library_query(body.message):
                 return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
-            return ChatResponse(response=process_fallback_message(body.message))
+            return ChatResponse(response=await _run_blocking(process_fallback_message, body.message))
 
         # ── 3. Local NLP Fallback ──────────────────────────────────────────────
         logger.info("No AI APIs available or in cooldown — using local NLP engine.")
         if _is_library_query(body.message):
             return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
-        return ChatResponse(response=process_fallback_message(body.message))
+        return ChatResponse(response=await _run_blocking(process_fallback_message, body.message))
 
+    except asyncio.TimeoutError:
+        # A blocking stage blew its deadline. Answer the client rather than
+        # letting the connection hang until the proxy resets it — a reset is
+        # what surfaces in the browser as "Failed to fetch".
+        logger.error("Chat request timed out waiting on a blocking stage.")
+        return ChatResponse(response=(
+            "⏳ That took longer than expected and I had to stop. "
+            "Please try again, or ask a narrower question."
+        ))
     except Exception as e:
-        logger.error(f"Unhandled error in chat endpoint: {e}")
+        # Must return a ChatResponse: falling off the end returns None, which
+        # fails response_model validation and turns every error into an opaque 500.
+        logger.exception(f"Unhandled error in chat endpoint: {e}")
+        return ChatResponse(response=(
+            "⚠️ Something went wrong on my side while answering that. "
+            "Please try again in a moment."
+        ))
         raise HTTPException(status_code=500, detail=str(e))

@@ -30,9 +30,11 @@ COPY .env.example /app/
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/ || exit 1
+# Health check. The timeout is generous on purpose: a brief spike must not mark
+# the container unhealthy and trigger a restart, which drops every in-flight
+# request and surfaces in the browser as "Failed to fetch".
+HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Start the FastAPI application
 CMD ["python", "-m", "uvicorn", "api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
