@@ -210,7 +210,30 @@ SCRAPE_TIMEOUT_S = 120
 
 
 async def _run_blocking(fn, *args, timeout: int = LLM_TIMEOUT_S):
-    """Run a blocking callable off the event loop under a hard deadline."""
+    """
+    Run a blocking callable off the event loop under a hard deadline.
+
+    CAVEAT — the deadline abandons the call, it does not cancel it.
+    `asyncio.to_thread` runs `fn` on a plain worker thread, and a thread cannot
+    be interrupted from outside. On timeout this coroutine raises
+    `TimeoutError` and the request gets an answer, but the thread keeps running
+    to completion, still holding its DB connection and its outbound socket.
+
+    Why that matters under load: a single chat can outlive its deadline by a
+    lot. `gemini.MAX_TOOL_TURNS` (8) × `gemini._REQUEST_OPTIONS` (30s), plus
+    tool dispatch time, allows roughly 240s of thread life against this 45s
+    budget. Abandoned threads accumulate in the default executor
+    (`min(32, cpu_count + 4)` workers); once every worker is occupied, new
+    `to_thread` calls queue instead of starting, and latency climbs for
+    everyone — a slower-motion version of the event-loop stall this helper
+    exists to prevent.
+
+    So if requests start timing out *in bulk* rather than individually, suspect
+    executor saturation before suspecting the model or the network. The fix is
+    to give the LLM clients an internal wall-clock budget matching
+    LLM_TIMEOUT_S (so the thread stops when the caller does), or to run them on
+    a dedicated bounded executor so saturation is explicit and observable.
+    """
     return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=timeout)
 
 
