@@ -1,7 +1,7 @@
 import os
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from core import config
 import hashlib
 from core.database import db_connection
@@ -467,9 +467,11 @@ async def chat_endpoint(request: Request, body: ChatRequest):
     except Exception as e:
         # Must return a ChatResponse: falling off the end returns None, which
         # fails response_model validation and turns every error into an opaque 500.
+        # Answer the client instead of raising. This used to be
+        # `raise HTTPException(500, detail=str(e))`, which put the raw exception
+        # text in the response body and gave the chat UI nothing useful to show.
         logger.exception(f"Unhandled error in chat endpoint: {e}")
         return ChatResponse(response=(
             "⚠️ Something went wrong on my side while answering that. "
             "Please try again in a moment."
         ))
-        raise HTTPException(status_code=500, detail=str(e))
