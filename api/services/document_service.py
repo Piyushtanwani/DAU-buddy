@@ -1,29 +1,15 @@
-import psycopg2
-import os
 from typing import List, Dict, Any
 
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASS = os.getenv("DB_PASSWORD", "postgres")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "postgres")
-DB_PORT = os.getenv("DB_PORT", "5432")
+# Connections come from the shared pool in core.database — this module used to
+# open (and leak) its own psycopg2 connections with a duplicate copy of the
+# credential handling, which exhausted the server's connection limit.
+from core.database import db_connection
 
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS,
-        host=DB_HOST,
-        port=DB_PORT
-    )
 
 class DocumentService:
     @staticmethod
     def search_documents(collection: str, query: str, program: str = None, effective_year: str = None, limit: int = 8) -> List[Dict[str, Any]]:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
+        with db_connection() as conn, conn.cursor() as cursor:
             # Build query
             sql = """
                 SELECT 
@@ -67,15 +53,10 @@ class DocumentService:
                 })
                 
             return formatted_results
-        finally:
-            cursor.close()
-            conn.close()
 
     @staticmethod
     def list_documents(collection: str, program: str = None) -> List[Dict[str, Any]]:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
+        with db_connection() as conn, conn.cursor() as cursor:
             sql = """
                 SELECT title, program, effective_year, version, is_latest, url, synced_at
                 FROM documents
@@ -104,23 +85,17 @@ class DocumentService:
                     'synced_at': row[6].isoformat() if row[6] else None
                 })
             return docs
-        finally:
-            cursor.close()
-            conn.close()
 
     @staticmethod
     def get_document_pages(collection: str, filename_or_url: str, start_page: int, end_page: int = None) -> str:
         if end_page is None:
             end_page = start_page
-            
+
         # Hard limit to 5 pages max to avoid huge responses
         if end_page - start_page > 4:
             end_page = start_page + 4
-            
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
+
+        with db_connection() as conn, conn.cursor() as cursor:
             sql = """
                 SELECT c.page, c.content
                 FROM document_chunks c
@@ -152,6 +127,3 @@ class DocumentService:
                 output += "\n"
                 
             return output.strip()
-        finally:
-            cursor.close()
-            conn.close()

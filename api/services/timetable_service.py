@@ -13,7 +13,11 @@ DAY_ORDER_SQL = """
         WHEN 'Wednesday' THEN 3
         WHEN 'Thursday' THEN 4
         WHEN 'Friday' THEN 5
-        ELSE 6
+        WHEN 'Saturday' THEN 6
+        WHEN 'Sunday' THEN 7
+        -- Unknown/malformed day values sort first so bad data is visible
+        -- rather than silently blending in with the weekend.
+        ELSE 0
     END
 """
 
@@ -28,7 +32,14 @@ def resolve_faculty(faculty_name: str) -> List[str]:
     with db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(query, (f"%{faculty_name}%",))
-            return [r[0] for r in cur.fetchall()]
+            matches = [r[0] for r in cur.fetchall()]
+
+    # An exact (case-insensitive) hit wins even when it is also a substring of
+    # longer rows. Without this, picking one of the candidates we just offered
+    # narrows nothing and the caller re-asks forever.
+    needle = faculty_name.strip().casefold()
+    exact = [m for m in matches if m.casefold() == needle]
+    return exact or matches
 
 
 DAY_START = "08:00"
@@ -165,12 +176,16 @@ def get_course_schedule(course_code: str, day: Optional[str] = None) -> List[Dic
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             base = f"""
-                SELECT day_of_week, start_time, end_time, session_type, faculty_name, room,
+                SELECT day_of_week, start_time, end_time, session_type, room,
                        course_type, course_code, course_name,
+                       -- Co-taught sessions are stored one row per instructor,
+                       -- so each name stays independently searchable; rejoin
+                       -- them here so the slot is listed once.
+                       string_agg(DISTINCT faculty_name, ' / ') AS faculty_name,
                        array_agg(DISTINCT program) AS programs
                 FROM timetables
                 WHERE (course_code ILIKE %s OR course_name ILIKE %s) {{day_clause}}
-                GROUP BY day_of_week, start_time, end_time, session_type, faculty_name, room,
+                GROUP BY day_of_week, start_time, end_time, session_type, room,
                          course_type, course_code, course_name
                 ORDER BY {DAY_ORDER_SQL}, start_time
             """
@@ -225,10 +240,12 @@ def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, An
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             base = f"""
-                SELECT day_of_week, start_time, end_time, session_type, course_code, faculty_name
+                SELECT day_of_week, start_time, end_time, session_type, course_code,
+                       -- One stored row per instructor; rejoin for display.
+                       string_agg(DISTINCT faculty_name, ' / ') AS faculty_name
                 FROM timetables
                 WHERE REPLACE(REPLACE(room, '-', ''), ' ', '') ILIKE REPLACE(REPLACE(%s, '-', ''), ' ', '') {{day_clause}}
-                GROUP BY day_of_week, start_time, end_time, session_type, course_code, faculty_name
+                GROUP BY day_of_week, start_time, end_time, session_type, course_code
                 ORDER BY {DAY_ORDER_SQL}, start_time
             """
             if day:

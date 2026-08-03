@@ -40,6 +40,9 @@ def record_openai_failure() -> None:
 # ==============================================================================
 OPENAI_TOOLS = tool_bridge.openai_declarations()
 
+# Hard ceiling on tool round-trips for a single user message.
+MAX_TOOL_TURNS = 8
+
 # ==============================================================================
 # OpenAI Chat Execution
 # ==============================================================================
@@ -87,8 +90,17 @@ def call_openai_api(api_key: str, system_instruction: str, history: List[ChatMes
         
         message = data["choices"][0]["message"]
 
-        # Tool calling loop
+        # Tool calling loop — bounded, so a model that keeps re-requesting tools
+        # cannot hold the request open indefinitely.
+        turns = 0
         while message.get("tool_calls"):
+            turns += 1
+            if turns > MAX_TOOL_TURNS:
+                logger.warning(f"OpenAI still requesting tools after {MAX_TOOL_TURNS} turns — stopping.")
+                return (
+                    "I wasn't able to pull all of that together. Could you ask about "
+                    "one thing at a time — a specific person, course, or book?"
+                ), usage_dict
             messages.append(message)
             
             for tool_call in message["tool_calls"]:

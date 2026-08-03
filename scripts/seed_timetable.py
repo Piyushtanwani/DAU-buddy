@@ -108,100 +108,64 @@ def _resolve_slot(slot) -> tuple:
         return _parse_time(m.group(1)), _parse_time(m.group(2))
     return None, None
 
-# ── Section Header Parsing ────────────────────────────────────────────────────
-# Maps keywords found in Excel section headers to curriculum.json program names.
-_HEADER_PROGRAM_MAP = {
-    "BTech Core":            "B Tech (Institute Core)",
-    "BTech (ICT and CS)":    "B Tech (ICT and CS)",
-    "BTech (ICT-CS)":        "B Tech (ICT-CS)",
-    "BTech (ICT, ICT-CS)":   "B Tech (ICT and ICT-CS)",
-    "BTech (ICT &  CS)":     "B Tech (ICT and CS)",
-    "BTech (ICT & CS)":      "B Tech (ICT and CS)",
-    "BTech (CS)":            "B Tech (CS)",
-    "BTech (MnC)":           "B Tech (MnC)",
-    "BTech (MNC)":           "B Tech (MnC)",
-    "BTech (EVD)":           "B Tech (EVD)",
-    "BTech (ICT)":           "B Tech (Program Core)",
-    "BTech":                 "B Tech (Institute Core)",
-    "BS-MS (IT)":            "BS-MS (IT)",
-    "BS-MS (DS & AI)":       "BS-MS (DS & AI)",
-    "BS-MS (DS &amp; AI)":   "BS-MS (DS & AI)",
-    "MTech (ICT":            "M Tech (ICT)",
-    "MTech":                 "M Tech (ICT)",
-    "MSc (IT)":              "MSc (IT)",
-    "MSc (DS)":              "MSc (DS)",
-    "MSc (AA)":              "MSc (AA)",
-    "MDes (CD)":             "MDes (CD)",
-    "MDes (IUxD)":           "MDes (IUxD)",
-}
+def read_abbrev_map(wb) -> dict:
+    """Short name → full display name, from the workbook's abbreviations sheet.
 
-_ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8}
-
-def _parse_section_header(header: str) -> tuple:
-    """Extract (curriculum_program, semester_int) from an Excel section header.
-    
-    Examples:
-        'MSc (IT) Core: SEMESTER III (2025 Batch)' → ('MSc (IT)', 3)
-        'BTech Core: SEMESTER I (2026 Batch)'      → ('B Tech (Institute Core)', 1)
-    Returns (None, None) if the header cannot be parsed.
+    e.g. {"AC": "Ankush Chander (AC)"}. Both parsers write this same display
+    form into `timetables.faculty_name`, so lecture and lab rows for one person
+    are matchable by the same name lookup.
     """
-    # Extract semester number from "SEMESTER III" pattern
-    semester = None
-    sem_match = re.search(r"SEMESTER\s+(VIII|VII|VI|IV|V|III|II|I)\b", header, re.IGNORECASE)
-    if sem_match:
-        semester = _ROMAN.get(sem_match.group(1).upper())
-    
-    # Match program: try longest keys first to avoid partial matches
-    program = None
-    for key in sorted(_HEADER_PROGRAM_MAP, key=len, reverse=True):
-        if key in header:
-            program = _HEADER_PROGRAM_MAP[key]
-            break
-    
-    return program, semester
-
-
-def _filter_meta(meta_list: list, section_program: str, section_semester: int) -> list:
-    """Filter curriculum entries to match the current section's program and semester.
-    
-    Strategy (best match first):
-    1. Exact match on both program and semester → use it
-    2. Match program only (semester is None in curriculum) → use it
-    3. No filter matched → return all entries (original behaviour as fallback)
-    """
-    if not section_program or not meta_list:
-        return meta_list
-    
-    # Exact match: both program and semester
-    exact = [m for m in meta_list
-             if m.get("program") == section_program
-             and m.get("semester") == section_semester]
-    if exact:
-        return exact
-    
-    # Program-only match (covers electives where semester may be None)
-    prog_only = [m for m in meta_list if m.get("program") == section_program]
-    if prog_only:
-        return prog_only
-    
-    # Fallback: The course is in curriculum, but doesn't map to this section's program.
-    # Don't return all entries (causes bleeding into unrelated programs).
-    # Instead, construct a single fallback entry for the current section, 
-    # borrowing the course_name from the first curriculum entry.
-    fallback_name = meta_list[0].get("course_name", "") if meta_list else ""
-    fallback_type = meta_list[0].get("course_type", "Unknown") if meta_list else "Unknown"
-    return [{"program": section_program, "semester": section_semester, 
-             "course_name": fallback_name, "course_type": fallback_type}]
-
-def parse_excel(excel_path: str, curriculum: dict) -> list:
-    wb = openpyxl.load_workbook(excel_path, data_only=True)
-
-    # Abbreviation map: initials → full name
     abbrev_map = {}
     if "FacultyNameAbbreviations" in wb.sheetnames:
         for row in wb["FacultyNameAbbreviations"].iter_rows(min_row=2, values_only=True):
             if row[0] and row[1]:
                 abbrev_map[str(row[1]).strip()] = str(row[0]).strip()
+    return abbrev_map
+
+
+def load_abbrev_map(excel_path: str) -> dict:
+    """read_abbrev_map() for callers that only have a path (e.g. the lab parser,
+    whose own workbook carries no abbreviations sheet)."""
+    return read_abbrev_map(openpyxl.load_workbook(excel_path, data_only=True))
+
+
+def resolve_faculty_codes(value: str, abbrev_map: dict) -> list:
+    """Split a lab sheet's faculty cell into one display name per instructor.
+
+    The lab workbook identifies staff by short name only ("AC"), while the
+    lecture workbook writes "Ankush Chander (AC)". Left unresolved, every
+    faculty-name query — schedules, locations, busy/free time — silently misses
+    that person's labs.
+
+        "AC"        -> ["Ankush Chander (AC)"]
+        "AV/PK"     -> ["Ankit Vijayvargiya (AV)", "Pankaj Kumar (PK)"]
+        "TF/TA"     -> ["TF/TA"]   # nothing resolvable — keep the cell whole
+        ""          -> [""]        # still emit one record, instructor unknown
+
+    One name per entry, never a joined string: `timetables.faculty_name` is
+    matched by substring, so a compound value like "A (X) / B (Y)" would make
+    A's own name ambiguous against it and resolve_faculty() could never narrow
+    a query down — the caller then asks the user to disambiguate forever.
+
+    Splitting only when at least one token resolves avoids inventing "TF" and
+    "TA" as two separate people. Token matching is exact: "AC" and "AC1" are
+    different people (Ankush Chander vs Arunava Chakravarty).
+    """
+    if not value:
+        return [""]
+
+    tokens = [t.strip() for t in value.split("/") if t.strip()]
+    if not abbrev_map or not any(t in abbrev_map for t in tokens):
+        return [value]
+
+    return [abbrev_map.get(t, t) for t in tokens]
+
+
+def parse_excel(excel_path: str, curriculum: dict) -> list:
+    wb = openpyxl.load_workbook(excel_path, data_only=True)
+
+    # Abbreviation map: initials → full name
+    abbrev_map = read_abbrev_map(wb)
 
     sheet_name = "Lecture (Update)" if "Lecture (Update)" in wb.sheetnames else wb.sheetnames[0]
     all_rows = list(wb[sheet_name].iter_rows(values_only=True))
@@ -275,7 +239,7 @@ def parse_excel(excel_path: str, curriculum: dict) -> list:
 
     return records
 
-def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
+def parse_lab_excel(excel_path: str, curriculum: dict, abbrev_map: dict = None) -> list:
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     sheet_name = wb.sheetnames[0]
     all_rows = list(wb[sheet_name].iter_rows(values_only=True))
@@ -302,8 +266,6 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         
     time_col, room_col, course_col, faculty_col = 0, 6, 7, 8
     current_program_header = "Unknown Program"
-    section_program = None   # curriculum.json program name
-    section_semester = None  # semester as int
     
     # Tutorial continuation rows: some rows have group data in day columns
     # but leave course/faculty blank, expecting them to carry forward.
@@ -315,8 +277,6 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         
         if t and not re.search(r"\d{1,2}:\d{2}", str(t)):
             current_program_header = str(t).strip()
-            section_program, section_semester = _parse_section_header(current_program_header)
-            logger.debug(f"Section: '{current_program_header}' → program={section_program}, semester={section_semester}")
             # Reset carry-forward on new program section
             last_course = None
             last_faculty = None
@@ -340,7 +300,11 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
             last_faculty = faculty_raw
         
         course = course_raw or last_course or ""
-        faculty = faculty_raw or last_faculty or ""
+        faculty_cell = faculty_raw or last_faculty or ""
+        # Lab sheets carry short names only — resolve to the same display form
+        # the lecture sheet writes, so both are reachable by one name lookup.
+        # One record per instructor: faculty_name must name exactly one person.
+        faculty_names = resolve_faculty_codes(faculty_cell, abbrev_map)
         
         if not course or course in ("-", "—"):
             continue
@@ -363,19 +327,20 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
                 
                 for meta in meta_list:
                     for room_name in split_rooms(room_raw):
-                        records.append({
-                            "session_type": session_type,
-                            "day": day,
-                            "start": start,
-                            "end": end,
-                            "course_code": course,
-                            "course_name": meta.get("course_name", course),
-                            "course_type": meta.get("course_type", "Unknown"),
-                            "program": meta.get("program", current_program_header),
-                            "semester": str(meta.get("semester", "")),
-                            "faculty": faculty,
-                            "room": room_name,
-                        })
+                        for faculty_name in faculty_names:
+                            records.append({
+                                "session_type": session_type,
+                                "day": day,
+                                "start": start,
+                                "end": end,
+                                "course_code": course,
+                                "course_name": meta.get("course_name", course),
+                                "course_type": meta.get("course_type", "Unknown"),
+                                "program": meta.get("program", current_program_header),
+                                "semester": str(meta.get("semester", "")),
+                                "faculty": faculty_name,
+                                "room": room_name,
+                            })
                     
     return records
 
@@ -393,7 +358,11 @@ def main():
         lab_excel_path = find_lab_excel_file()
         if lab_excel_path:
             logger.info(f"Parsing lab timetable from: {lab_excel_path}")
-            lab_records = parse_lab_excel(lab_excel_path, curriculum)
+            # The abbreviations sheet lives in the lecture workbook, so the lab
+            # parser has to be handed it explicitly.
+            abbrev_map = load_abbrev_map(excel_path)
+            logger.info(f"Loaded {len(abbrev_map)} faculty short names for lab resolution.")
+            lab_records = parse_lab_excel(lab_excel_path, curriculum, abbrev_map)
             records.extend(lab_records)
         else:
             logger.info("No lab timetable file found. Skipping labs.")
