@@ -129,29 +129,36 @@ def load_abbrev_map(excel_path: str) -> dict:
     return read_abbrev_map(openpyxl.load_workbook(excel_path, data_only=True))
 
 
-def expand_faculty_codes(value: str, abbrev_map: dict) -> str:
-    """Resolve a lab sheet's faculty cell to the same display form lectures use.
+def resolve_faculty_codes(value: str, abbrev_map: dict) -> list:
+    """Split a lab sheet's faculty cell into one display name per instructor.
 
     The lab workbook identifies staff by short name only ("AC"), while the
     lecture workbook writes "Ankush Chander (AC)". Left unresolved, every
     faculty-name query — schedules, locations, busy/free time — silently misses
     that person's labs.
 
-        "AC"               -> "Ankush Chander (AC)"
-        "AB1/NKS"          -> "A B (AB1) / N K S (NKS)"
-        "TF/TA"            -> "TF/TA"        (nothing to resolve, left alone)
+        "AC"        -> ["Ankush Chander (AC)"]
+        "AV/PK"     -> ["Ankit Vijayvargiya (AV)", "Pankaj Kumar (PK)"]
+        "TF/TA"     -> ["TF/TA"]   # nothing resolvable — keep the cell whole
+        ""          -> [""]        # still emit one record, instructor unknown
 
-    Matching is exact per token, never substring: "AC" and "AC1" are different
-    people (Ankush Chander vs Arunava Chakravarty).
+    One name per entry, never a joined string: `timetables.faculty_name` is
+    matched by substring, so a compound value like "A (X) / B (Y)" would make
+    A's own name ambiguous against it and resolve_faculty() could never narrow
+    a query down — the caller then asks the user to disambiguate forever.
+
+    Splitting only when at least one token resolves avoids inventing "TF" and
+    "TA" as two separate people. Token matching is exact: "AC" and "AC1" are
+    different people (Ankush Chander vs Arunava Chakravarty).
     """
-    if not value or not abbrev_map:
-        return value
+    if not value:
+        return [""]
 
-    tokens = [t.strip() for t in value.split("/")]
-    if not any(t in abbrev_map for t in tokens):
-        return value
+    tokens = [t.strip() for t in value.split("/") if t.strip()]
+    if not abbrev_map or not any(t in abbrev_map for t in tokens):
+        return [value]
 
-    return " / ".join(abbrev_map.get(t, t) for t in tokens)
+    return [abbrev_map.get(t, t) for t in tokens]
 
 
 def parse_excel(excel_path: str, curriculum: dict) -> list:
@@ -293,10 +300,11 @@ def parse_lab_excel(excel_path: str, curriculum: dict, abbrev_map: dict = None) 
             last_faculty = faculty_raw
         
         course = course_raw or last_course or ""
-        faculty = faculty_raw or last_faculty or ""
+        faculty_cell = faculty_raw or last_faculty or ""
         # Lab sheets carry short names only — resolve to the same display form
         # the lecture sheet writes, so both are reachable by one name lookup.
-        faculty = expand_faculty_codes(faculty, abbrev_map)
+        # One record per instructor: faculty_name must name exactly one person.
+        faculty_names = resolve_faculty_codes(faculty_cell, abbrev_map)
         
         if not course or course in ("-", "—"):
             continue
@@ -316,19 +324,20 @@ def parse_lab_excel(excel_path: str, curriculum: dict, abbrev_map: dict = None) 
                 
                 for meta in meta_list:
                     for room_name in split_rooms(room_raw):
-                        records.append({
-                            "session_type": session_type,
-                            "day": day,
-                            "start": start,
-                            "end": end,
-                            "course_code": course,
-                            "course_name": meta.get("course_name", course),
-                            "course_type": meta.get("course_type", "Unknown"),
-                            "program": meta.get("program", current_program_header),
-                            "semester": str(meta.get("semester", "")),
-                            "faculty": faculty,
-                            "room": room_name,
-                        })
+                        for faculty_name in faculty_names:
+                            records.append({
+                                "session_type": session_type,
+                                "day": day,
+                                "start": start,
+                                "end": end,
+                                "course_code": course,
+                                "course_name": meta.get("course_name", course),
+                                "course_type": meta.get("course_type", "Unknown"),
+                                "program": meta.get("program", current_program_header),
+                                "semester": str(meta.get("semester", "")),
+                                "faculty": faculty_name,
+                                "room": room_name,
+                            })
                     
     return records
 

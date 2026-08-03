@@ -6,18 +6,20 @@ entrypoint directly from the unified FastMCP server's tool registry. Web chat
 (Gemini/OpenAI) therefore always exposes exactly what the MCP server exposes —
 no hand-maintained declaration lists, no drift between the two surfaces.
 
-Role awareness: directory tools return full contact info; for non-privileged
-roles (students) the dispatch result is redacted (phone numbers and office
-addresses stripped), matching the old prompt-injection behaviour.
+Directory tools return contact details to every caller. The listed phone
+numbers are institute switchboard extensions (079-6826xxxx) and the addresses
+are campus office rooms — the same information the public directory at
+daiict.ac.in publishes — so there is nothing here to withhold by role.
+
+Role still gates *mutating* tools: sync_* remain MCP-only (EXCLUDED_TOOLS
+below) and the MCP servers check user_role_var before running a scrape.
 """
-import re
 import copy
 import asyncio
 import threading
 from typing import Any, Dict, List
 
 from core import config
-from api.context import user_role_var
 
 logger = config.get_logger("api.services.tool_bridge")
 
@@ -28,23 +30,6 @@ EXCLUDED_TOOLS = {
     "sync_scholar_data",
     "sync_academic_documents",
 }
-
-# Tools whose output contains personal contact details subject to role redaction.
-DIRECTORY_TOOLS = {
-    "list_faculty", "search_faculty", "get_faculty_details", "search_faculty_by_expertise",
-    "list_staff", "search_staff", "get_staff_details",
-}
-
-PRIVILEGED_ROLES = ("Faculty", "Staff", "Admin")
-
-_PHONE_RE = re.compile(r"(\+?\d[\d\s-]{7,}\d)")
-_OFFICE_RE = re.compile(r"#\s?\d{3,4}(?:,\s?FB-\d[^,|\n]*)?")
-
-# The placeholder the model sees in place of a redacted value. It is
-# self-explaining on purpose: a bare "[restricted]" left the model guessing why
-# the field was missing, so it invented privacy rationales and could be argued
-# out of them. The system prompt keys off this exact wording.
-REDACTED = "[withheld: visible to faculty and staff only]"
 
 
 def _mcp():
@@ -96,11 +81,6 @@ def gemini_tool_config() -> List[Dict[str, Any]]:
     return [{"function_declarations": list_tools()}]
 
 
-def _redact(text: str) -> str:
-    text = _PHONE_RE.sub(REDACTED, text)
-    return _OFFICE_RE.sub(REDACTED, text)
-
-
 def _run_async(coro):
     """Run a coroutine to completion from sync code, safe inside a running loop."""
     result, exc = [None], [None]
@@ -125,19 +105,16 @@ def _run_async(coro):
 def dispatch(name: str, arguments: Dict[str, Any]) -> str:
     """Execute a tool by name and return its text result (sync).
 
-    All chat backends funnel through here, so redaction and logging are
+    All chat backends funnel through here, so tool access and logging are
     applied uniformly.
     """
     if name in EXCLUDED_TOOLS:
         return f"Tool '{name}' is not available in chat."
-    
+
     logger.info(f"Bridge dispatch: {name}({arguments})")
     try:
         result = _run_async(_mcp()._tool_manager.call_tool(name, arguments or {}))
     except Exception as e:
         logger.error(f"Bridge dispatch failed for {name}: {e}")
         return f"Tool '{name}' failed: check the arguments and try again."
-    text = result if isinstance(result, str) else str(result)
-    if name in DIRECTORY_TOOLS and user_role_var.get() not in PRIVILEGED_ROLES:
-        text = _redact(text)
-    return text
+    return result if isinstance(result, str) else str(result)

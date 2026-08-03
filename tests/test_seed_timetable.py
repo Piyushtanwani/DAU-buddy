@@ -182,26 +182,47 @@ def test_similar_short_names_are_not_confused(monkeypatch):
     assert records[1]["faculty"] == "Arunava Chakravarty (AC1)"
 
 
-def test_multiple_instructors_each_resolve(monkeypatch):
+def test_co_taught_session_emits_one_row_per_instructor(monkeypatch):
+    """A compound cell must never be stored as one joined string.
+
+    faculty_name is matched by substring, so "A (X) / B (Y)" would make A's own
+    name ambiguous against it — resolve_faculty() could never narrow a query
+    down and the assistant would ask the user to disambiguate forever.
+    """
     records = parse(monkeypatch, [
         row("B Tech (ICT)"),
         row("09:00-11:00", monday="Tut. G1", room="CEP-103", course="IC105", faculty="AC/NKS"),
     ], abbrev_map=ABBREV)
 
-    assert records[0]["faculty"] == "Ankush Chander (AC) / N K Sharma (NKS)"
+    assert [r["faculty"] for r in records] == [
+        "Ankush Chander (AC)", "N K Sharma (NKS)",
+    ]
+    assert all(" / " not in r["faculty"] for r in records)
+    # Everything else about the two rows is identical — same slot, same room.
+    assert {r["course_code"] for r in records} == {"IC105"}
+    assert {r["room"] for r in records} == {"CEP-103"}
 
 
 def test_unknown_short_name_is_left_alone(monkeypatch):
     """'TF/TA' and codes missing from the abbreviations sheet must pass through
-    untouched rather than being mangled or dropped."""
+    untouched — not split into two fictitious people named TF and TA."""
     records = parse(monkeypatch, [
         row("B Tech (ICT)"),
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="TF/TA"),
         row("11:00-13:00", monday="G2", room="LAB211", course="DS636", faculty="BD"),
     ], abbrev_map=ABBREV)
 
-    assert records[0]["faculty"] == "TF/TA"
-    assert records[1]["faculty"] == "BD"
+    assert [r["faculty"] for r in records] == ["TF/TA", "BD"]
+
+
+def test_partially_resolvable_cell_splits(monkeypatch):
+    """When at least one token resolves, split — unknown tokens stay verbatim."""
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC/ZZZ"),
+    ], abbrev_map=ABBREV)
+
+    assert [r["faculty"] for r in records] == ["Ankush Chander (AC)", "ZZZ"]
 
 
 def test_no_abbrev_map_is_a_no_op(monkeypatch):
@@ -214,15 +235,15 @@ def test_no_abbrev_map_is_a_no_op(monkeypatch):
     assert records[0]["faculty"] == "AC"
 
 
-def test_expand_faculty_codes_is_pure():
-    """Unit-level checks of the resolver itself."""
-    expand = seed_timetable.expand_faculty_codes
-    assert expand("AC", ABBREV) == "Ankush Chander (AC)"
-    assert expand("AC / NKS", ABBREV) == "Ankush Chander (AC) / N K Sharma (NKS)"
-    assert expand("AC/UNKNOWN", ABBREV) == "Ankush Chander (AC) / UNKNOWN"
-    assert expand("UNKNOWN", ABBREV) == "UNKNOWN"
-    assert expand("", ABBREV) == ""
-    assert expand("AC", {}) == "AC"
+def test_resolve_faculty_codes_is_pure():
+    """Unit-level checks of the resolver itself. Always a list, one name each."""
+    resolve = seed_timetable.resolve_faculty_codes
+    assert resolve("AC", ABBREV) == ["Ankush Chander (AC)"]
+    assert resolve("AC / NKS", ABBREV) == ["Ankush Chander (AC)", "N K Sharma (NKS)"]
+    assert resolve("AC/UNKNOWN", ABBREV) == ["Ankush Chander (AC)", "UNKNOWN"]
+    assert resolve("UNKNOWN", ABBREV) == ["UNKNOWN"]
+    assert resolve("", ABBREV) == [""]
+    assert resolve("AC", {}) == ["AC"]
 
 
 # ── Smoke test against the real workbook, when it is present ─────────────────
