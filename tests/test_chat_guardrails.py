@@ -12,6 +12,7 @@ untrusted-history surface:
     is attacker-controlled and must be capped and role-validated.
 """
 import types
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -90,18 +91,33 @@ class TestHistorySanitization:
         assert sanitize_history([]) == []
 
 
-class TestRedaction:
-    def test_placeholder_explains_itself(self):
-        """A bare '[restricted]' left the model inventing rationales it could be
-        argued out of; the placeholder must state why the value is missing."""
-        redacted = tool_bridge._redact("Phone: +91 79 6826 1700")
-        assert tool_bridge.REDACTED in redacted
-        assert "+91" not in redacted
-        assert "faculty and staff" in tool_bridge.REDACTED
+class TestContactDetailsAreNotRedacted:
+    """Directory phone numbers are institute switchboard extensions
+    (079-6826xxxx) and addresses are campus office rooms — public information.
+    Role-based redaction was removed; these tests stop it reappearing by
+    accident, and stop the prompt describing a filter that no longer exists."""
 
-    def test_system_prompt_matches_the_placeholder(self):
-        """The prompt tells the model what the placeholder means — keep them in sync."""
-        assert tool_bridge.REDACTED in gemini.SYSTEM_INSTRUCTIONS_TEMPLATE
+    def test_dispatch_does_not_rewrite_tool_output(self, monkeypatch):
+        """Phone and office must reach the model exactly as the tool wrote them."""
+        payload = "Name: A Prof\nPhone: 079-68261598\nOffice: # 3208, FB-3, DAU"
+        monkeypatch.setattr(tool_bridge, "_mcp", lambda: MagicMock())
+        monkeypatch.setattr(tool_bridge, "_run_async", lambda _coro: payload)
+
+        assert tool_bridge.dispatch("get_faculty_details", {"name": "A Prof"}) == payload
+
+    def test_no_redaction_machinery_remains(self):
+        for gone in ("_redact", "REDACTED", "DIRECTORY_TOOLS", "PRIVILEGED_ROLES"):
+            assert not hasattr(tool_bridge, gone), f"{gone} is back — was that intended?"
+
+    def test_prompt_does_not_promise_a_filter(self):
+        prompt = gemini.SYSTEM_INSTRUCTIONS_TEMPLATE
+        assert "withheld" not in prompt.lower()
+        assert "CONTACT DETAILS" in prompt
+
+    def test_mutating_tools_are_still_blocked_in_chat(self):
+        """Removing contact redaction must not open up the sync tools."""
+        assert "sync_faculty_data" in tool_bridge.EXCLUDED_TOOLS
+        assert tool_bridge.dispatch("sync_faculty_data", {}).startswith("Tool ")
 
 
 class TestScopeGuardrails:
