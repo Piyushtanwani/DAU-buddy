@@ -108,6 +108,91 @@ def _resolve_slot(slot) -> tuple:
         return _parse_time(m.group(1)), _parse_time(m.group(2))
     return None, None
 
+# ── Section Header Parsing ────────────────────────────────────────────────────
+# Maps keywords found in Excel section headers to curriculum.json program names.
+_HEADER_PROGRAM_MAP = {
+    "BTech Core":            "B Tech (Institute Core)",
+    "BTech (ICT and CS)":    "B Tech (ICT and CS)",
+    "BTech (ICT-CS)":        "B Tech (ICT-CS)",
+    "BTech (ICT, ICT-CS)":   "B Tech (ICT and ICT-CS)",
+    "BTech (ICT &  CS)":     "B Tech (ICT and CS)",
+    "BTech (ICT & CS)":      "B Tech (ICT and CS)",
+    "BTech (CS)":            "B Tech (CS)",
+    "BTech (MnC)":           "B Tech (MnC)",
+    "BTech (MNC)":           "B Tech (MnC)",
+    "BTech (EVD)":           "B Tech (EVD)",
+    "BTech (ICT)":           "B Tech (Program Core)",
+    "BTech":                 "B Tech (Institute Core)",
+    "BS-MS (IT)":            "BS-MS (IT)",
+    "BS-MS (DS & AI)":       "BS-MS (DS & AI)",
+    "BS-MS (DS &amp; AI)":   "BS-MS (DS & AI)",
+    "MTech (ICT":            "M Tech (ICT)",
+    "MTech":                 "M Tech (ICT)",
+    "MSc (IT)":              "MSc (IT)",
+    "MSc (DS)":              "MSc (DS)",
+    "MSc (AA)":              "MSc (AA)",
+    "MDes (CD)":             "MDes (CD)",
+    "MDes (IUxD)":           "MDes (IUxD)",
+}
+
+_ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8}
+
+def _parse_section_header(header: str) -> tuple:
+    """Extract (curriculum_program, semester_int) from an Excel section header.
+    
+    Examples:
+        'MSc (IT) Core: SEMESTER III (2025 Batch)' → ('MSc (IT)', 3)
+        'BTech Core: SEMESTER I (2026 Batch)'      → ('B Tech (Institute Core)', 1)
+    Returns (None, None) if the header cannot be parsed.
+    """
+    # Extract semester number from "SEMESTER III" pattern
+    semester = None
+    sem_match = re.search(r"SEMESTER\s+(VIII|VII|VI|IV|V|III|II|I)\b", header, re.IGNORECASE)
+    if sem_match:
+        semester = _ROMAN.get(sem_match.group(1).upper())
+    
+    # Match program: try longest keys first to avoid partial matches
+    program = None
+    for key in sorted(_HEADER_PROGRAM_MAP, key=len, reverse=True):
+        if key in header:
+            program = _HEADER_PROGRAM_MAP[key]
+            break
+    
+    return program, semester
+
+
+def _filter_meta(meta_list: list, section_program: str, section_semester: int) -> list:
+    """Filter curriculum entries to match the current section's program and semester.
+    
+    Strategy (best match first):
+    1. Exact match on both program and semester → use it
+    2. Match program only (semester is None in curriculum) → use it
+    3. No filter matched → return all entries (original behaviour as fallback)
+    """
+    if not section_program or not meta_list:
+        return meta_list
+    
+    # Exact match: both program and semester
+    exact = [m for m in meta_list
+             if m.get("program") == section_program
+             and m.get("semester") == section_semester]
+    if exact:
+        return exact
+    
+    # Program-only match (covers electives where semester may be None)
+    prog_only = [m for m in meta_list if m.get("program") == section_program]
+    if prog_only:
+        return prog_only
+    
+    # Fallback: The course is in curriculum, but doesn't map to this section's program.
+    # Don't return all entries (causes bleeding into unrelated programs).
+    # Instead, construct a single fallback entry for the current section, 
+    # borrowing the course_name from the first curriculum entry.
+    fallback_name = meta_list[0].get("course_name", "") if meta_list else ""
+    fallback_type = meta_list[0].get("course_type", "Unknown") if meta_list else "Unknown"
+    return [{"program": section_program, "semester": section_semester, 
+             "course_name": fallback_name, "course_type": fallback_type}]
+
 def parse_excel(excel_path: str, curriculum: dict) -> list:
     wb = openpyxl.load_workbook(excel_path, data_only=True)
 
@@ -217,6 +302,8 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         
     time_col, room_col, course_col, faculty_col = 0, 6, 7, 8
     current_program_header = "Unknown Program"
+    section_program = None   # curriculum.json program name
+    section_semester = None  # semester as int
     
     # Tutorial continuation rows: some rows have group data in day columns
     # but leave course/faculty blank, expecting them to carry forward.
@@ -228,6 +315,8 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         
         if t and not re.search(r"\d{1,2}:\d{2}", str(t)):
             current_program_header = str(t).strip()
+            section_program, section_semester = _parse_section_header(current_program_header)
+            logger.debug(f"Section: '{current_program_header}' → program={section_program}, semester={section_semester}")
             # Reset carry-forward on new program section
             last_course = None
             last_faculty = None
@@ -256,9 +345,12 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         if not course or course in ("-", "—"):
             continue
 
+        # New architecture: lookup (course, program, semester)
         meta_list = curriculum.get(course, [])
+        if meta_list:
+            meta_list = _filter_meta(meta_list, section_program, section_semester)
         if not meta_list:
-            meta_list = [{"program": current_program_header}]
+            meta_list = [{"program": current_program_header, "semester": section_semester}]
             
         for day in DAYS:
             if day not in day_cols:
