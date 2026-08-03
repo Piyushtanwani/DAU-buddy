@@ -218,11 +218,19 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
     time_col, room_col, course_col, faculty_col = 0, 6, 7, 8
     current_program_header = "Unknown Program"
     
+    # Tutorial continuation rows: some rows have group data in day columns
+    # but leave course/faculty blank, expecting them to carry forward.
+    last_course = None
+    last_faculty = None
+    
     for row in all_rows[header_idx + 1:]:
         t = row[time_col] if len(row) > time_col else None
         
         if t and not re.search(r"\d{1,2}:\d{2}", str(t)):
             current_program_header = str(t).strip()
+            # Reset carry-forward on new program section
+            last_course = None
+            last_faculty = None
             continue
             
         if not t or not str(t).strip():
@@ -232,9 +240,18 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         if not start or not end:
             continue
             
-        room = str(row[room_col]).strip() if len(row) > room_col and row[room_col] else ""
-        course = str(row[course_col]).strip() if len(row) > course_col and row[course_col] else ""
-        faculty = str(row[faculty_col]).strip() if len(row) > faculty_col and row[faculty_col] else ""
+        room_raw = str(row[room_col]).strip() if len(row) > room_col and row[room_col] else ""
+        course_raw = str(row[course_col]).strip() if len(row) > course_col and row[course_col] else ""
+        faculty_raw = str(row[faculty_col]).strip() if len(row) > faculty_col and row[faculty_col] else ""
+        
+        # Carry-forward: update trackers when present, inherit when blank
+        if course_raw and course_raw not in ("-", "—"):
+            last_course = course_raw
+        if faculty_raw:
+            last_faculty = faculty_raw
+        
+        course = course_raw or last_course or ""
+        faculty = faculty_raw or last_faculty or ""
         
         if not course or course in ("-", "—"):
             continue
@@ -253,7 +270,7 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
                 session_type = f"Tutorial ({gv})" if "tut" in gv.lower() else f"Lab ({gv})"
                 
                 for meta in meta_list:
-                    for room_name in split_rooms(room):
+                    for room_name in split_rooms(room_raw):
                         records.append({
                             "session_type": session_type,
                             "day": day,
