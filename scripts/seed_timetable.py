@@ -108,15 +108,57 @@ def _resolve_slot(slot) -> tuple:
         return _parse_time(m.group(1)), _parse_time(m.group(2))
     return None, None
 
-def parse_excel(excel_path: str, curriculum: dict) -> list:
-    wb = openpyxl.load_workbook(excel_path, data_only=True)
+def read_abbrev_map(wb) -> dict:
+    """Short name → full display name, from the workbook's abbreviations sheet.
 
-    # Abbreviation map: initials → full name
+    e.g. {"AC": "Ankush Chander (AC)"}. Both parsers write this same display
+    form into `timetables.faculty_name`, so lecture and lab rows for one person
+    are matchable by the same name lookup.
+    """
     abbrev_map = {}
     if "FacultyNameAbbreviations" in wb.sheetnames:
         for row in wb["FacultyNameAbbreviations"].iter_rows(min_row=2, values_only=True):
             if row[0] and row[1]:
                 abbrev_map[str(row[1]).strip()] = str(row[0]).strip()
+    return abbrev_map
+
+
+def load_abbrev_map(excel_path: str) -> dict:
+    """read_abbrev_map() for callers that only have a path (e.g. the lab parser,
+    whose own workbook carries no abbreviations sheet)."""
+    return read_abbrev_map(openpyxl.load_workbook(excel_path, data_only=True))
+
+
+def expand_faculty_codes(value: str, abbrev_map: dict) -> str:
+    """Resolve a lab sheet's faculty cell to the same display form lectures use.
+
+    The lab workbook identifies staff by short name only ("AC"), while the
+    lecture workbook writes "Ankush Chander (AC)". Left unresolved, every
+    faculty-name query — schedules, locations, busy/free time — silently misses
+    that person's labs.
+
+        "AC"               -> "Ankush Chander (AC)"
+        "AB1/NKS"          -> "A B (AB1) / N K S (NKS)"
+        "TF/TA"            -> "TF/TA"        (nothing to resolve, left alone)
+
+    Matching is exact per token, never substring: "AC" and "AC1" are different
+    people (Ankush Chander vs Arunava Chakravarty).
+    """
+    if not value or not abbrev_map:
+        return value
+
+    tokens = [t.strip() for t in value.split("/")]
+    if not any(t in abbrev_map for t in tokens):
+        return value
+
+    return " / ".join(abbrev_map.get(t, t) for t in tokens)
+
+
+def parse_excel(excel_path: str, curriculum: dict) -> list:
+    wb = openpyxl.load_workbook(excel_path, data_only=True)
+
+    # Abbreviation map: initials → full name
+    abbrev_map = read_abbrev_map(wb)
 
     sheet_name = "Lecture (Update)" if "Lecture (Update)" in wb.sheetnames else wb.sheetnames[0]
     all_rows = list(wb[sheet_name].iter_rows(values_only=True))
@@ -190,7 +232,7 @@ def parse_excel(excel_path: str, curriculum: dict) -> list:
 
     return records
 
-def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
+def parse_lab_excel(excel_path: str, curriculum: dict, abbrev_map: dict = None) -> list:
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     sheet_name = wb.sheetnames[0]
     all_rows = list(wb[sheet_name].iter_rows(values_only=True))
@@ -252,6 +294,9 @@ def parse_lab_excel(excel_path: str, curriculum: dict) -> list:
         
         course = course_raw or last_course or ""
         faculty = faculty_raw or last_faculty or ""
+        # Lab sheets carry short names only — resolve to the same display form
+        # the lecture sheet writes, so both are reachable by one name lookup.
+        faculty = expand_faculty_codes(faculty, abbrev_map)
         
         if not course or course in ("-", "—"):
             continue
@@ -301,7 +346,11 @@ def main():
         lab_excel_path = find_lab_excel_file()
         if lab_excel_path:
             logger.info(f"Parsing lab timetable from: {lab_excel_path}")
-            lab_records = parse_lab_excel(lab_excel_path, curriculum)
+            # The abbreviations sheet lives in the lecture workbook, so the lab
+            # parser has to be handed it explicitly.
+            abbrev_map = load_abbrev_map(excel_path)
+            logger.info(f"Loaded {len(abbrev_map)} faculty short names for lab resolution.")
+            lab_records = parse_lab_excel(lab_excel_path, curriculum, abbrev_map)
             records.extend(lab_records)
         else:
             logger.info("No lab timetable file found. Skipping labs.")

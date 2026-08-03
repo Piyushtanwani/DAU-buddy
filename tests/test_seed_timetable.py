@@ -72,9 +72,9 @@ def row(time_slot, monday=None, room=None, course=None, faculty=None):
     return [time_slot, monday, None, None, None, None, room, course, faculty]
 
 
-def parse(monkeypatch, rows, curriculum=None):
+def parse(monkeypatch, rows, curriculum=None, abbrev_map=None):
     monkeypatch.setattr(seed_timetable, "openpyxl", _FakeOpenpyxl([HEADER] + rows))
-    return seed_timetable.parse_lab_excel("fake.xlsx", curriculum or {})
+    return seed_timetable.parse_lab_excel("fake.xlsx", curriculum or {}, abbrev_map)
 
 
 # ── Carry-forward: the behaviour the feature exists for ──────────────────────
@@ -146,6 +146,83 @@ def test_new_course_does_not_inherit_previous_faculty(monkeypatch):
 
     assert records[1]["course_code"] == "IC202"
     assert records[1]["faculty"] != "AAA", "IC202 was attributed to IC101's instructor"
+
+
+# ── Faculty short-name resolution ────────────────────────────────────────────
+# The lab workbook names staff by short name ("AC"); the lecture workbook writes
+# "Ankush Chander (AC)". Unresolved, every faculty-name query misses that
+# person's labs — schedules, locations, and busy/free time alike.
+
+ABBREV = {
+    "AC": "Ankush Chander (AC)",
+    "AC1": "Arunava Chakravarty (AC1)",
+    "NKS": "N K Sharma (NKS)",
+}
+
+
+def test_short_name_resolves_to_lecture_display_form(monkeypatch):
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
+    ], abbrev_map=ABBREV)
+
+    assert records[0]["faculty"] == "Ankush Chander (AC)"
+
+
+def test_similar_short_names_are_not_confused(monkeypatch):
+    """'AC' and 'AC1' are different people. Resolution is exact per token —
+    substring matching would cross-attribute their teaching."""
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
+        row("11:00-13:00", monday="G2", room="LAB211", course="IE406", faculty="AC1"),
+    ], abbrev_map=ABBREV)
+
+    assert records[0]["faculty"] == "Ankush Chander (AC)"
+    assert records[1]["faculty"] == "Arunava Chakravarty (AC1)"
+
+
+def test_multiple_instructors_each_resolve(monkeypatch):
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="Tut. G1", room="CEP-103", course="IC105", faculty="AC/NKS"),
+    ], abbrev_map=ABBREV)
+
+    assert records[0]["faculty"] == "Ankush Chander (AC) / N K Sharma (NKS)"
+
+
+def test_unknown_short_name_is_left_alone(monkeypatch):
+    """'TF/TA' and codes missing from the abbreviations sheet must pass through
+    untouched rather than being mangled or dropped."""
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="TF/TA"),
+        row("11:00-13:00", monday="G2", room="LAB211", course="DS636", faculty="BD"),
+    ], abbrev_map=ABBREV)
+
+    assert records[0]["faculty"] == "TF/TA"
+    assert records[1]["faculty"] == "BD"
+
+
+def test_no_abbrev_map_is_a_no_op(monkeypatch):
+    """Callers that pass no map (older call sites, tests) keep the raw value."""
+    records = parse(monkeypatch, [
+        row("B Tech (ICT)"),
+        row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
+    ])
+
+    assert records[0]["faculty"] == "AC"
+
+
+def test_expand_faculty_codes_is_pure():
+    """Unit-level checks of the resolver itself."""
+    expand = seed_timetable.expand_faculty_codes
+    assert expand("AC", ABBREV) == "Ankush Chander (AC)"
+    assert expand("AC / NKS", ABBREV) == "Ankush Chander (AC) / N K Sharma (NKS)"
+    assert expand("AC/UNKNOWN", ABBREV) == "Ankush Chander (AC) / UNKNOWN"
+    assert expand("UNKNOWN", ABBREV) == "UNKNOWN"
+    assert expand("", ABBREV) == ""
+    assert expand("AC", {}) == "AC"
 
 
 # ── Smoke test against the real workbook, when it is present ─────────────────
