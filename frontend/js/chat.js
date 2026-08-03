@@ -23,6 +23,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sendBtn = document.getElementById("send-btn");
 
+    // Client-side request budget. Slightly above the server's own deadline
+    // (LLM_TIMEOUT_S in api/routes/chat.py) so the server normally answers first.
+    const CHAT_TIMEOUT_MS = 55000;
+    // Turns posted back to the server; it re-caps this itself.
+    const HISTORY_TURNS_SENT = 12;
+
+    class HttpError extends Error {
+        constructor(status) {
+            super(`HTTP ${status}`);
+            this.status = status;
+        }
+    }
+
+    /**
+     * Turn a fetch failure into something a user can act on. The previous
+     * message blamed the database for every failure, including cases where the
+     * request never left the browser.
+     */
+    function describeChatError(error) {
+        if (error && error.name === "AbortError") {
+            return "That request took too long and I stopped waiting. Please try again, or ask a narrower question.";
+        }
+        if (error instanceof HttpError) {
+            if (error.status === 429) {
+                return "You're sending messages faster than I can handle. Please wait a moment and try again.";
+            }
+            if (error.status === 413) {
+                return "That message is too long for me to process. Try shortening it.";
+            }
+            if (error.status >= 500) {
+                return "The server hit an error answering that. Please try again in a moment.";
+            }
+            return `The server rejected that request (${error.status}). Please try again.`;
+        }
+        // TypeError from fetch() — the request never completed: offline, or the
+        // server dropped the connection / is restarting.
+        return "I couldn't reach the server. Check your connection and try again — if this keeps happening, the service may be restarting.";
+    }
+
     if (themeToggle) {
         themeToggle.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -346,20 +385,32 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } catch (e) { }
 
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    message: text,
-                    history: activeSession.messages,
-                    user_email: userEmail
-                })
-            });
+            // Abort client-side before the server's own deadline, so a stalled
+            // request fails cleanly instead of hanging until the connection is reset.
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
+
+            let response;
+            try {
+                response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        // Only the last few turns are sent; the server caps this again.
+                        history: activeSession.messages.slice(-HISTORY_TURNS_SENT),
+                        user_email: userEmail
+                    }),
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timer);
+            }
 
             if (!response.ok) {
-                throw new Error("Server connection issues");
+                throw new HttpError(response.status);
             }
 
             const data = await response.json();
@@ -377,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
             typingIndicator.remove();
             setInputState(true);
 
-            const errorMsg = `⚠️ Sorry, I encountered an error communicating with the database: ${error.message}`;
+            const errorMsg = `⚠️ ${describeChatError(error)}`;
             activeSession.messages.push({ sender: "ai", text: errorMsg });
             saveChatHistory();
 

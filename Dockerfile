@@ -30,8 +30,21 @@ COPY .env.example /app/
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+# Liveness check — deliberately does NOT touch the database.
+#
+# This probe answers one question: is the process still serving? A restart is
+# the only remedy it can trigger, and restarting fixes a wedged process but not
+# an unreachable database — it just drops every in-flight request, which is what
+# surfaces in the browser as "Failed to fetch". So the probe hits the static
+# root, not /api/health.
+#
+# /api/health does check the database and is the right probe for readiness (load
+# balancer / orchestrator traffic gating), where the remedy is "stop sending
+# traffic here" rather than "restart this".
+#
+# The timeout is generous on purpose: a brief latency spike must not be read as
+# a dead process.
+HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8080/ || exit 1
 
 # Start the FastAPI application
