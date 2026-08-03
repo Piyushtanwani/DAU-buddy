@@ -147,7 +147,6 @@ def test_new_course_does_not_inherit_previous_faculty(monkeypatch):
     assert records[1]["course_code"] == "IC202"
     assert records[1]["faculty"] != "AAA", "IC202 was attributed to IC101's instructor"
 
-
 # ── Faculty short-name resolution ────────────────────────────────────────────
 # The lab workbook names staff by short name ("AC"); the lecture workbook writes
 # "Ankush Chander (AC)". Unresolved, every faculty-name query misses that
@@ -159,15 +158,12 @@ ABBREV = {
     "NKS": "N K Sharma (NKS)",
 }
 
-
 def test_short_name_resolves_to_lecture_display_form(monkeypatch):
     records = parse(monkeypatch, [
         row("B Tech (ICT)"),
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
     ], abbrev_map=ABBREV)
-
     assert records[0]["faculty"] == "Ankush Chander (AC)"
-
 
 def test_similar_short_names_are_not_confused(monkeypatch):
     """'AC' and 'AC1' are different people. Resolution is exact per token —
@@ -177,10 +173,8 @@ def test_similar_short_names_are_not_confused(monkeypatch):
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
         row("11:00-13:00", monday="G2", room="LAB211", course="IE406", faculty="AC1"),
     ], abbrev_map=ABBREV)
-
     assert records[0]["faculty"] == "Ankush Chander (AC)"
     assert records[1]["faculty"] == "Arunava Chakravarty (AC1)"
-
 
 def test_co_taught_session_emits_one_row_per_instructor(monkeypatch):
     """A compound cell must never be stored as one joined string.
@@ -198,10 +192,8 @@ def test_co_taught_session_emits_one_row_per_instructor(monkeypatch):
         "Ankush Chander (AC)", "N K Sharma (NKS)",
     ]
     assert all(" / " not in r["faculty"] for r in records)
-    # Everything else about the two rows is identical — same slot, same room.
     assert {r["course_code"] for r in records} == {"IC105"}
     assert {r["room"] for r in records} == {"CEP-103"}
-
 
 def test_unknown_short_name_is_left_alone(monkeypatch):
     """'TF/TA' and codes missing from the abbreviations sheet must pass through
@@ -211,9 +203,7 @@ def test_unknown_short_name_is_left_alone(monkeypatch):
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="TF/TA"),
         row("11:00-13:00", monday="G2", room="LAB211", course="DS636", faculty="BD"),
     ], abbrev_map=ABBREV)
-
     assert [r["faculty"] for r in records] == ["TF/TA", "BD"]
-
 
 def test_partially_resolvable_cell_splits(monkeypatch):
     """When at least one token resolves, split — unknown tokens stay verbatim."""
@@ -221,9 +211,7 @@ def test_partially_resolvable_cell_splits(monkeypatch):
         row("B Tech (ICT)"),
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC/ZZZ"),
     ], abbrev_map=ABBREV)
-
     assert [r["faculty"] for r in records] == ["Ankush Chander (AC)", "ZZZ"]
-
 
 def test_no_abbrev_map_is_a_no_op(monkeypatch):
     """Callers that pass no map (older call sites, tests) keep the raw value."""
@@ -231,9 +219,7 @@ def test_no_abbrev_map_is_a_no_op(monkeypatch):
         row("B Tech (ICT)"),
         row("09:00-11:00", monday="G1", room="LAB210", course="DS635", faculty="AC"),
     ])
-
     assert records[0]["faculty"] == "AC"
-
 
 def test_resolve_faculty_codes_is_pure():
     """Unit-level checks of the resolver itself. Always a list, one name each."""
