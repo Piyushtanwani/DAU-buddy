@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="login-card" style="background: white; border-radius: 8px; padding: 30px; max-width: 400px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative;">
                     <button class="close-modal-btn" id="close-login-btn" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; color: #666;"><i class="fa-solid fa-xmark"></i></button>
                     <div class="login-header" style="text-align: center; margin-bottom: 20px;">
-                        <i class="fa-solid fa-graduation-cap login-logo" style="font-size: 32px; color: #0369a1; margin-bottom: 10px;"></i>
+                        <img src="/assets/dau_buddy_icon.png" alt="DAU Buddy" class="login-logo" style="width: 48px; height: 48px; margin-bottom: 10px; object-fit: contain;">
                         <h2 style="margin: 0; font-size: 24px; color: #111;">DAU Buddy</h2>
                         <p style="margin: 5px 0 0; font-size: 14px; color: #666;">Sign in with your university account to authenticate.</p>
                     </div>

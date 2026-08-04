@@ -448,7 +448,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const avatar = document.createElement("div");
         avatar.className = "avatar";
-        avatar.innerHTML = sender === "user" ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-graduation-cap"></i>';
+        avatar.innerHTML = sender === "user" ? '<i class="fa-solid fa-user"></i>' : '<i class="fas fa-graduation-cap"></i>';
 
         const wrapper = document.createElement("div");
         wrapper.className = "bubble-wrapper";
@@ -706,7 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const avatar = document.createElement("div");
         avatar.className = "avatar";
-        avatar.innerHTML = '<i class="fa-solid fa-graduation-cap"></i>';
+        avatar.innerHTML = '<i class="fas fa-hat-wizard"></i>';
 
         const wrapper = document.createElement("div");
         wrapper.className = "bubble-wrapper";
