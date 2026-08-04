@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
-  <title>DAU Buddy</title>
+    <link rel="icon" href="/assets/favicon.png">
+    <title>DAU Buddy</title>
     <meta name="description" content="DAU Buddy Login Interface">
 
     <!-- Google Fonts -->
@@ -31,7 +31,8 @@
         <div class="top-accent-bar"></div>
         <nav class="landing-nav">
             <div class="nav-brand">
-                <i class="fa-solid fa-graduation-cap"></i>
+                <img src="/assets/dau_buddy_icon.png" alt="DAU Buddy"
+                    style="width: 24px; height: 24px; object-fit: contain; transform: scale(2.0) translate(6px, -1px); transform-origin: center; margin: 0 18px;">
                 <span>DAU Buddy</span>
             </div>
             <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
@@ -113,13 +114,13 @@
 
         <header class="landing-hero">
             <div class="hero-content">
-                <h1>DAU Buddy <br><span class="hero-highlight">MCP Server</span></h1>
+                <h1>DAU Buddy <br><span class="hero-highlight" id="typewriter"></span><span class="cursor">|</span></h1>
                 <p>Securely query the university information right from your favorite AI portals like Cursor, Windsurf,
                     OpenCode, or
                     Claude Desktop. Role-based access ensures data privacy.</p>
                 <div class="hero-actions">
-			<a href="/chat" class="hero-btn secondary">Access Chat Feature</a>                    
-			<a href="/api-keys" class="hero-btn primary">Configure MCP Server</a>                    
+                    <a href="/chat" class="hero-btn secondary">Access Chat Feature</a>
+                    <a href="/api-keys" class="hero-btn primary">Configure MCP Server</a>
                 </div>
             </div>
         </header>
@@ -171,7 +172,50 @@
 
     <script src="/js/login-modal.js"></script>
 
-    
+    <script>
+        const textToType = "Your AI Campus Guide";
+        const typewriterElement = document.getElementById('typewriter');
+        let i = 0;
+        let isDeleting = false;
 
+        function typeWriter() {
+            if (!isDeleting && i <= textToType.length) {
+                typewriterElement.innerHTML = textToType.substring(0, i);
+                i++;
+                if (i <= textToType.length) {
+                    setTimeout(typeWriter, 100); // Typing speed
+                } else {
+                    isDeleting = true;
+                    setTimeout(typeWriter, 2000); // Wait before deleting
+                }
+            } else if (isDeleting && i >= 0) {
+                typewriterElement.innerHTML = textToType.substring(0, i);
+                i--;
+                if (i >= 0) {
+                    setTimeout(typeWriter, 40); // Deleting speed
+                } else {
+                    isDeleting = false;
+                    setTimeout(typeWriter, 500); // Wait before typing again
+                }
+            }
+        }
+
+        // Start typing after a short delay
+        setTimeout(typeWriter, 500);
+    </script>
+    <style>
+        .cursor {
+            color: #fca311;
+            font-weight: 300;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
 </body>
+
 </html>

@@ -246,6 +246,121 @@ def test_resolve_faculty_codes_is_pure():
     assert resolve("AC", {}) == ["AC"]
 
 
+# ── Section headers → curriculum program + semester ──────────────────────────
+# The lab workbook groups rows under headers like
+# "BTech (ICT and CS) Core: SEMESTER III (2025 Batch)". Without parsing those,
+# a course's curriculum entries fan out across every program that offers it and
+# one physical lab is written to `timetables` several times over.
+
+class TestSectionHeaderParsing:
+    @pytest.mark.parametrize("header,expected", [
+        ("MSc (IT) Core: SEMESTER III (2025 Batch)", ("MSc (IT)", 3)),
+        ("BTech Core: SEMESTER I (2026 Batch)", ("B Tech (Institute Core)", 1)),
+        ("BTech (EVD) Elective: SEMESTER VII (2023 Batch)", ("B Tech (EVD)", 7)),
+        ("BS-MS (DS & AI) Core: SEMESTER I (2026 Batch)", ("BS-MS (DS & AI)", 1)),
+    ])
+    def test_parses_well_formed_headers(self, header, expected):
+        assert seed_timetable._parse_section_header(header) == expected
+
+    @pytest.mark.parametrize("header,expected", [
+        # Real headers from the shipped workbook — typos and stray spacing included.
+        ("BTech (ICT &  CS) Elective: SEMESTER V (2024 Batch)", ("B Tech (ICT and CS)", 5)),
+        ("MSc (DS) Coe : SEMESTER III (2025 Batch)", ("MSc (DS)", 3)),
+        ("MTech (ICT , SS, ML, VES, WCSP )Elective: SEMESTER I (2026 Batch)", ("M Tech (ICT)", 1)),
+        ("BTech (ICT, ICT-CS) Elective (RAS minor): SEMESTER VII (2023 Batch)",
+         ("B Tech (ICT and ICT-CS)", 7)),
+    ])
+    def test_tolerates_the_workbook_as_it_actually_ships(self, header, expected):
+        assert seed_timetable._parse_section_header(header) == expected
+
+    def test_longest_key_wins(self):
+        """'BTech' is also a key; the more specific match must take precedence."""
+        program, _ = seed_timetable._parse_section_header("BTech (MnC) Core: SEMESTER III")
+        assert program == "B Tech (MnC)"
+
+    def test_unrecognised_header_is_reported_as_unknown(self):
+        assert seed_timetable._parse_section_header("Some New Programme: TERM 2") == (None, None)
+
+    def test_semester_alone_is_returned_without_a_program(self):
+        _, semester = seed_timetable._parse_section_header("Unknown Prog: SEMESTER IV")
+        assert semester == 4
+
+
+class TestCurriculumFiltering:
+    CORE = {"program": "MSc (IT)", "semester": 3, "course_name": "X", "course_type": "Core"}
+    OTHER_SEM = {"program": "MSc (IT)", "semester": 1, "course_name": "X", "course_type": "Core"}
+    OTHER_PROG = {"program": "B Tech (MnC)", "semester": 3, "course_name": "X", "course_type": "El"}
+    NO_SEM = {"program": "MSc (IT)", "semester": None, "course_name": "X", "course_type": "El"}
+
+    def test_exact_program_and_semester_wins(self):
+        got = seed_timetable._filter_meta(
+            [self.CORE, self.OTHER_SEM, self.OTHER_PROG], "MSc (IT)", 3)
+        assert got == [self.CORE]
+
+    def test_falls_back_to_program_when_semester_does_not_match(self):
+        """Electives are often listed without a semester."""
+        got = seed_timetable._filter_meta([self.NO_SEM, self.OTHER_PROG], "MSc (IT)", 3)
+        assert got == [self.NO_SEM]
+
+    def test_course_from_another_program_is_attributed_to_this_section(self):
+        """An elective run inside a BTech section belongs to that section, not
+        to every program that lists the course."""
+        got = seed_timetable._filter_meta([self.OTHER_PROG], "MSc (IT)", 3)
+
+        assert len(got) == 1
+        assert got[0]["program"] == "MSc (IT)"
+        assert got[0]["semester"] == 3
+        assert got[0]["course_name"] == "X"     # borrowed from the curriculum entry
+
+    def test_unparsed_header_leaves_entries_untouched(self):
+        """No section program means no basis to filter — keep prior behaviour."""
+        entries = [self.CORE, self.OTHER_PROG]
+        assert seed_timetable._filter_meta(entries, None, None) == entries
+
+    def test_empty_curriculum_stays_empty(self):
+        assert seed_timetable._filter_meta([], "MSc (IT)", 3) == []
+
+
+class TestDeduplication:
+    def test_same_session_listed_twice_is_emitted_once(self, monkeypatch):
+        """A lab can appear under two sections of the workbook (e.g. IE494 under
+        both SEMESTER V and SEMESTER VII of the same program). It happens once."""
+        curriculum = {"IE494": [
+            {"program": "B Tech (MnC)", "semester": None, "course_name": "Big Data", "course_type": "El"},
+            {"program": "B Tech (MnC)", "semester": 7, "course_name": "Big Data", "course_type": "El"},
+        ]}
+        records = parse(monkeypatch, [
+            row("BTech (MnC) Elective: SEMESTER V (2024 Batch)"),
+            row("12:00-13:00", monday="G1", room="LAB002", course="IE494", faculty="AC"),
+        ], curriculum=curriculum, abbrev_map=ABBREV)
+
+        assert len(records) == 1
+
+    def test_the_concrete_semester_is_kept(self, monkeypatch):
+        """Between a semester-less entry and a numbered one for the same
+        session, the numbered one is the more useful statement of the fact."""
+        curriculum = {"IE494": [
+            {"program": "B Tech (MnC)", "semester": None, "course_name": "Big Data", "course_type": "El"},
+            {"program": "B Tech (MnC)", "semester": 7, "course_name": "Big Data", "course_type": "El"},
+        ]}
+        records = parse(monkeypatch, [
+            row("BTech (MnC) Elective: SEMESTER V (2024 Batch)"),
+            row("12:00-13:00", monday="G1", room="LAB002", course="IE494", faculty="AC"),
+        ], curriculum=curriculum, abbrev_map=ABBREV)
+
+        assert records[0]["semester"] == "7"
+
+    def test_genuinely_distinct_sessions_are_preserved(self, monkeypatch):
+        """Two instructors, two rooms — four real rows, none collapsed."""
+        records = parse(monkeypatch, [
+            row("BTech (MnC) Core: SEMESTER III (2025 Batch)"),
+            row("12:00-13:00", monday="G1", room="LAB002 & LAB003", course="XX999", faculty="AC/NKS"),
+        ], abbrev_map=ABBREV)
+
+        assert len(records) == 4
+        assert len({(r["room"], r["faculty"]) for r in records}) == 4
+
+
 # ── Smoke test against the real workbook, when it is present ─────────────────
 
 def test_real_workbook_parses(monkeypatch):
