@@ -9,24 +9,25 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 | **Faculty** | An academic teaching/research member of DAU with a specialization and profile           | Professor, teacher, instructor       |
 | **Staff**   | A non-teaching DAU employee with an administrative designation (e.g. electrician, coordinator) | Employee, admin, personnel     |
 | **Scholar** | A Ph.D. student enrolled at DAU with a research area                                    | Doctoral scholar, Ph.D. student, researcher |
-| **User**    | An authenticated person holding an API Key, identified by their DAU email               | Client, account                      |
-| **Role**    | The access level assigned to a User at sign-in (Student, Faculty, Staff, or Admin)      | Permission, user type                |
-| **Privileged Role** | A Role (Faculty, Staff, Admin) that sees unredacted contact details             | Elevated user, admin role            |
+| **User**    | An authenticated person, identified by their verified DAU email — via a Google credential (Web Chat) or an API Key (MCP clients) | Client, account, key holder |
+| **Role**    | The access level derived from a User's email: Student, Faculty, Staff, Maintainer, or Student / Maintainer | Permission, user type |
 
 ## Access & security
 
 | Term           | Definition                                                                        | Aliases to avoid          |
 | -------------- | --------------------------------------------------------------------------------- | ------------------------- |
-| **API Key**    | A per-User bearer secret (`dau_sk_...`) stored hashed, with status and expiry     | Token, secret, credential |
-| **Redaction**  | Stripping phone numbers and office addresses from directory results for non-privileged Roles | Filtering, masking, sanitization |
-| **Rate Limit** | The per-key request ceiling enforced by the auth middleware                        | Throttle, quota           |
+| **API Key**    | A bearer secret (`dau_sk_...`) stored hashed, with status and expiry. Optional: a User only needs one to reach the MCP surface | Token, secret, credential |
+| **Credential** | The Google-issued ID token a Web Chat User signs in with; verified per request and restricted to `@dau.ac.in` / `@daiict.ac.in` | Token, login, session |
+| **Rate Limit** | The per-User request ceiling, keyed on the verified email and falling back to client IP when a request is unauthenticated | Throttle, quota |
 
 ## Scheduling
 
 | Term             | Definition                                                                        | Aliases to avoid            |
 | ---------------- | --------------------------------------------------------------------------------- | --------------------------- |
 | **Timetable**    | The weekly grid of teaching Slots for a Program and Semester                      | Schedule, routine           |
-| **Slot**         | One timetabled interval on a day: a Course, Faculty, room, and start/end time     | Session, period, class hour |
+| **Slot**         | One timetabled interval on a day: a Course, **one** Faculty, room, and start/end time. A co-taught session is several Slots, one per instructor, so each name stays searchable | Session, period, class hour |
+| **Short Name**   | A Faculty's initials as the timetable workbooks write them (`AC`); resolved at seeding time to the display form `Ankush Chander (AC)` so lecture and lab rows match one lookup | Abbreviation, code, initials |
+| **Section Header** | A row in the lab workbook naming the program and semester the rows beneath it belong to (`BTech (ICT and CS) Core: SEMESTER III (2025 Batch)`); parsed to attribute Slots to one Program | Group header, title row |
 | **Session Type** | The kind of Slot: Lecture, Lab, or Tutorial                                       | Class type, mode            |
 | **Free Slot**    | A gap in a Faculty's day (08:00–18:00) computed by inverting their busy Slots     | Free time, availability     |
 | **Program**      | A degree offering (e.g. BTech ICT) whose batches share a Timetable                | Course (never), degree, branch |
@@ -76,13 +77,14 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 
 ## Relationships
 
-- A **User** has exactly one **API Key** and exactly one **Role**.
+- A **User** has exactly one **Role**, and *at most* one **API Key** — Web Chat Users authenticate with a **Credential** and may never hold a key.
 - A **Program** has one **Timetable** per **Semester**; a **Timetable** is made of **Slots**.
 - A **Slot** links one **Course**, one **Faculty**, and one room at one time; a **Free Slot** is derived, never stored.
+- A **Short Name** identifies a **Faculty** inside the timetable workbooks only; it is resolved to the full display name before it reaches the database.
 - A **Document** belongs to one **Collection** and is split into many **Chunks**; search returns **Chunks**, citations point at their **Document** page.
 - The **Curriculum** places each **Course** in a **Program** and **Semester**.
 - **Sync** Tools and **Seeding** scripts both write datasets; only **Sync** is reachable through MCP, and neither is exposed to **Web Chat**.
-- The **Tool Bridge** re-exposes every non-excluded MCP **Tool** to **Web Chat**, applying **Redaction** based on the caller's **Role**.
+- The **Tool Bridge** re-exposes every non-excluded MCP **Tool** to **Web Chat** verbatim; it does not filter results by **Role**.
 
 ## Example dialogue
 
@@ -96,7 +98,7 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 >
 > **Dev:** "If the student asks for the professor's phone number?"
 >
-> **Domain expert:** "Their **Role** is Student, which isn't a **Privileged Role**, so **Redaction** strips phone and office from the directory result before it reaches the model."
+> **Domain expert:** "They get it. The directory's numbers are institute switchboard extensions and the addresses are campus office rooms — the same data daiict.ac.in publishes. **Role** gates *mutating* Tools, not contact details."
 >
 > **Dev:** "One more — is a Ph.D. student a **Scholar** or a **User**?"
 >
@@ -110,5 +112,13 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 - **"Dashboard"** — used for two different surfaces. Say **User Dashboard** (sign-in, key management) or **Maintainer Dashboard** (analytics); plain "dashboard" is ambiguous.
 - **"Scholar"** — the database table is `doctoral_scholars` but tools and docs say "scholar". A **Scholar** always means a Ph.D. scholar; it never means a student or academic generally.
 - **`biblionumber` vs Accession Number** — the `get_book_details(biblionumber)` tool parameter uses OPAC (Koha) terminology while the local table keys books by `acc_no` (**Accession Number**). Decide which identifier the tool actually accepts and name the parameter accordingly; today the mismatch invites wrong lookups.
-- **"User" Role default** — `api_keys.role` defaults to `'User'`, but the documented Roles are Student, Faculty, Staff, and Admin. `'User'` as a role value is a fifth, undocumented state; the default should probably be `'Student'` or the docs should acknowledge it.
+- **`'Admin'` is a Role nothing assigns** — `faculty_mcp_server.py` and `staff_mcp_server.py` gate the Sync Tools on `("Staff", "Faculty", "Admin")`, but `resolve_role` only ever returns Student, Faculty, Staff, Maintainer, or Student / Maintainer. `'Admin'` is dead in the gate, and Maintainers are *not* in it — so a Maintainer cannot trigger a Sync. Settle the vocabulary in one place.
+- **"Program" is not only programs** — `timetables.program` currently holds 21 distinct values including course categories (`General Elective (Technical)`, `Specialization Core`), raw **Section Headers** (`BTech Core: SEMESTER I (2026 Batch)`), four spellings of the same BTech branch, and 121 rows of `Unknown Program`. `list_programs` returns them verbatim, so the model is offered section headers as if a student could enrol in one. Tracked in issue #48; until it is settled, "Program" means different things in the glossary and in the column.
+- **Faculty name: Short Name vs display name** — the lecture workbook writes `Ankush Chander (AC)` while the lab workbook writes `AC`. Storing both forms in `faculty_name` made every faculty lookup miss that person's labs, and joining co-instructors into one cell then made their own name ambiguous against the compound value. One Slot, one instructor, one display form — never a **Short Name** and never a joined string.
 - **"Session"** — `session_type` in the timetable means Lecture/Lab/Tutorial (a property of a **Slot**), not an auth session or academic session (year). Prefer **Session Type** in full, never bare "session".
+
+## Retired terms
+
+Kept so that older code comments, commits and PRs remain readable.
+
+- **Redaction** / **Privileged Role** — until 2026-08-03, directory Tool results had phone numbers and office addresses stripped for non-privileged Roles. Removed: the numbers are institute switchboard extensions (`079-6826xxxx`) and the addresses are campus office rooms, both already public at daiict.ac.in, so there was nothing to withhold. Role still gates **Sync** Tools. If either term reappears in a diff, it is probably a bad merge — `tests/test_chat_guardrails.py` asserts the machinery stays gone.
