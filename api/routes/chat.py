@@ -267,11 +267,28 @@ def sanitize_history(history) -> list[ChatMessage]:
     return list(reversed(kept))
 
 
+import time
+from collections import defaultdict
+from fastapi import Depends
+
+_auth_ip_limits = defaultdict(list)
+
+def _check_ip_auth_limit(request: Request):
+    ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+    _auth_ip_limits[ip] = [t for t in _auth_ip_limits[ip] if now - t < 60]
+    if len(_auth_ip_limits[ip]) >= 60:
+        raise HTTPException(status_code=429, detail="Too many authentication attempts")
+    _auth_ip_limits[ip].append(now)
+
 def authenticate_request(request: Request) -> tuple[str, str]:
     """
-    Authenticate the request and return (email, role).
+    Authenticate the request and set request.state.email and request.state.role.
     Raises HTTPException(401) if missing or invalid credentials.
+    Raises HTTPException(429) if rate limited.
     """
+    _check_ip_auth_limit(request)
+    
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
@@ -287,17 +304,23 @@ def authenticate_request(request: Request) -> tuple[str, str]:
                     row = cursor.fetchone()
                     if row:
                         email = row[0]
-                        return email, resolve_role(email)
+                        role = resolve_role(email)
+                        request.state.email = email
+                        request.state.role = role
+                        return email, role
         except Exception:
             pass
         raise HTTPException(status_code=401, detail="Invalid API key")
     
     email = verify_google_token(raw_key)
-    return email, resolve_role(email)
+    role = resolve_role(email)
+    request.state.email = email
+    request.state.role = role
+    return email, role
 
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
-async def chat_endpoint(request: Request, body: ChatRequest):
+async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, str] = Depends(authenticate_request)):
     """
     Main conversational endpoint.
     Routes between sync triggers, library search, Gemini RAG, and the local NLP fallback engine.
@@ -306,9 +329,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         cleaned = body.message.strip().lower()
         history = sanitize_history(body.history)
 
-        email, role = authenticate_request(request)
-        request.state.email = email
-        request.state.role = role
+        email, role = auth
 
         try:
             with db_connection() as conn:
