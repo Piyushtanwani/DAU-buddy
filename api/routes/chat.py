@@ -1,7 +1,7 @@
 import os
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from core import config
 import hashlib
 from core.database import db_connection
@@ -267,19 +267,9 @@ def sanitize_history(history) -> list[ChatMessage]:
     return list(reversed(kept))
 
 
-import time
-from collections import defaultdict
-from fastapi import Depends
-
-_auth_ip_limits = defaultdict(list)
-
+@limiter.limit("60/minute")
 def _check_ip_auth_limit(request: Request):
-    ip = request.client.host if request.client else "127.0.0.1"
-    now = time.time()
-    _auth_ip_limits[ip] = [t for t in _auth_ip_limits[ip] if now - t < 60]
-    if len(_auth_ip_limits[ip]) >= 60:
-        raise HTTPException(status_code=429, detail="Too many authentication attempts")
-    _auth_ip_limits[ip].append(now)
+    pass
 
 def authenticate_request(request: Request) -> tuple[str, str]:
     """

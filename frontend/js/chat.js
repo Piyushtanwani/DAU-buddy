@@ -49,6 +49,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (error.status === 401) {
                 return "Your session has expired or is invalid. Please log in again.";
             }
+            if (error.status === 403) {
+                return "This Google account isn't eligible.\nDAU Buddy is limited to @dau.ac.in\nand @daiict.ac.in accounts.";
+            }
             if (error.status === 429) {
                 return "You're sending messages faster than I can handle. Please wait a moment and try again.";
             }

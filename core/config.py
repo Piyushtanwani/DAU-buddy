@@ -104,3 +104,10 @@ def get_feedback_recipient_emails() -> list[str]:
     """Return a list of feedback recipient emails."""
     emails = os.getenv("FEEDBACK_RECIPIENT_EMAILS", "")
     return [e.strip() for e in emails.split(",") if e.strip()]
+
+# ==============================================================================
+# Authentication Configuration
+# ==============================================================================
+def get_google_client_id() -> str:
+    """Return the Google Client ID for OAuth verification."""
+    return os.getenv("GOOGLE_CLIENT_ID", "")

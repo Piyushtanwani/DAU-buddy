@@ -8,7 +8,7 @@ from core.database import db_connection
 
 logger = config.get_logger("api.auth")
 
-CLIENT_ID = "590260573365-9151v4jkovetn7rhml7vhtfs5c0or2em.apps.googleusercontent.com"
+CLIENT_ID = config.get_google_client_id()
 global_session = requests.Session()
 cached_google_request = google_requests.Request(session=global_session)
 

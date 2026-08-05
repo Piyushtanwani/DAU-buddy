@@ -128,7 +128,7 @@ class TestScopeGuardrails:
 import contextlib
 from fastapi.testclient import TestClient
 from api.main import create_app
-from api.routes.chat import _auth_ip_limits
+from core.rate_limit import limiter
 
 app = create_app()
 client = TestClient(app)
@@ -136,7 +136,7 @@ client = TestClient(app)
 class TestChatAuthentication:
     @pytest.fixture(autouse=True)
     def reset_limits(self):
-        _auth_ip_limits.clear()
+        limiter.reset()
 
     def test_no_auth_header(self):
         response = client.post("/api/chat", json={"message": "hello", "history": []})

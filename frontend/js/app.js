@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 regenerateBtn.disabled = true;
                 regenerateBtn.textContent = "Generating...";
             }
-            
+
             if (!credential) {
                 alert("Error: Missing Google credential in frontend. Please login again.");
                 return;
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 const data = await response.json();
                 const key = data.api_key;
-                
+
                 // Show modal with new key
                 const newKeyModal = document.getElementById("new-key-modal");
                 const newKeyInput = document.getElementById("new-key-input");
@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     newKeyInput.value = key;
                     newKeyModal.style.display = "flex";
                 }
-                
+
                 // Mask the key on main UI
                 const maskedKey = (data.key_prefix || key.substring(0, 14)) + "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
                 setApiKeyValue(maskedKey);
@@ -283,10 +283,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (loginOverlay) if (loginOverlay) loginOverlay.style.opacity = "0";
             if (loginOverlay) if (loginOverlay) loginOverlay.style.display = "none";
-            
-          setTimeout(() => {
-            window.location.href = "/chat";
-        }, 1500);
+
+            setTimeout(() => {
+                window.location.href = "/chat";
+            }, 1500);
         }
 
         let displayName = name || "User";
@@ -429,7 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Valid session exists, configure UI
                 showWelcomeScreen(authData.name, authData.email, authData.picture, authData.credential, authData.api_key, false);
-                
+
                 // Update landing page buttons to indicate they lead to the dashboard
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnDocsLogin = document.getElementById("docs-login-btn");
@@ -437,14 +437,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (btnSignIn) {
                     btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnSignIn.className = 'nav-docs-btn';
-                    btnSignIn.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    btnSignIn.onclick = function (e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnDocsLogin) {
                     btnDocsLogin.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnDocsLogin.className = 'nav-docs-btn';
                     btnDocsLogin.style.display = 'inline-block';
-                    btnDocsLogin.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    btnDocsLogin.onclick = function (e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -475,7 +475,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     credential: response.credential
                 }));
                 if (currentLoginError) currentLoginError.style.display = "none";
-                
+
                 // Update landing page buttons immediately
                 const btnSignIn = document.getElementById("nav-signin-btn");
                 const btnDocsLogin = document.getElementById("docs-login-btn");
@@ -483,14 +483,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (btnSignIn) {
                     btnSignIn.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnSignIn.className = 'nav-docs-btn';
-                    btnSignIn.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    btnSignIn.onclick = function (e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnDocsLogin) {
                     btnDocsLogin.innerHTML = '<i class="fa-solid fa-code"></i> Dashboard';
                     btnDocsLogin.className = 'nav-docs-btn';
                     btnDocsLogin.style.display = 'inline-block';
-                    btnDocsLogin.onclick = function(e) { e.preventDefault(); window.location.href = '/api-keys'; };
+                    btnDocsLogin.onclick = function (e) { e.preventDefault(); window.location.href = '/api-keys'; };
                     if (landingProfileContainer) landingProfileContainer.style.display = "block";
                 }
                 if (btnGetStarted) btnGetStarted.textContent = "Go to Dashboard";
@@ -522,7 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-        // Logout handling
+    // Logout handling
     const handleLogout = () => {
         localStorage.removeItem("dau_buddy_auth");
         localStorage.removeItem("dau_buddy_view");
@@ -658,7 +658,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyNewKeyBtn = document.getElementById("copy-new-key-btn");
     const closeNewKeyModal = document.getElementById("close-new-key-modal");
     const doneNewKeyBtn = document.getElementById("done-new-key-btn");
-    
+
     function closeKeyModal() {
         if (newKeyModal) {
             newKeyModal.style.display = "none";
@@ -671,7 +671,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (closeNewKeyModal) closeNewKeyModal.addEventListener("click", closeKeyModal);
     if (doneNewKeyBtn) doneNewKeyBtn.addEventListener("click", closeKeyModal);
-    
+
     if (copyNewKeyBtn && newKeyInput) {
         if (copyNewKeyBtn) copyNewKeyBtn.addEventListener("click", () => {
             if (newKeyInput.value) {
@@ -697,7 +697,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 profileDropdown.style.display = "flex";
             }
         });
-        
+
         // Close dropdown when clicking outside
         document.addEventListener("click", (e) => {
             if (!profileContainer.contains(e.target)) {
@@ -724,7 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 landingProfileDropdown.style.display = "flex";
             }
         });
-        
+
         // Close dropdown when clicking outside
         document.addEventListener("click", (e) => {
             if (landingProfileContainer && !landingProfileContainer.contains(e.target)) {
@@ -739,8 +739,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 landingProfileDropdown.style.display = "none";
             });
         }
-        
-        
+
+
     }
 });
 
