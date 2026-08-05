@@ -91,29 +91,28 @@ class TestHistorySanitization:
         assert sanitize_history([]) == []
 
 
-class TestContactDetailsRedaction:
-    """Directory phone numbers and addresses should be withheld for unprivileged roles."""
+class TestContactDetailsAreNotRedacted:
+    """Directory phone numbers are institute switchboard extensions
+    (079-6826xxxx) and addresses are campus office rooms — public information.
+    Role-based redaction was removed; these tests stop it reappearing by
+    accident, and stop the prompt describing a filter that no longer exists."""
 
-    def test_dispatch_redacts_for_unprivileged(self, monkeypatch):
+    def test_dispatch_does_not_rewrite_tool_output(self, monkeypatch):
+        """Phone and office must reach the model exactly as the tool wrote them."""
         payload = "Name: A Prof\nPhone: 079-68261598\nOffice: # 3208, FB-3, DAU"
         monkeypatch.setattr(tool_bridge, "_mcp", lambda: MagicMock())
         monkeypatch.setattr(tool_bridge, "_run_async", lambda _coro: payload)
 
-        from api.context import user_role_var
-        
-        # Test student role
-        user_role_var.set("Student")
-        redacted = tool_bridge.dispatch("get_faculty_details", {"name": "A Prof"})
-        assert "079-68261598" not in redacted
-        assert "# 3208, FB-3" not in redacted
-        assert "withheld" in redacted.lower()
+        assert tool_bridge.dispatch("get_faculty_details", {"name": "A Prof"}) == payload
 
-        # Test privileged role
-        user_role_var.set("Faculty")
-        unredacted = tool_bridge.dispatch("get_faculty_details", {"name": "A Prof"})
-        assert "079-68261598" in unredacted
-        assert "# 3208, FB-3" in unredacted
-        assert "withheld" not in unredacted.lower()
+    def test_no_redaction_machinery_remains(self):
+        for gone in ("_redact", "REDACTED", "DIRECTORY_TOOLS", "PRIVILEGED_ROLES"):
+            assert not hasattr(tool_bridge, gone), f"{gone} is back — was that intended?"
+
+    def test_prompt_does_not_promise_a_filter(self):
+        prompt = gemini.SYSTEM_INSTRUCTIONS_TEMPLATE
+        assert "withheld" not in prompt.lower()
+        assert "CONTACT DETAILS" in prompt
 
     def test_mutating_tools_are_still_blocked_in_chat(self):
         """Removing contact redaction must not open up the sync tools."""

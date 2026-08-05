@@ -6,11 +6,13 @@ entrypoint directly from the unified FastMCP server's tool registry. Web chat
 (Gemini/OpenAI) therefore always exposes exactly what the MCP server exposes —
 no hand-maintained declaration lists, no drift between the two surfaces.
 
-Role gates *mutating* tools: sync_* remain MCP-only (EXCLUDED_TOOLS
-below) and the MCP servers check user_role_var before running a scrape.
+Directory tools return contact details to every caller. The listed phone
+numbers are institute switchboard extensions (079-6826xxxx) and the addresses
+are campus office rooms — the same information the public directory at
+daiict.ac.in publishes — so there is nothing here to withhold by role.
 
-Role also gates *contact details* returned by directory tools. Unprivileged
-users see redacted phone numbers and office addresses.
+Role still gates *mutating* tools: sync_* remain MCP-only (EXCLUDED_TOOLS
+below) and the MCP servers check user_role_var before running a scrape.
 """
 import copy
 import asyncio
@@ -28,26 +30,6 @@ EXCLUDED_TOOLS = {
     "sync_scholar_data",
     "sync_academic_documents",
 }
-
-PRIVILEGED_ROLES = ("Faculty", "Staff", "Maintainer", "Student / Maintainer")
-
-DIRECTORY_TOOLS = {
-    "get_faculty_details",
-    "get_staff_details",
-    "search_faculty",
-    "search_staff",
-    "list_faculty",
-    "list_staff",
-}
-
-def _redact(text: str) -> str:
-    import re
-    text = re.sub(r"(?im)^Phone:\s*.*$", "Phone: [withheld: visible to faculty and staff only]", text)
-    text = re.sub(r"(?im)^Office:\s*.*$", "Office: [withheld: visible to faculty and staff only]", text)
-    # Also redact if it's formatted as "Email: ..." just in case, wait, issue only says "contact details" and test had Phone and Office. 
-    # The acceptance criteria doesn't explicitly mention email, but contact details typically include it.
-    # The original test check had Name, Phone, Office.
-    return text
 
 
 def _mcp():
@@ -135,13 +117,4 @@ def dispatch(name: str, arguments: Dict[str, Any]) -> str:
     except Exception as e:
         logger.error(f"Bridge dispatch failed for {name}: {e}")
         return f"Tool '{name}' failed: check the arguments and try again."
-        
-    result_str = result if isinstance(result, str) else str(result)
-    
-    if name in DIRECTORY_TOOLS:
-        from api.context import user_role_var
-        role = user_role_var.get("Student")
-        if role not in PRIVILEGED_ROLES:
-            result_str = _redact(result_str)
-            
-    return result_str
+    return result if isinstance(result, str) else str(result)
