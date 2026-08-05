@@ -744,3 +744,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// Share CTA (landing hero + chat header). Kept in its own listener so it stays
+// independent of the large handler above, and inert on pages with no share button.
+document.addEventListener("DOMContentLoaded", () => {
+    const shareButtons = document.querySelectorAll("[data-share]");
+    if (!shareButtons.length) return;
+
+    const SHARE_TITLE = "DAU Buddy";
+    const SHARE_TEXT = "Try DAU Buddy — ask it about faculty, timetables, holidays, library books and academic rules at DAU:";
+    const shareUrl = `${window.location.origin}/?ref=share`;
+
+    const openWhatsAppShare = () => {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(`${SHARE_TEXT} ${shareUrl}`)}`;
+        window.open(waUrl, "_blank", "noopener");
+    };
+
+    shareButtons.forEach((shareBtn) => {
+        shareBtn.addEventListener("click", async () => {
+            if (typeof navigator.share !== "function") {
+                openWhatsAppShare();
+                return;
+            }
+            try {
+                // Awaited first thing in the handler so the click keeps its user-activation.
+                await navigator.share({ title: SHARE_TITLE, text: SHARE_TEXT, url: shareUrl });
+            } catch (err) {
+                // User dismissed the native share sheet — not an error, do nothing.
+                if (err && err.name === "AbortError") return;
+                openWhatsAppShare();
+            }
+        });
+    });
+});
+
