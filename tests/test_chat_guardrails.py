@@ -124,3 +124,92 @@ class TestScopeGuardrails:
     @pytest.mark.parametrize("clause", ["SCOPE", "INSTRUCTION HANDLING", "out of scope"])
     def test_prompt_declares_scope_and_injection_rules(self, clause):
         assert clause in gemini.SYSTEM_INSTRUCTIONS_TEMPLATE
+
+import contextlib
+from fastapi.testclient import TestClient
+from api.main import create_app
+from core.rate_limit import limiter
+
+app = create_app()
+client = TestClient(app)
+
+class TestChatAuthentication:
+    @pytest.fixture(autouse=True)
+    def reset_limits(self):
+        limiter.reset()
+
+    def test_no_auth_header(self):
+        response = client.post("/api/chat", json={"message": "hello", "history": []})
+        assert response.status_code == 401
+
+    def test_invalid_api_key(self, monkeypatch):
+        mock_conn = MagicMock()
+        mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
+        mock_cursor.fetchone.return_value = None
+        
+        @contextlib.contextmanager
+        def mock_db():
+            yield mock_conn
+            
+        monkeypatch.setattr("api.routes.chat.db_connection", mock_db)
+        response = client.post("/api/chat", headers={"Authorization": "Bearer dau_sk_invalid"}, json={"message": "hello", "history": []})
+        assert response.status_code == 401
+        
+    def test_invalid_google_token(self, monkeypatch):
+        monkeypatch.setattr("api.auth.id_token.verify_oauth2_token", MagicMock(side_effect=ValueError("Invalid Token")))
+        response = client.post("/api/chat", headers={"Authorization": "Bearer some.google.jwt"}, json={"message": "hello", "history": []})
+        assert response.status_code == 401
+        
+    def test_non_dau_domain(self, monkeypatch):
+        # Mock id_token.verify_oauth2_token to return a gmail address
+        monkeypatch.setattr("api.auth.id_token.verify_oauth2_token", lambda *args, **kwargs: {"email": "user@gmail.com"})
+        response = client.post("/api/chat", headers={"Authorization": "Bearer some.google.jwt"}, json={"message": "hello", "history": []})
+        assert response.status_code == 403
+        
+    def test_valid_api_key(self, monkeypatch):
+        # Mock DB to return a valid email
+        mock_conn = MagicMock()
+        mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
+        mock_cursor.fetchone.return_value = ("prof@dau.ac.in",)
+        
+        @contextlib.contextmanager
+        def mock_db():
+            yield mock_conn
+            
+        monkeypatch.setattr("api.routes.chat.db_connection", mock_db)
+        
+        mock_resolve = MagicMock(return_value="Faculty")
+        monkeypatch.setattr("api.routes.chat.resolve_role", mock_resolve)
+        
+        # We also need to mock the RAG logic so it doesn't actually call AI, just returns a quick response
+        monkeypatch.setattr("api.routes.chat._run_blocking", MagicMock(return_value="AI Response"))
+        # We must also mock the analytics DB insertion in chat_endpoint so it doesn't fail
+        monkeypatch.setattr("api.routes.chat.db_connection", mock_db) # DB is already mocked
+        
+        response = client.post("/api/chat", headers={"Authorization": "Bearer dau_sk_valid"}, json={"message": "hello", "history": []})
+        assert response.status_code == 200
+        mock_resolve.assert_called_with("prof@dau.ac.in")
+
+    def test_auth_or_ip(self):
+        from core.rate_limit import auth_or_ip
+        from fastapi import Request
+        
+        req = MagicMock(spec=Request)
+        req.state.email = "test@dau.ac.in"
+        assert auth_or_ip(req) == "test@dau.ac.in"
+        
+        req2 = MagicMock(spec=Request)
+        req2.state.email = None
+        req2.client = MagicMock()
+        req2.client.host = "1.2.3.4"
+        req2.headers = {}
+        assert auth_or_ip(req2) == "1.2.3.4"
+        
+    def test_ip_backstop_limit(self):
+        # 60 requests should pass, the 61st should fail
+        for _ in range(60):
+            res = client.post("/api/chat", json={"message": "spam"})
+            assert res.status_code == 401
+        
+        res = client.post("/api/chat", json={"message": "spam"})
+        assert res.status_code == 429

@@ -1,7 +1,7 @@
 import os
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException, Depends
 from core import config
 import hashlib
 from core.database import db_connection
@@ -21,6 +21,7 @@ from api.services import (
 from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
 )
+from api.auth import verify_google_token, resolve_role
 from api.context import user_role_var
 from api.services.library_service import LibraryService
 
@@ -266,27 +267,50 @@ def sanitize_history(history) -> list[ChatMessage]:
     return list(reversed(kept))
 
 
-def get_role_from_request(request: Request) -> str:
+@limiter.limit("60/minute")
+def _check_ip_auth_limit(request: Request):
+    pass
+
+def authenticate_request(request: Request) -> tuple[str, str]:
+    """
+    Authenticate the request and set request.state.email and request.state.role.
+    Raises HTTPException(401) if missing or invalid credentials.
+    Raises HTTPException(429) if rate limited.
+    """
+    _check_ip_auth_limit(request)
+    
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Bearer "):
-        return "Student"
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     
     raw_key = auth.split(" ", 1)[1].strip()
-    hashed_k = hashlib.sha256(raw_key.encode()).hexdigest()
-    try:
-        with db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT role FROM api_keys WHERE hashed_key = %s AND status = 'Active'", (hashed_k,))
-                row = cursor.fetchone()
-                if row:
-                    return row[0]
-    except Exception:
-        pass
-    return "Student"
+    
+    if raw_key.startswith("dau_sk_"):
+        hashed_k = hashlib.sha256(raw_key.encode()).hexdigest()
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT email FROM api_keys WHERE hashed_key = %s AND status = 'Active'", (hashed_k,))
+                    row = cursor.fetchone()
+                    if row:
+                        email = row[0]
+                        role = resolve_role(email)
+                        request.state.email = email
+                        request.state.role = role
+                        return email, role
+        except Exception:
+            pass
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    email = verify_google_token(raw_key)
+    role = resolve_role(email)
+    request.state.email = email
+    request.state.role = role
+    return email, role
 
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
-async def chat_endpoint(request: Request, body: ChatRequest):
+async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, str] = Depends(authenticate_request)):
     """
     Main conversational endpoint.
     Routes between sync triggers, library search, Gemini RAG, and the local NLP fallback engine.
@@ -295,16 +319,17 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         cleaned = body.message.strip().lower()
         history = sanitize_history(body.history)
 
-        if getattr(body, "user_email", None):
-            try:
-                with db_connection() as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute(
-                            "INSERT INTO mcp_analytics (tool_name, user_email, client_name) VALUES (%s, %s, %s)",
-                            ('Web Chat', body.user_email, 'DAU Web Chat')
-                        )
-            except Exception as e:
-                logger.error(f"Failed to log web chat analytics: {e}")
+        email, role = auth
+
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO mcp_analytics (tool_name, user_email, client_name) VALUES (%s, %s, %s)",
+                        ('Web Chat', email, 'DAU Web Chat')
+                    )
+        except Exception as e:
+            logger.error(f"Failed to log web chat analytics: {e}")
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
         gemini_available = bool(os.getenv("GEMINI_API_KEY") and is_gemini_available())
@@ -402,7 +427,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             # reaches it through the bridged directory tools. The user's role is
             # published via contextvar so tool dispatch can redact contact
             # details for non-privileged users.
-            user_role_var.set(get_role_from_request(request))
+            user_role_var.set(request.state.role)
 
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
                 current_day=datetime.now().strftime("%A"),
@@ -455,6 +480,9 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             return ChatResponse(response=await handle_library_fallback(_extract_book_query(body.message)))
         return ChatResponse(response=await _run_blocking(process_fallback_message, body.message))
 
+    except HTTPException:
+        # Re-raise HTTPExceptions so FastAPI can return the correct status code (e.g. 401)
+        raise
     except asyncio.TimeoutError:
         # A blocking stage blew its deadline. Answer the client rather than
         # letting the connection hang until the proxy resets it — a reset is

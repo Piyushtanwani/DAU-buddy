@@ -14,15 +14,7 @@ from core import config
 from core.database import db_connection
 from api.routes import router as api_router
 from dau_mcp.unified_mcp_server import mcp
-
-# Google Auth
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-import google.auth.exceptions
-import requests
-
-global_session = requests.Session()
-cached_google_request = google_requests.Request(session=global_session)
+from api.auth import verify_google_token, resolve_role
 
 oauth_codes = {}
 
@@ -62,21 +54,6 @@ def hash_key(key: str) -> str:
 def split_key(raw_key: str) -> tuple[str, str]:
     prefix = raw_key[:14]
     return prefix, hash_key(raw_key)
-
-def verify_google_token(credential: str) -> str:
-    try:
-        idinfo = id_token.verify_oauth2_token(credential, cached_google_request, CLIENT_ID, clock_skew_in_seconds=300)
-        email = idinfo['email']
-        # Domain check bypassed for testing
-        # if not (email.endswith("@dau.ac.in") or email.endswith("@daiict.ac.in")):
-        #     raise HTTPException(status_code=403, detail="Invalid domain")
-        return email
-    except ValueError as e:
-        logger.error(f"Google Token Verification Error (ValueError): {e}")
-        raise HTTPException(status_code=401, detail="Invalid Google token")
-    except google.auth.exceptions.TransportError as e:
-        logger.error(f"Google Token Verification Error (TransportError): {e}")
-        raise HTTPException(status_code=503, detail="Failed to connect to Google authentication servers. Please try again.")
 
 def create_app() -> FastAPI:
     logger.info("Starting DA-IICT Faculty & Staff AI Buddy (Production)...")
@@ -142,28 +119,15 @@ def create_app() -> FastAPI:
                     row = cursor.fetchone()
                     if row:
                         role = row[3]
+                        # Fix up role for maintainers here if it's outdated in DB, or let it be.
+                        # Since we rely on resolve_role, we might want to just update it or return what's in DB.
+                        # The original code did an explicit check here.
                         if email in config.get_feedback_recipient_emails():
                             local_part = email.split('@')[0]
                             role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
                         return {"has_key": True, "status": row[0], "created_at": row[1], "last_used": row[2], "role": role, "key_prefix": row[4]}
                     
-                    assigned_role = 'User'
-                    if email in config.get_feedback_recipient_emails():
-                        local_part = email.split('@')[0]
-                        assigned_role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
-                    else:
-                        local_part = email.split('@')[0]
-                        if local_part.isdigit():
-                            assigned_role = 'Student'
-                        else:
-                            cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
-                            if cursor.fetchone():
-                                assigned_role = 'Faculty'
-                            else:
-                                cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
-                                if cursor.fetchone():
-                                    assigned_role = 'Staff'
-                                    
+                    assigned_role = resolve_role(email)
                     return {"has_key": False, "role": assigned_role}
         except Exception as e:
             logger.error(f"DB Error: {e}")
@@ -173,28 +137,7 @@ def create_app() -> FastAPI:
     @limiter.limit("5/minute")
     def generate_api_key(request: Request, req: KeyRequest):
         email = verify_google_token(req.credential)
-        
-        assigned_role = 'User'
-        if email in config.get_feedback_recipient_emails():
-            local_part = email.split('@')[0]
-            assigned_role = 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
-        else:
-            local_part = email.split('@')[0]
-            if local_part.isdigit():
-                assigned_role = 'Student'
-            else:
-                try:
-                    with db_connection() as conn:
-                        with conn.cursor() as cursor:
-                            cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
-                            if cursor.fetchone():
-                                assigned_role = 'Faculty'
-                            else:
-                                cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
-                                if cursor.fetchone():
-                                    assigned_role = 'Staff'
-                except Exception as e:
-                    logger.error(f"Error checking directories for role assignment: {e}")
+        assigned_role = resolve_role(email)
 
         raw_key = f"dau_sk_{secrets.token_hex(16)}"
         key_prefix, hashed_k = split_key(raw_key)

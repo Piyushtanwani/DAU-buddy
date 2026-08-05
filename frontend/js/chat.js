@@ -46,6 +46,12 @@ document.addEventListener("DOMContentLoaded", () => {
             return "That request took too long and I stopped waiting. Please try again, or ask a narrower question.";
         }
         if (error instanceof HttpError) {
+            if (error.status === 401) {
+                return "Your session has expired or is invalid. Please log in again.";
+            }
+            if (error.status === 403) {
+                return "This Google account isn't eligible.\nDAU Buddy is limited to @dau.ac.in\nand @daiict.ac.in accounts.";
+            }
             if (error.status === 429) {
                 return "You're sending messages faster than I can handle. Please wait a moment and try again.";
             }
@@ -377,13 +383,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 3. Perform Server API Call
         try {
-            let userEmail = null;
-            try {
-                const authData = JSON.parse(localStorage.getItem("dau_buddy_auth"));
-                if (authData && authData.email) {
-                    userEmail = authData.email;
-                }
-            } catch (e) { }
+            // We know authData and authData.credential exist from earlier check
+            const currentAuthData = JSON.parse(localStorage.getItem("dau_buddy_auth"));
 
             // Abort client-side before the server's own deadline, so a stalled
             // request fails cleanly instead of hanging until the connection is reset.
@@ -395,13 +396,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 response = await fetch("/api/chat", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${currentAuthData.credential}`
                     },
                     body: JSON.stringify({
                         message: text,
                         // Only the last few turns are sent; the server caps this again.
-                        history: activeSession.messages.slice(-HISTORY_TURNS_SENT),
-                        user_email: userEmail
+                        history: activeSession.messages.slice(-HISTORY_TURNS_SENT)
                     }),
                     signal: controller.signal
                 });
@@ -427,6 +428,14 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             typingIndicator.remove();
             setInputState(true);
+
+            if (error instanceof HttpError && error.status === 401) {
+                if (window.openLoginModal) {
+                    window.openLoginModal();
+                } else {
+                    window.location.href = '/?view=login';
+                }
+            }
 
             const errorMsg = `⚠️ ${describeChatError(error)}`;
             activeSession.messages.push({ sender: "ai", text: errorMsg });

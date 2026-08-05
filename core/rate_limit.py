@@ -8,5 +8,12 @@ back from `api.main`.
 """
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from fastapi import Request
 
-limiter = Limiter(key_func=get_remote_address)
+def auth_or_ip(request: Request) -> str:
+    """Use the verified email if authentication succeeded, fallback to IP."""
+    if hasattr(request.state, "email") and request.state.email:
+        return request.state.email
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=auth_or_ip)

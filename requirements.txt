@@ -16,6 +16,7 @@ pandas>=2.0.0
 openpyxl>=3.1.0
 PyYAML>=6.0.1
 google-auth
+google-genai>=2.7.0
 slowapi
 node
 npx

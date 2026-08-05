@@ -27,7 +27,6 @@ class ChatRequest(BaseModel):
     """Validated payload for incoming /api/chat requests."""
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_CHARS)
     history: Optional[List[ChatMessage]] = None
-    user_email: Optional[str] = Field(default=None, max_length=254)
 
 
 class ChatResponse(BaseModel):
