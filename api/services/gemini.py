@@ -404,62 +404,101 @@ def _extract_function_calls(response) -> list:
     return calls
 
 
+def _extract_function_calls_genai(response) -> list:
+    """Return every function_call part from a google.genai response (may be >1)."""
+    calls = []
+    try:
+        candidates = response.candidates or []
+        if not candidates:
+            return calls
+        content = candidates[0].content
+        if not content or not content.parts:
+            return calls
+        for part in content.parts:
+            fc = part.function_call
+            if fc and fc.name:
+                calls.append(fc)
+    except (AttributeError, IndexError, ValueError) as e:
+        logger.warning(f"Could not read function calls off the Gemini response: {e}")
+    return calls
+
 def call_gemini_api(
     api_key: str,
     system_instruction: str,
     history: Optional[List[ChatMessage]] = None,
 ) -> Tuple[str, Dict[str, int]]:
     """
-    Call the native Google Gemini API using google-generativeai, with tool support.
+    Call the Google Gemini API using the google-genai SDK, with tool support.
     Returns a tuple of (response_text, usage_metadata_dict).
     """
     import os
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
     gemini_key = os.getenv("GEMINI_API_KEY")
     if not gemini_key:
         raise ValueError("GEMINI_API_KEY is missing. Cannot use native Gemini API.")
-    
-    genai.configure(api_key=gemini_key)
-    
+
+    client = genai.Client(api_key=gemini_key)
+
     # Tool surface derived from the unified MCP server (single source of truth).
-    all_tools = tool_bridge.gemini_tool_config()
-    
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=system_instruction,
-        tools=all_tools,
-        generation_config={"temperature": 0.3, "max_output_tokens": 1200}
-    )
-    
-    # Format history
-    formatted_history = []
+    # tool_bridge.list_tools() returns [{name, description, parameters}, ...]
+    # Convert to google.genai FunctionDeclaration format.
+    raw_tools = tool_bridge.list_tools()
+    func_decls = []
+    for t in raw_tools:
+        params = t.get("parameters", {})
+        func_decls.append(types.FunctionDeclaration(
+            name=t["name"],
+            description=t.get("description", t["name"]),
+            parameters=params if params.get("properties") else None,
+        ))
+    tools = [types.Tool(function_declarations=func_decls)]
+
+    # Build conversation contents from history
+    contents = []
     latest_msg = "Hello"
-    
+
     if history:
         for i, msg in enumerate(history):
             if not msg.text or not msg.text.strip():
                 continue
-            
-            # The last message from user must be sent via send_message
+            # The last message from user is the current turn
             if i == len(history) - 1 and msg.sender == "user":
                 latest_msg = msg.text
                 break
-                
             role = "user" if msg.sender == "user" else "model"
-            # Ensure model parts are correctly formatted, especially if they came from history
-            formatted_history.append({"role": role, "parts": [msg.text]})
-    
+            contents.append(types.Content(
+                role=role,
+                parts=[types.Part.from_text(text=msg.text)],
+            ))
+
+    # Add the current user message
+    contents.append(types.Content(
+        role="user",
+        parts=[types.Part.from_text(text=latest_msg)],
+    ))
+
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        tools=tools,
+        temperature=0.3,
+        max_output_tokens=1200,
+    )
+
     try:
-        chat = model.start_chat(history=formatted_history)
-        response = chat.send_message(latest_msg, request_options=_REQUEST_OPTIONS)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+            config=config,
+        )
 
         # ── Tool calling loop ─────────────────────────────────────────────────
         # Bounded: an unbounded loop here can spin forever on a model that keeps
         # re-requesting tools, holding the request (and, before the threading
         # fix in the route, the whole server) open indefinitely.
         for turn in range(MAX_TOOL_TURNS):
-            calls = _extract_function_calls(response)
+            calls = _extract_function_calls_genai(response)
             if not calls:
                 break
 
@@ -468,19 +507,19 @@ def call_gemini_api(
             # API requires exactly one function_response part per call — replying
             # to only the first one makes the next request invalid, which the
             # model answers with the same calls again: an infinite loop.
-            parts = []
+            fn_response_parts = []
             for fc in calls:
-                args = {k: v for k, v in fc.args.items()} if hasattr(fc, "args") else {}
+                args = dict(fc.args) if fc.args else {}
                 logger.info(f"Gemini requested tool call: {fc.name}({args})")
                 tool_result = tool_bridge.dispatch(fc.name, args)
-                
+
                 try:
                     # Some tools might return dicts directly or JSON strings
                     if isinstance(tool_result, str):
                         parsed_result = json.loads(tool_result)
                     else:
                         parsed_result = tool_result
-                        
+
                     if isinstance(parsed_result, list):
                         response_dict = {"result": parsed_result}
                     elif isinstance(parsed_result, dict):
@@ -490,18 +529,28 @@ def call_gemini_api(
                 except (json.JSONDecodeError, TypeError):
                     response_dict = {"result": str(tool_result)}
 
-                parts.append(genai.protos.Part(
-                    function_response=genai.protos.FunctionResponse(
-                        name=fc.name,
-                        response=response_dict,
-                    )
+                fn_response_parts.append(types.Part.from_function_response(
+                    name=fc.name,
+                    response=response_dict,
                 ))
 
-            logger.info(f"Returning {len(parts)} tool result(s) to Gemini (turn {turn + 1}/{MAX_TOOL_TURNS})...")
-            response = chat.send_message(parts, request_options=_REQUEST_OPTIONS)
+            logger.info(f"Returning {len(fn_response_parts)} tool result(s) to Gemini (turn {turn + 1}/{MAX_TOOL_TURNS})...")
+
+            # Rebuild contents: original + model's function_call turn + our function_response turn
+            contents.append(response.candidates[0].content)
+            contents.append(types.Content(
+                role="user",
+                parts=fn_response_parts,
+            ))
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=contents,
+                config=config,
+            )
         else:
             # Loop exhausted without the model settling on an answer.
-            if _extract_function_calls(response):
+            if _extract_function_calls_genai(response):
                 logger.warning(
                     f"Gemini still requesting tools after {MAX_TOOL_TURNS} turns — "
                     "returning a best-effort reply."
@@ -513,22 +562,29 @@ def call_gemini_api(
 
         usage = response.usage_metadata
         usage_dict = {
-            "prompt_token_count": usage.prompt_token_count,
-            "candidates_token_count": usage.candidates_token_count,
-            "total_token_count": usage.total_token_count
+            "prompt_token_count": getattr(usage, "prompt_token_count", 0) or 0,
+            "candidates_token_count": getattr(usage, "candidates_token_count", 0) or 0,
+            "total_token_count": getattr(usage, "total_token_count", 0) or 0,
         } if usage else {}
 
+        # Extract text from the response
+        out_text = None
         try:
-            out_text = response.text
-        except ValueError:
+            # The new SDK's .text may warn when function_call parts are present
+            # but should still work for text-only final responses.
+            if response.candidates and response.candidates[0].content:
+                for part in response.candidates[0].content.parts:
+                    if part.text:
+                        out_text = part.text
+                        break
+        except Exception:
+            pass
+
+        if not out_text:
             out_text = "I checked the system, but there is no additional information to provide right now."
-            if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-                try:
-                    out_text = response.candidates[0].content.parts[0].text
-                except Exception:
-                    pass
 
         return out_text, usage_dict
     except Exception as e:
         logger.error(f"Native Gemini API Error: {e}")
         raise e
+
