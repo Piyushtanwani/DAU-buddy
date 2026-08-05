@@ -447,6 +447,7 @@ def call_gemini_api(
                 break
                 
             role = "user" if msg.sender == "user" else "model"
+            # Ensure model parts are correctly formatted, especially if they came from history
             formatted_history.append({"role": role, "parts": [msg.text]})
     
     try:
@@ -472,10 +473,27 @@ def call_gemini_api(
                 args = {k: v for k, v in fc.args.items()} if hasattr(fc, "args") else {}
                 logger.info(f"Gemini requested tool call: {fc.name}({args})")
                 tool_result = tool_bridge.dispatch(fc.name, args)
+                
+                try:
+                    # Some tools might return dicts directly or JSON strings
+                    if isinstance(tool_result, str):
+                        parsed_result = json.loads(tool_result)
+                    else:
+                        parsed_result = tool_result
+                        
+                    if isinstance(parsed_result, list):
+                        response_dict = {"result": parsed_result}
+                    elif isinstance(parsed_result, dict):
+                        response_dict = parsed_result
+                    else:
+                        response_dict = {"result": parsed_result}
+                except (json.JSONDecodeError, TypeError):
+                    response_dict = {"result": str(tool_result)}
+
                 parts.append(genai.protos.Part(
                     function_response=genai.protos.FunctionResponse(
                         name=fc.name,
-                        response={"result": tool_result},
+                        response=response_dict,
                     )
                 ))
 

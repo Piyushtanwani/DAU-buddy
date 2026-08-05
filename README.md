@@ -14,7 +14,8 @@ A unified MCP platform providing AI assistants with structured access to DAU fac
 - **User Feedback System**: Built-in feedback form allowing users to submit bug reports, feature requests, and suggestions. Automatically sends beautifully formatted HTML emails to administrators asynchronously.
 - **Maintainer Dashboard**: Dedicated analytics portal for monitoring API usage, rate limit metrics, and endpoint popularity via interactive charts.
 - **Full-Text Search**: Powered by PostgreSQL tsvector, `websearch_to_tsquery`, and GIN indexes for fast, relevance-ranked retrieval across institutional datasets.
-- **Secure Authentication**: All endpoints (including the Feedback API) are secured by an ASGI authentication middleware that verifies API keys and enforces rate limits.
+- **Web Chat Interface**: Built-in chat dashboard enabling users to query DAU Buddy directly from the browser using a RAG pipeline backed by Google Gemini or OpenAI.
+- **Secure Authentication**: All endpoints (including the Feedback API and Chat API) are secured by an ASGI authentication middleware that verifies API keys and Google Credentials.
 - **Role-Based Access**: Automatically assigns roles (Student, Faculty, Staff) based on your DAU email upon Google Sign-In.
 
 ## Architecture
@@ -38,6 +39,7 @@ Service Service Service   Service    Service   Service   Service   Service
 
 ## Tech Stack
 - **Backend**: Python 3.10+, FastAPI, `mcp` (Model Context Protocol), `FastMCP`
+- **AI Integrations**: Google Gemini (`google-generativeai`), OpenAI RAG pipeline
 - **Database**: PostgreSQL (Local)
 - **Frontend**: HTML5, Vanilla CSS3, JavaScript, Google Identity Services (OAuth 2.0)
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
@@ -59,9 +61,16 @@ MCP Project/
 │
 ├── api/                        # HTTP Server & Dashboard
 │   ├── main.py                 # FastAPI and FastMCP entry point
+│   ├── routes/                 # FastAPI routers
+│   │   └── chat.py             # Chat endpoint handling RAG strategy routing
 │   ├── middleware/             # ASGI Middlewares
 │   │   └── mcp_auth.py         # Bearer token validation for MCP
+│   ├── auth.py                 # Core authentication and role resolution
+│   ├── context.py              # Context variables for tracking user state
 │   └── services/               # Database Business Logic layer
+│       ├── gemini.py           # Gemini Tool calling and AI Integration
+│       ├── openai_service.py   # OpenAI Fallback Integration
+│       ├── tool_bridge.py      # Translates MCP tools for AI APIs
 │       ├── faculty_service.py
 │       ├── staff_service.py
 │       ├── scholar_service.py
@@ -130,6 +139,10 @@ DB_PORT=5432
 DB_NAME=daiict_db
 DB_USER=postgres
 DB_PASSWORD=your-postgresql-password
+
+# AI Integrations (Web Chat)
+GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
 
 # Email Configuration (Feedback System)
 SMTP_SERVER=smtp.gmail.com
