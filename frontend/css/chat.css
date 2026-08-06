@@ -1229,6 +1229,32 @@ a {
     color: var(--txt-primary);
 }
 
+/* Share CTA in the chat header */
+.chat-share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--txt-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+}
+
+.chat-share-btn:hover {
+    background: var(--bg-hover);
+    color: var(--txt-primary);
+}
+
+/* Restores a visible focus ring, since the global button reset clears the outline */
+.chat-share-btn:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
 
 
 
@@ -1254,6 +1280,14 @@ a {
 
     .top-nav {
         padding: 10px 15px;
+    }
+
+    .chat-share-label {
+        display: none;
+    }
+
+    .chat-share-btn {
+        padding: 8px 10px;
     }
 }
 
