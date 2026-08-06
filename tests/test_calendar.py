@@ -108,3 +108,55 @@ def test_search_calendar(mocker):
     assert len(results['academic_events']) == 1
     assert len(results['holidays']) == 1
     assert results['holidays'][0]['holiday_name'] == 'Diwali'
+
+
+# ── Day-order substitution ────────────────────────────────────────────────────
+# The academic calendar reassigns individual dates ("07-08-2026 to be treated as
+# Tuesday"). On those days the campus runs the substituted day's timetable, so a
+# schedule lookup keyed off the real weekday returns the wrong classes.
+
+@pytest.mark.parametrize("event_name,expected", [
+    ("To be treated as Tuesday", "Tuesday"),
+    ("To be Treated as Friday", "Friday"),          # capitalisation varies in the data
+    ("to be treated as    wednesday", "Wednesday"), # whitespace varies too
+    ("Orientation of Fresh BTech Students", None),
+    ("Instruction begins", None),
+    ("", None),
+])
+def test_parse_day_substitution(event_name, expected):
+    assert calendar_service._parse_day_substitution([event_name]) == expected
+
+
+def test_parse_day_substitution_picks_it_out_of_a_crowded_day():
+    """Substitutions share a date with orientation events, holidays, etc."""
+    names = [
+        "Orientation of Fresh BTech Students",
+        "Orientation of Fresh BS-MS Students",
+        "To be treated as Tuesday",
+    ]
+    assert calendar_service._parse_day_substitution(names) == "Tuesday"
+
+
+def test_effective_day_substitutes(mocker):
+    mocker.patch.object(calendar_service, "get_day_substitution", return_value="Tuesday")
+    # 2026-08-07 is a Friday.
+    assert calendar_service.effective_day(date(2026, 8, 7)) == ("Tuesday", "Friday")
+
+
+def test_effective_day_passes_a_normal_day_through(mocker):
+    mocker.patch.object(calendar_service, "get_day_substitution", return_value=None)
+    assert calendar_service.effective_day(date(2026, 8, 6)) == ("Thursday", None)
+
+
+def test_effective_day_ignores_a_substitution_to_the_same_day(mocker):
+    """A calendar entry restating the real weekday is not a substitution."""
+    mocker.patch.object(calendar_service, "get_day_substitution", return_value="Friday")
+    assert calendar_service.effective_day(date(2026, 8, 7)) == ("Friday", None)
+
+
+def test_get_day_substitution_degrades_instead_of_raising(mocker):
+    """A calendar outage must not break every schedule answer."""
+    mocker.patch.object(
+        calendar_service, "db_connection", side_effect=RuntimeError("db down")
+    )
+    assert calendar_service.get_day_substitution("2026-08-07") is None

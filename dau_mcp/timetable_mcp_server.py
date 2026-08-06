@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import config
 from api.services import timetable_service
+from api.services import calendar_service
 
 logger = config.get_logger("dau_mcp.timetable_mcp_server")
 
@@ -22,9 +23,21 @@ DAY_END = "18:00"
 
 
 def _now_day_time() -> tuple[str, str]:
-    """Campus day+time. Never datetime.now() — see config.CAMPUS_TZ."""
+    """
+    Campus day+time for timetable lookups. Never datetime.now() — see
+    config.CAMPUS_TZ — and never the raw weekday either: the academic calendar
+    reassigns some dates ("07-08-2026 to be treated as Tuesday"), and on those
+    days the campus runs the substituted day's timetable.
+    """
     now = config.campus_now()
-    return now.strftime("%A"), now.strftime("%H:%M:%S")
+    day, _ = calendar_service.effective_day(now.date())
+    return day, now.strftime("%H:%M:%S")
+
+
+def _day_note() -> str:
+    """' (Friday, treated as Tuesday)' when today is reassigned, else ''."""
+    day, substituted_from = calendar_service.effective_day()
+    return f" ({substituted_from}, treated as {day})" if substituted_from else ""
 
 
 def _hhmm(t) -> str:
@@ -68,17 +81,18 @@ async def get_faculty_location(faculty_name: str, day: Optional[str] = None, tim
     """
     try:
         now_day, now_time = _now_day_time()
+        note = _day_note() if day is None else ""
         day, time = day or now_day, time or now_time
         name, err = _resolve_single(faculty_name)
         if err:
             return err
         result = timetable_service.get_faculty_location(name, day, time)
         if not result:
-            return f"{name}: no class at {time} on {day}."
+            return f"{name}: no class at {time} on {day}{note}."
         progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
         name_info = f" - {result['course_name']}" if result.get("course_name") else ""
         return (f"{name}: {result['session_type']} {result['course_code']}{name_info}{progs} "
-                f"in {result['room']}, {_hhmm(result['start_time'])}-{_hhmm(result['end_time'])} ({day}).")
+                f"in {result['room']}, {_hhmm(result['start_time'])}-{_hhmm(result['end_time'])} ({day}{note}).")
     except Exception as e:
         logger.error(f"Error in get_faculty_location: {e}")
         return "Error querying faculty location."
@@ -288,11 +302,12 @@ async def find_free_rooms(day: Optional[str] = None, time: Optional[str] = None)
     """
     try:
         now_day, now_time = _now_day_time()
+        note = _day_note() if day is None else ""
         day, time = day or now_day, time or now_time
         rooms = timetable_service.find_free_rooms(day, time)
         if not rooms:
-            return f"No free rooms at {time} on {day}."
-        return f"Free at {time} {day}: " + "; ".join(rooms)
+            return f"No free rooms at {time} on {day}{note}."
+        return f"Free at {time} {day}{note}: " + "; ".join(rooms)
     except Exception as e:
         logger.error(f"Error in find_free_rooms: {e}")
         return "Error querying free rooms."
