@@ -429,8 +429,13 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
             # details for non-privileged users.
             user_role_var.set(request.state.role)
 
+            # Campus time, not server time: a naive now() in a UTC container is
+            # 5h30m off, which turns every "right now" answer confidently wrong.
+            now_ist = config.campus_now()
             system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-                current_day=datetime.now().strftime("%A"),
+                current_day=now_ist.strftime("%A"),
+                current_date=now_ist.strftime("%d %B %Y"),
+                current_time=now_ist.strftime("%H:%M"),
             )
             
             response_text = None

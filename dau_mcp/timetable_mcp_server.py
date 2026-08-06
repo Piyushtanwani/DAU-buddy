@@ -22,7 +22,8 @@ DAY_END = "18:00"
 
 
 def _now_day_time() -> tuple[str, str]:
-    now = datetime.now()
+    """Campus day+time. Never datetime.now() — see config.CAMPUS_TZ."""
+    now = config.campus_now()
     return now.strftime("%A"), now.strftime("%H:%M:%S")
 
 
