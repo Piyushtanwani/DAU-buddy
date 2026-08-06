@@ -1231,7 +1231,6 @@ a {
 
 /* Share CTA in the chat header */
 .chat-share-btn {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
