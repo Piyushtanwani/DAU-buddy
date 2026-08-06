@@ -17,6 +17,7 @@ from mcp.server.fastmcp import FastMCP
 from core import config
 from core.database import db_connection
 from api.services.pagination import envelope
+from api.services.name_matching import find_similar_names, fuzzy_match_notice
 from scrapers import faculty_scraper
 from api.context import user_role_var
 
@@ -113,6 +114,23 @@ def get_faculty_details(name_or_email: str) -> str:
                     LIMIT 1;
                 """, (pattern, pattern))
                 row = cursor.fetchone()
+
+                # Trigram similarity fallback, only after the exact lookup missed.
+                fuzzy_notice = ""
+                if not row:
+                    for candidate in find_similar_names("faculty", name_or_email, limit=1):
+                        cursor.execute("""
+                            SELECT name, email, phone, address, education, specialization,
+                                   profile_url, image_url, faculty_type, scraped_at
+                            FROM faculty
+                            WHERE name = %s
+                            LIMIT 1;
+                        """, (candidate,))
+                        row = cursor.fetchone()
+                        if row:
+                            fuzzy_notice = fuzzy_match_notice(name_or_email.strip(), candidate) + "\n"
+                            break
+
                 if not row:
                     return f"No faculty member found matching '{name_or_email}'."
                 name, email, phone, addr, edu, spec, url, img, ftype, ts = row
@@ -128,7 +146,7 @@ def get_faculty_details(name_or_email: str) -> str:
                 if url: out.append(f"- **Profile URL:** [{url}]({url})")
                 if img: out.append(f"- **Profile Image:** [{img}]({img})")
                 out.append(f"- **Data Scraped At:** {ts.strftime('%Y-%m-%d %H:%M:%S')}")
-                return "\n".join(out)
+                return fuzzy_notice + "\n".join(out)
     except Exception as e:
         logger.error(f"get_faculty_details error: {e}")
         return f"Error retrieving faculty details: {e}"

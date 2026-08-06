@@ -3,10 +3,11 @@ Faculty Service
 ===============
 Handles all faculty-related database queries and in-memory context caching.
 """
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from core import config
 from core.database import db_connection
 from api.services.retrieval import PostgresFullTextRetriever
+from api.services.name_matching import find_similar_names, fuzzy_match_notice
 
 logger = config.get_logger("api.services.faculty_service")
 
@@ -68,11 +69,44 @@ def fetch_all_faculty_context() -> str:
 # ==============================================================================
 # Direct Database Query Helpers
 # ==============================================================================
+def _faculty_records_by_name(names: List[str]) -> List[Dict[str, Any]]:
+    """Fetch full faculty rows for exact names, preserving the order given."""
+    if not names:
+        return []
+    with db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT name, faculty_type, email, phone, address,
+                       education, specialization, profile_url
+                FROM faculty
+                WHERE name = ANY(%s);
+            """, (list(names),))
+            by_name = {row[0]: row for row in cursor.fetchall()}
+
+    records = []
+    for name in names:
+        row = by_name.get(name)
+        if row:
+            records.append({
+                "name": row[0], "faculty_type": row[1], "email": row[2],
+                "phone": row[3], "address": row[4], "education": row[5],
+                "specialization": row[6], "profile_url": row[7],
+            })
+    return records
+
+
 def search_faculty_db(query: str, error_on_empty: bool = True) -> Optional[str]:
     """Full-text search across faculty name, specialization, education, and email using RAG retriever."""
     try:
         retriever = PostgresFullTextRetriever()
         records = retriever.retrieve_faculty(query, limit=10)
+
+        # Trigram fallback: only once exact/full-text retrieval came back empty.
+        fuzzy_notice = ""
+        if not records:
+            records = _faculty_records_by_name(find_similar_names("faculty", query, limit=1))
+            if records:
+                fuzzy_notice = fuzzy_match_notice(query.strip(), records[0]["name"]) + "\n"
 
         if not records:
             if error_on_empty:
@@ -97,7 +131,7 @@ def search_faculty_db(query: str, error_on_empty: bool = True) -> Optional[str]:
             if rec.get('specialization'): out.append(f"- **Specialization:** {rec.get('specialization')}")
             if rec.get('profile_url'): out.append(f"- **Profile:** [{rec.get('profile_url')}]({rec.get('profile_url')})")
             out.append("")
-        return "\n".join(out)
+        return fuzzy_notice + "\n".join(out)
     except Exception as e:
         logger.error(f"search_faculty_db failed: {e}")
         return f"Database query failed: {e}"
@@ -157,6 +191,24 @@ def get_faculty_details_db(name_or_email: str, error_on_empty: bool = True) -> O
                                 key=lambda r: sum(1 for t in tokens if t in r[0].lower()),
                             )
 
+                # Trigram similarity fallback — last resort, and the only path
+                # here whose answer may be a different name than was asked for,
+                # so the reply discloses the substitution.
+                fuzzy_notice = ""
+                if not row:
+                    for candidate in find_similar_names("faculty", name_or_email, limit=1):
+                        cursor.execute("""
+                            SELECT name, email, phone, address, education, specialization,
+                                   profile_url, image_url, faculty_type
+                            FROM faculty
+                            WHERE name = %s
+                            LIMIT 1;
+                        """, (candidate,))
+                        row = cursor.fetchone()
+                        if row:
+                            fuzzy_notice = fuzzy_match_notice(name_or_email.strip(), candidate) + "\n"
+                            break
+
                 if not row:
                     if error_on_empty:
                         return f"Could not find any faculty member matching '{name_or_email}'."
@@ -174,7 +226,7 @@ def get_faculty_details_db(name_or_email: str, error_on_empty: bool = True) -> O
                 ]
                 if url: out.append(f"- **Profile URL:** [{url}]({url})")
                 if img: out.append(f"- **Profile Image:** [{img}]({img})")
-                return "\n".join(out)
+                return fuzzy_notice + "\n".join(out)
     except Exception as e:
         logger.error(f"get_faculty_details_db failed: {e}")
         return f"Database query failed: {e}"
