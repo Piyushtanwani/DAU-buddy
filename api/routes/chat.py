@@ -17,6 +17,7 @@ from api.services import (
     is_gemini_available,
     record_gemini_failure,
     SYSTEM_INSTRUCTIONS_TEMPLATE,
+    build_system_instruction,
 )
 from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
@@ -432,22 +433,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
 
             # Campus time, not server time: a naive now() in a UTC container is
             # 5h30m off, which turns every "right now" answer confidently wrong.
-            now_ist = config.campus_now()
-            # The academic calendar can reassign today's weekday; if it has, the
-            # model must be told here, or it will answer schedule questions from
-            # the real weekday and quietly serve the wrong day's timetable.
-            effective, substituted_from = calendar_service.effective_day(now_ist.date())
-            day_order_note = (
-                f"NOTE: today is {substituted_from} but the academic calendar treats it "
-                f"as {effective} — the campus runs {effective}'s timetable today."
-                if substituted_from else ""
-            )
-            system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-                current_day=now_ist.strftime("%A"),
-                current_date=now_ist.strftime("%d %B %Y"),
-                current_time=now_ist.strftime("%H:%M"),
-                day_order_note=day_order_note,
-            )
+            system_instruction = build_system_instruction()
             
             response_text = None
 

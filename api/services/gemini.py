@@ -156,6 +156,31 @@ F4. Greetings and chit-chat: warm and natural.
 
 
 
+def build_system_instruction() -> str:
+    """
+    The exact system prompt production sends, filled with campus time and any
+    day-order substitution in force. Everything that talks to the model — the
+    chat route, the eval harness — goes through here, so an eval can never
+    silently test a different prompt than users get.
+    """
+    now = config.campus_now()
+    # The academic calendar can reassign today's weekday; if it has, the model
+    # must be told here, or it answers schedule questions from the real weekday
+    # and quietly serves the wrong day's timetable.
+    effective, substituted_from = calendar_service.effective_day(now.date())
+    day_order_note = (
+        f"NOTE: today is {substituted_from} but the academic calendar treats it "
+        f"as {effective} — the campus runs {effective}'s timetable today."
+        if substituted_from else ""
+    )
+    return SYSTEM_INSTRUCTIONS_TEMPLATE.format(
+        current_day=now.strftime("%A"),
+        current_date=now.strftime("%d %B %Y"),
+        current_time=now.strftime("%H:%M"),
+        day_order_note=day_order_note,
+    )
+
+
 # ==============================================================================
 # Gemini Tools
 # ==============================================================================
