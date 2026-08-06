@@ -5,6 +5,7 @@ from api.services.gemini import (
     is_gemini_available,
     record_gemini_failure,
     SYSTEM_INSTRUCTIONS_TEMPLATE,
+    build_system_instruction,
 )
 from api.services.faculty_service import (
     fetch_all_faculty_context,
