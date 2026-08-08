@@ -158,6 +158,10 @@
                         <i class="fa-solid fa-bars"></i>
                     </button>
                     <div class="nav-center" id="chat-nav-center" style="display: none;">DAU Buddy</div>
+                    <button type="button" class="chat-share-btn" data-share aria-label="Share DAU Buddy">
+                        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                        <span class="chat-share-label">Share</span>
+                    </button>
                 </header>
 
                 <!-- Viewport -->
@@ -228,9 +232,12 @@
                 <footer class="input-area">
                     <form class="input-form" id="input-form">
                         <div class="input-wrapper">
-                            <input type="text" id="user-input"
+                            <textarea id="user-input"
                                 placeholder="Ask about a faculty member, specialization, or staff role…"
-                                autocomplete="off">
+                                rows="1"></textarea>
+                            <button type="button" class="mic-btn" id="mic-btn" title="Dictate" aria-label="Voice Dictation">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
                             <button type="submit" class="send-btn" id="send-btn" title="Send">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
