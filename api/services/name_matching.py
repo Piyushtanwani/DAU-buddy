@@ -111,38 +111,44 @@ def find_similar_names(
     if len(cleaned) < MIN_QUERY_LENGTH:
         return []
 
-    try:
-        with db_connection() as conn:
-            with conn.cursor() as cursor:
-                # The `<%` operator reads its cut-off from a GUC, so the setting
-                # must still be in effect when the SELECT runs — but it must not
-                # outlive this call, because pooled connections are handed to
-                # other callers afterwards. The setting is therefore always
-                # transaction-local: the pool's connections have autocommit off,
-                # so both statements share the transaction the pool commits on
-                # exit. An autocommit connection has no such transaction, so one
-                # is opened here and rolled back below; this function only reads.
-                started_transaction = False
-                if getattr(conn, "autocommit", False):
-                    cursor.execute("BEGIN;")
-                    started_transaction = True
+    def _run(cur) -> List[str]:
+        # The `<%` operator reads its cut-off from a GUC, so the setting must
+        # still be in effect when the SELECT runs — but it must not outlive this
+        # call, because pooled connections are handed to other callers
+        # afterwards. The setting is therefore always transaction-local: the
+        # pool's connections have autocommit off, so both statements share the
+        # transaction the pool commits on exit. An autocommit connection has no
+        # such transaction, so one is opened here and rolled back below; this
+        # function only reads.
+        started_transaction = False
+        if getattr(cur.connection, "autocommit", False):
+            cur.execute("BEGIN;")
+            started_transaction = True
+        try:
+            cur.execute(_THRESHOLD_SQL, (str(TRGM_WORD_SIMILARITY_THRESHOLD), True))
+            cur.execute(sql, (cleaned, cleaned, cleaned, limit))
+            return [row[0] for row in cur.fetchall()]
+        finally:
+            if started_transaction:
+                # Discards the local threshold and clears the aborted state a
+                # failed statement would otherwise leave behind.
                 try:
-                    cursor.execute(
-                        _THRESHOLD_SQL,
-                        (str(TRGM_WORD_SIMILARITY_THRESHOLD), True),
+                    cur.execute("ROLLBACK;")
+                except Exception as rollback_error:
+                    logger.error(
+                        f"Failed to roll back similarity transaction: {rollback_error}"
                     )
-                    cursor.execute(sql, (cleaned, cleaned, cleaned, limit))
-                    names = [row[0] for row in cursor.fetchall()]
-                finally:
-                    if started_transaction:
-                        # Discards the local threshold and clears the aborted
-                        # state a failed statement would otherwise leave behind.
-                        try:
-                            cursor.execute("ROLLBACK;")
-                        except Exception as rollback_error:
-                            logger.error(
-                                f"Failed to roll back similarity transaction: {rollback_error}"
-                            )
+
+    try:
+        if cursor is not None:
+            # Reuse the caller's cursor: avoids a second pool checkout while the
+            # caller still holds one, and keeps the threshold local to the
+            # caller's transaction.
+            names = _run(cursor)
+        else:
+            with db_connection() as conn:
+                with conn.cursor() as own_cursor:
+                    names = _run(own_cursor)
 
         if names:
             logger.info(
