@@ -769,7 +769,10 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.continuous = true;
         recognition.interimResults = false;
 
-        recognition.lang = "en-IN";
+        recognition.lang = {
+            english: "en-IN",
+            hindi: "hi-IN"
+        };
 
         recognition.onstart = () => {
             if (permissionTimeout) {
