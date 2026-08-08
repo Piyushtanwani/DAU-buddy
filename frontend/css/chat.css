@@ -958,7 +958,7 @@ a {
 }
 
 .mic-btn:hover {
-    color: var(--brand-blue);
+    color: var(--brand);
     background: rgba(59, 130, 246, 0.1);
 }
 
