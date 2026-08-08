@@ -433,7 +433,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
 
             # Campus time, not server time: a naive now() in a UTC container is
             # 5h30m off, which turns every "right now" answer confidently wrong.
-            system_instruction = build_system_instruction()
+            system_instruction = await _run_blocking(build_system_instruction)
             
             response_text = None
 
