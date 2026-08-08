@@ -376,6 +376,7 @@ a {
 
 .hero-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     justify-content: center;
 }
@@ -411,6 +412,16 @@ a {
 
 .hero-btn.secondary:hover {
     background: rgb(255 255 255 / 10%);
+}
+
+/* Restores a visible focus ring, since the global button reset clears the outline */
+.hero-btn:focus-visible {
+    outline: 2px solid #fca311;
+    outline-offset: 3px;
+}
+
+.hero-share-btn {
+    gap: 8px;
 }
 
 .landing-features {

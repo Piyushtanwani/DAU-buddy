@@ -43,7 +43,7 @@ Service Service Service   Service    Service   Service   Service   Service
 - **Database**: PostgreSQL (Local)
 - **Frontend**: HTML5, Vanilla CSS3, JavaScript, Google Identity Services (OAuth 2.0)
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
-- **Search**: PostgreSQL `tsvector` and GIN Indexes
+- **Search**: PostgreSQL `tsvector` and GIN Indexes, with a `pg_trgm` similarity fallback for misspelled directory names
 - **Integration**: SSE (Server-Sent Events) over HTTP with dynamic Stdio bridging via `mcp-remote`.
 
 ## Project Structure
@@ -199,6 +199,13 @@ pip install -r requirements.txt
      python scripts/setup_db.py --only staff
      python scripts/setup_db.py --only calendar
      ```
+
+   > **Existing databases:** `init_db.sql` now enables the `pg_trgm` extension and
+   > creates trigram indexes on `faculty.name` and `staff.name`, which power the
+   > typo-tolerant directory fallback. Re-run the schema step once after pulling:
+   > `python scripts/setup_db.py --only schema`. The script is idempotent and needs
+   > superuser rights (or a database owner on PostgreSQL 13+, where `pg_trgm` is a
+   > trusted extension) to install the extension.
 
 3. **Manual / Individual Seeding (Optional):**
    ```bash
