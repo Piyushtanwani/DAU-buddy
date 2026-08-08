@@ -342,6 +342,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!text.trim() || isResponding) return;
 
+        // Auto-stop dictation if active
+        if (window.stopDictation) window.stopDictation();
+
         // Require authentication to chat
         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
         if (!authData || !authData.credential) {
@@ -754,6 +757,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let recognition = null;
     let isRequestingPermission = false;
     let isListening = false;
+<<<<<<< HEAD
     let permissionTimeout = null;
     let placeholderOverride = false;
 
@@ -763,22 +767,36 @@ document.addEventListener("DOMContentLoaded", () => {
             stopListening(); // Eagerly reset UI
         }
     }
+=======
+
+    // Configuration dictionary for easy language expansion later
+
+>>>>>>> origin/develop
 
     if (SpeechRecognition && micBtn) {
         recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = false;
 
+<<<<<<< HEAD
+=======
+        // Set the primary listening engine. (Web Speech API only accepts one active lang code per session)
+        // Note: Chrome's engine is smart enough to parse English even when set to Hindi ('hi-IN')
+>>>>>>> origin/develop
         recognition.lang = {
             english: "en-IN",
             hindi: "hi-IN"
         };
+<<<<<<< HEAD
 
         recognition.onstart = () => {
             if (permissionTimeout) {
                 clearTimeout(permissionTimeout);
                 permissionTimeout = null;
             }
+=======
+        recognition.onstart = () => {
+>>>>>>> origin/develop
             isRequestingPermission = false;
             isListening = true;
             micBtn.classList.add("listening");
@@ -817,6 +835,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         recognition.onerror = (event) => {
+<<<<<<< HEAD
             if (permissionTimeout) {
                 clearTimeout(permissionTimeout);
                 permissionTimeout = null;
@@ -828,15 +847,26 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 userInput.placeholder = `Mic error: ${event.error}`;
                 placeholderOverride = true;
+=======
+            isRequestingPermission = false;
+            if (event.error === 'not-allowed') {
+                userInput.placeholder = "Microphone access denied.";
+            } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                userInput.placeholder = `Mic error: ${event.error}`;
+>>>>>>> origin/develop
             }
         };
 
         recognition.onend = () => {
             stopListening();
+<<<<<<< HEAD
             if (!placeholderOverride) {
                 userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
             }
             placeholderOverride = false;
+=======
+            userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
+>>>>>>> origin/develop
             userInput.focus();
         };
 
@@ -850,21 +880,35 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+<<<<<<< HEAD
+=======
+        window.stopDictation = () => {
+            if (isListening && recognition) {
+                recognition.stop();
+            }
+        };
+>>>>>>> origin/develop
 
         micBtn.addEventListener("click", () => {
             if (isRequestingPermission) return;
 
             if (isListening) {
                 recognition.stop();
+<<<<<<< HEAD
                 stopListening(); // Eagerly reset UI
+=======
+>>>>>>> origin/develop
             } else {
                 isRequestingPermission = true;
                 try {
                     recognition.start();
+<<<<<<< HEAD
                     permissionTimeout = setTimeout(() => {
                         isRequestingPermission = false;
                         permissionTimeout = null;
                     }, 5000);
+=======
+>>>>>>> origin/develop
                 } catch (e) {
                     isRequestingPermission = false;
                     console.error("Speech recognition start error:", e);
