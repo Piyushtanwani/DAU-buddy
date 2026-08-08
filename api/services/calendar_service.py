@@ -1,10 +1,71 @@
+import re
 import sys
 import os
+from datetime import date as _date
 from typing import List, Dict, Any, Optional
 import psycopg2.extras
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from core import config
 from core.database import db_connection
+
+logger = config.get_logger("api.services.calendar_service")
+
+# The academic calendar reassigns the weekday of individual dates to make up for
+# holidays — e.g. "To be treated as Tuesday" on Friday 07-08-2026. On such a day
+# the campus runs another day's timetable, so every schedule lookup that keys off
+# the real weekday is wrong. Six such dates exist across the loaded terms.
+_DAY_SUBSTITUTION_RE = re.compile(
+    r"treated\s+as\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
+    re.IGNORECASE,
+)
+
+
+def _parse_day_substitution(event_names: List[str]) -> Optional[str]:
+    """First 'treated as <weekday>' found in these event names, capitalised."""
+    for name in event_names:
+        match = _DAY_SUBSTITUTION_RE.search(name or "")
+        if match:
+            return match.group(1).capitalize()
+    return None
+
+
+def get_day_substitution(date_str: str) -> Optional[str]:
+    """
+    The weekday `date_str` (YYYY-MM-DD) is treated as per the academic calendar,
+    or None when it runs as its real weekday.
+    """
+    query = """
+        SELECT event_name
+        FROM academic_calendar
+        WHERE %s >= start_date AND %s <= end_date;
+    """
+    try:
+        with db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (date_str, date_str))
+                return _parse_day_substitution([r[0] for r in cur.fetchall()])
+    except Exception as e:
+        # Never let a calendar lookup break a schedule answer: degrade to the
+        # real weekday rather than failing the whole query.
+        logger.error(f"Day-substitution lookup failed for {date_str}: {e}")
+        return None
+
+
+def effective_day(on_date: Optional[_date] = None) -> tuple[str, Optional[str]]:
+    """
+    The weekday the campus actually runs on `on_date` (default: today).
+
+    Returns (effective_day, substituted_from). `substituted_from` is None on a
+    normal day, and the real weekday when the calendar overrides it — callers
+    need it to explain themselves ("Friday, treated as Tuesday").
+    """
+    on_date = on_date or config.campus_now().date()
+    real_day = on_date.strftime("%A")
+    substitute = get_day_substitution(on_date.strftime("%Y-%m-%d"))
+    if substitute and substitute != real_day:
+        return substitute, real_day
+    return real_day, None
 
 def get_next_holiday() -> Optional[Dict[str, Any]]:
     """Returns the next upcoming holiday based on the current date."""
