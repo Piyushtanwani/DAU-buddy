@@ -52,6 +52,10 @@ def _mock_db(cursor):
     conn.__exit__ = MagicMock(return_value=False)
     conn.cursor.return_value.__enter__ = MagicMock(return_value=cursor)
     conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    # find_similar_names reads the mode off `cursor.connection`, so the mock
+    # cursor must point back at this connection or a bare MagicMock attribute
+    # would read as autocommit=True.
+    cursor.connection = conn
     return conn
 
 
@@ -195,7 +199,7 @@ class TestFacultyDetailsFallback:
             from api.services.faculty_service import get_faculty_details_db
             result = get_faculty_details_db("Chandar")
 
-        mock_fuzzy.assert_called_once_with("faculty", "Chandar", limit=1)
+        mock_fuzzy.assert_called_once_with("faculty", "Chandar", limit=1, cursor=cursor)
         assert "No exact match for **'Chandar'**" in result
         assert "**Ankush chander**" in result
         # The detailed-profile contract is preserved, only prefixed.
@@ -288,7 +292,7 @@ class TestStaffFallback:
             from api.services.staff_service import get_staff_details_db
             result = get_staff_details_db("Akaash Desa")
 
-        mock_fuzzy.assert_called_once_with("staff", "Akaash Desa", limit=1)
+        mock_fuzzy.assert_called_once_with("staff", "Akaash Desa", limit=1, cursor=cursor)
         assert "No exact match for **'Akaash Desa'**" in result
         assert "**Akash Desai**" in result
         assert "### Detailed Staff Profile: Akash Desai" in result
@@ -375,6 +379,266 @@ class TestMcpDetailTools:
              patch("dau_mcp.staff_mcp_server.find_similar_names", return_value=[]):
             assert _tool_fn(get_staff_details)("Elon Musk") == \
                 "No staff member found matching 'Elon Musk'."
+
+
+# ==============================================================================
+# Nested pool checkout: the four callers that already hold a cursor
+# ==============================================================================
+# The detail lookups run their fuzzy step *inside* `with db_connection()`, so a
+# helper that opened its own connection would hold two at once and can deadlock
+# once the pool is saturated. Each of these paths must hand its live cursor down.
+def _pooled_cursor(fetchone, fetchall):
+    """A cursor that looks like one handed out by the pool (autocommit off)."""
+    cursor = MagicMock()
+    cursor.connection.autocommit = False
+    cursor.fetchone.side_effect = fetchone
+    cursor.fetchall.side_effect = fetchall
+    return cursor
+
+
+class TestNestedCursorIsReused:
+
+    def test_faculty_service_details_passes_its_cursor(self):
+        cursor = _pooled_cursor([None, FACULTY_ROW], [[], [("Ankush chander",)]])
+        with patch("api.services.faculty_service.db_connection",
+                   return_value=_mock_db(cursor)) as caller_db, \
+             patch("api.services.name_matching.db_connection") as helper_db, \
+             patch("api.services.faculty_service.find_similar_names",
+                   wraps=find_similar_names) as spy:
+            from api.services.faculty_service import get_faculty_details_db
+            result = get_faculty_details_db("Chandar")
+
+        assert spy.call_args.kwargs["cursor"] is cursor
+        # The helper never opened a second connection of its own.
+        helper_db.assert_not_called()
+        assert caller_db.call_count == 1
+        assert "### Detailed Profile: Ankush chander" in result
+
+    def test_staff_service_details_passes_its_cursor(self):
+        cursor = _pooled_cursor([None, STAFF_ROW], [[], [("Akash Desai",)]])
+        with patch("api.services.staff_service.db_connection",
+                   return_value=_mock_db(cursor)) as caller_db, \
+             patch("api.services.name_matching.db_connection") as helper_db, \
+             patch("api.services.staff_service.find_similar_names",
+                   wraps=find_similar_names) as spy:
+            from api.services.staff_service import get_staff_details_db
+            result = get_staff_details_db("Akaash Desa")
+
+        assert spy.call_args.kwargs["cursor"] is cursor
+        helper_db.assert_not_called()
+        assert caller_db.call_count == 1
+        assert "### Detailed Staff Profile: Akash Desai" in result
+
+    def test_faculty_mcp_tool_passes_its_cursor(self):
+        import datetime
+        from dau_mcp.faculty_mcp_server import get_faculty_details
+        cursor = _pooled_cursor(
+            [None, FACULTY_ROW + (datetime.datetime(2026, 1, 1),)],
+            [[("Ankush chander",)]],                 # no token step in the MCP tool
+        )
+        with patch("dau_mcp.faculty_mcp_server.db_connection",
+                   return_value=_mock_db(cursor)) as caller_db, \
+             patch("api.services.name_matching.db_connection") as helper_db, \
+             patch("dau_mcp.faculty_mcp_server.find_similar_names",
+                   wraps=find_similar_names) as spy:
+            result = _tool_fn(get_faculty_details)("Chandar")
+
+        assert spy.call_args.kwargs["cursor"] is cursor
+        helper_db.assert_not_called()
+        assert caller_db.call_count == 1
+        assert "### Detailed Profile: Ankush chander" in result
+
+    def test_staff_mcp_tool_passes_its_cursor(self):
+        import datetime
+        from dau_mcp.staff_mcp_server import get_staff_details
+        cursor = _pooled_cursor(
+            [None, STAFF_ROW + (datetime.datetime(2026, 1, 1),)],
+            [[("Akash Desai",)]],
+        )
+        with patch("dau_mcp.staff_mcp_server.db_connection",
+                   return_value=_mock_db(cursor)) as caller_db, \
+             patch("api.services.name_matching.db_connection") as helper_db, \
+             patch("dau_mcp.staff_mcp_server.find_similar_names",
+                   wraps=find_similar_names) as spy:
+            result = _tool_fn(get_staff_details)("Akaash Desa")
+
+        assert spy.call_args.kwargs["cursor"] is cursor
+        helper_db.assert_not_called()
+        assert caller_db.call_count == 1
+        assert "### Detailed Staff Profile: Akash Desai" in result
+
+    def test_search_paths_still_open_their_own_connection(self):
+        """search_* run their fuzzy step outside any cursor, so they must NOT
+        pass one — this is the boundary of the change."""
+        with patch("api.services.faculty_service.PostgresFullTextRetriever") as retriever, \
+             patch("api.services.faculty_service.find_similar_names",
+                   return_value=[]) as spy:
+            retriever.return_value.retrieve_faculty.return_value = []
+            from api.services.faculty_service import search_faculty_db
+            search_faculty_db("Chandar", error_on_empty=False)
+        assert "cursor" not in spy.call_args.kwargs
+
+        with patch("api.services.staff_service.PostgresFullTextRetriever") as retriever, \
+             patch("api.services.staff_service.find_similar_names",
+                   return_value=[]) as spy:
+            retriever.return_value.retrieve_staff.return_value = []
+            from api.services.staff_service import search_staff_db
+            search_staff_db("Akaash Desa", error_on_empty=False)
+        assert "cursor" not in spy.call_args.kwargs
+
+    def test_helper_reusing_a_cursor_runs_the_same_two_statements(self):
+        """Passing a cursor must not change what the helper does to it, and must
+        not wrap a pooled (autocommit-off) connection in its own transaction."""
+        cursor = MagicMock()
+        cursor.connection.autocommit = False
+        cursor.fetchall.return_value = [("Ankush chander",)]
+        with patch("api.services.name_matching.db_connection") as helper_db:
+            assert find_similar_names("faculty", "Chandar", cursor=cursor) == \
+                ["Ankush chander"]
+        helper_db.assert_not_called()
+
+        statements = [call.args[0] for call in cursor.execute.call_args_list]
+        assert len(statements) == 2
+        assert "set_config" in statements[0]
+        assert "<%" in statements[1]
+        assert cursor.execute.call_args_list[0].args[1] == ("0.55", True)
+
+
+# ==============================================================================
+# The pre-existing token-overlap fallback also substitutes a name
+# ==============================================================================
+# This fallback predates the trigram work: it picks whichever row shares the most
+# query tokens, which is frequently a *different* person from the one typed. It
+# is kept as-is, but it may no longer answer silently.
+#
+# Its scoring compares the raw query tokens against a lower-cased name, so only
+# lower-case tokens can score — unchanged behaviour, and why the queries below
+# are typed in lower case.
+FACULTY_TOKEN_CANDIDATES = [
+    ("Rahul muthu", "rahul_muthu@dau.ac.in", "079-68261702", "Faculty Block 2",
+     "PhD IISc", "Algorithms", None, None, "Regular"),
+    ("Mukesh tiwari", "mukesh_tiwari@dau.ac.in", "079-68261703", "Faculty Block 3",
+     "PhD IIT Kanpur", "VLSI", None, None, "Regular"),
+]
+STAFF_TOKEN_CANDIDATES = [
+    ("Rajesh Patel", "rajesh_patel@dau.ac.in", "079-68261704", "Admin Block",
+     "B.Com", "Accounts Officer", None, None),
+    ("Rajendra Shah", "rajendra_shah@dau.ac.in", "079-68261705", "Admin Block",
+     "MBA", "Finance Officer", None, None),
+]
+
+
+class TestTokenOverlapFallbackIsDisclosed:
+
+    def test_faculty_token_substitution_is_disclosed(self):
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [None]                       # exact miss
+        cursor.fetchall.return_value = FACULTY_TOKEN_CANDIDATES    # token hit
+        with patch("api.services.faculty_service.db_connection", return_value=_mock_db(cursor)), \
+             patch("api.services.faculty_service.find_similar_names") as mock_fuzzy:
+            from api.services.faculty_service import get_faculty_details_db
+            result = get_faculty_details_db("mukesh tiwary")
+
+        # The token step answered, so the trigram step never ran.
+        mock_fuzzy.assert_not_called()
+        # What the user typed, and the real name that was selected instead.
+        assert "No exact match for **'mukesh tiwary'**" in result
+        assert "**Mukesh tiwari**" in result
+        # The detailed-profile contract is preserved, only prefixed.
+        assert "### Detailed Profile: Mukesh tiwari" in result
+        assert "- **Faculty Designation:** Regular Faculty" in result
+        assert "- **Email Address:** mukesh_tiwari@dau.ac.in" in result
+        assert "- **Areas of Specialization:** VLSI" in result
+        assert result.index("No exact match") < result.index("### Detailed Profile")
+
+    def test_staff_token_substitution_is_disclosed(self):
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [None]
+        cursor.fetchall.return_value = STAFF_TOKEN_CANDIDATES
+        with patch("api.services.staff_service.db_connection", return_value=_mock_db(cursor)), \
+             patch("api.services.staff_service.find_similar_names") as mock_fuzzy:
+            from api.services.staff_service import get_staff_details_db
+            result = get_staff_details_db("rajendra shaah")
+
+        mock_fuzzy.assert_not_called()
+        assert "No exact match for **'rajendra shaah'**" in result
+        assert "**Rajendra Shah**" in result
+        assert "### Detailed Staff Profile: Rajendra Shah" in result
+        assert "- **Role/Designation:** Finance Officer" in result
+        assert "- **Email Address:** rajendra_shah@dau.ac.in" in result
+        assert "- **Qualifications:** MBA" in result
+        assert result.index("No exact match") < result.index("### Detailed Staff Profile")
+
+    def test_token_fallback_still_selects_the_highest_overlap_row(self):
+        """Behaviour is unchanged — only the disclosure is new."""
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [None]
+        cursor.fetchall.return_value = FACULTY_TOKEN_CANDIDATES
+        with patch("api.services.faculty_service.db_connection", return_value=_mock_db(cursor)), \
+             patch("api.services.faculty_service.find_similar_names", return_value=[]):
+            from api.services.faculty_service import get_faculty_details_db
+            result = get_faculty_details_db("rahul someone")
+
+        assert "### Detailed Profile: Rahul muthu" in result
+        assert "Mukesh tiwari" not in result
+
+    def test_token_fallback_row_matching_the_query_gets_no_notice(self):
+        """The notice is tied to the name actually differing, not to the path
+        being taken — a row equal to the query is announced as itself."""
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [None]
+        cursor.fetchall.return_value = [FACULTY_ROW]
+        with patch("api.services.faculty_service.db_connection", return_value=_mock_db(cursor)), \
+             patch("api.services.faculty_service.find_similar_names") as mock_fuzzy:
+            from api.services.faculty_service import get_faculty_details_db
+            result = get_faculty_details_db("ankush CHANDER")
+
+        mock_fuzzy.assert_not_called()
+        assert result.startswith("### Detailed Profile: Ankush chander")
+        assert "No exact match" not in result
+
+    @pytest.mark.parametrize("module,func,row,heading", [
+        ("api.services.faculty_service", "get_faculty_details_db",
+         FACULTY_ROW, "### Detailed Profile: Ankush chander"),
+        ("api.services.staff_service", "get_staff_details_db",
+         STAFF_ROW, "### Detailed Staff Profile: Akash Desai"),
+    ])
+    def test_exact_match_is_still_notice_free(self, module, func, row, heading):
+        """The notice belongs to substitutions only; an exact hit never sees one."""
+        import importlib
+        cursor = MagicMock()
+        cursor.fetchone.return_value = row
+        with patch(f"{module}.db_connection", return_value=_mock_db(cursor)), \
+             patch(f"{module}.find_similar_names") as mock_fuzzy:
+            result = getattr(importlib.import_module(module), func)(row[0])
+
+        mock_fuzzy.assert_not_called()
+        assert result.startswith(heading)
+        assert "No exact match" not in result
+
+    @pytest.mark.parametrize("module,func,row", [
+        ("api.services.faculty_service", "get_faculty_details_db", FACULTY_ROW),
+        ("api.services.staff_service", "get_staff_details_db", STAFF_ROW),
+    ])
+    def test_trigram_fallback_is_reached_unchanged_when_tokens_find_nothing(
+        self, module, func, row
+    ):
+        """The token step is tried first, but an empty result still falls through
+        to the trigram step and produces its own (unchanged) notice."""
+        import importlib
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [None, row]
+        cursor.fetchall.return_value = []                  # token step finds nothing
+        with patch(f"{module}.db_connection", return_value=_mock_db(cursor)), \
+             patch(f"{module}.find_similar_names", return_value=[row[0]]) as mock_fuzzy:
+            result = getattr(importlib.import_module(module), func)("Chandar Desa")
+
+        mock_fuzzy.assert_called_once()
+        assert mock_fuzzy.call_args.kwargs["cursor"] is cursor
+        assert "No exact match for **'Chandar Desa'**" in result
+        assert f"**{row[0]}**" in result
+        # Exactly one notice, even though two fallbacks were consulted.
+        assert result.count("No exact match") == 1
 
 
 # ==============================================================================

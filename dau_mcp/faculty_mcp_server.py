@@ -118,7 +118,14 @@ def get_faculty_details(name_or_email: str) -> str:
                 # Trigram similarity fallback, only after the exact lookup missed.
                 fuzzy_notice = ""
                 if not row:
-                    for candidate in find_similar_names("faculty", name_or_email, limit=1):
+                    # The cursor above is still open, so it is reused rather
+                    # than checking a second connection out of the pool.
+                    for candidate in find_similar_names(
+                        "faculty",
+                        name_or_email,
+                        limit=1,
+                        cursor=cursor,
+                    ):
                         cursor.execute("""
                             SELECT name, email, phone, address, education, specialization,
                                    profile_url, image_url, faculty_type, scraped_at

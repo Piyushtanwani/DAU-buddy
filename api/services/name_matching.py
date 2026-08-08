@@ -4,11 +4,18 @@ Name Matching Service
 Trigram-based (``pg_trgm``) name resolution shared by the faculty and staff
 directory lookups.
 
-This is the **last** step of the directory search chain, never the first one:
+This is the **last** step of the directory search chain, never the first one.
+The two families of callers reach it by different routes:
 
-    1. exact      — ``name ILIKE '%query%'`` (unchanged, fastest)
-    2. full-text  — ``websearch_to_tsquery`` via PostgresFullTextRetriever
-    3. similarity — this module, only when 1 and 2 returned nothing
+``search_faculty_db`` / ``search_staff_db``
+    1. full-text   — ``websearch_to_tsquery`` via PostgresFullTextRetriever
+    2. similarity  — this module, only when full-text returned nothing
+
+``get_faculty_details_db`` / ``get_staff_details_db`` (and the matching MCP tools,
+which have no token-overlap step)
+    1. exact          — ``name ILIKE '%query%' OR email ILIKE '%query%'``
+    2. token-overlap  — ``name ILIKE`` per query token, best token count wins
+    3. similarity     — this module, only when 1 and 2 returned nothing
 
 It resolves a *misspelled query to a real directory name*; the caller then
 renders that name through its own existing exact-lookup formatting, so no
@@ -96,12 +103,16 @@ def find_similar_names(
     limit: int = DEFAULT_CANDIDATE_LIMIT,
     cursor=None,
 ) -> List[str]:
+    """
     Return directory names similar to `query`, best match first.
 
     Args:
         table: 'faculty' or 'staff'.
         query: The (possibly misspelled) name the user typed.
         limit: Maximum candidates to return.
+        cursor: An open cursor to reuse. Callers already holding one must pass
+            it, so this never checks a second connection out of the pool while
+            the caller's is still in use.
 
     Returns an empty list when nothing clears the similarity threshold, when
     the query is too short to match safely, or when the lookup fails.
@@ -162,7 +173,8 @@ def find_similar_names(
 
 def fuzzy_match_notice(query: str, matched_name: str) -> str:
     """
-    Disclosure banner for a result produced by similarity matching.
+    Disclosure banner for a result whose name differs from what was typed —
+    used by both the token-overlap and the similarity fallbacks.
 
     The match may be wrong, so the reply must never read as if the user's
     spelling was found: it states what was typed and who was actually matched.

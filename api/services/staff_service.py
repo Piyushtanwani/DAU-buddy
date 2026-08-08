@@ -171,7 +171,10 @@ def get_staff_details_db(name_or_email: str, error_on_empty: bool = True) -> Opt
                 """, (pattern, pattern))
                 row = cursor.fetchone()
 
-                # Token-based typo fallback
+                # Token-based typo fallback. Like the trigram path below, this
+                # can select a different person than was typed, so the reply
+                # discloses whichever name it settled on.
+                fuzzy_notice = ""
                 if not row:
                     tokens = [t for t in name_or_email.split() if len(t) >= 3]
                     if tokens:
@@ -188,13 +191,23 @@ def get_staff_details_db(name_or_email: str, error_on_empty: bool = True) -> Opt
                                 candidates,
                                 key=lambda r: sum(1 for t in tokens if t in r[0].lower()),
                             )
+                            if row[0].strip().lower() != name_or_email.strip().lower():
+                                fuzzy_notice = fuzzy_match_notice(
+                                    name_or_email.strip(), row[0]
+                                ) + "\n"
 
-                # Trigram similarity fallback — last resort, and the only path
-                # here whose answer may be a different name than was asked for,
-                # so the reply discloses the substitution.
-                fuzzy_notice = ""
+                # Trigram similarity fallback — last resort, and the only other
+                # path here whose answer may be a different name than was asked
+                # for, so the reply discloses the substitution.
                 if not row:
-                    for candidate in find_similar_names("staff", name_or_email, limit=1):
+                    # The cursor above is still open, so it is reused rather
+                    # than checking a second connection out of the pool.
+                    for candidate in find_similar_names(
+                        "staff",
+                        name_or_email,
+                        limit=1,
+                        cursor=cursor,
+                    ):
                         cursor.execute("""
                             SELECT name, email, phone, address, qualification,
                                    designation, profile_url, image_url
