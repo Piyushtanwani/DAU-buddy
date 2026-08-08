@@ -22,22 +22,13 @@ DAY_START = "08:00"
 DAY_END = "18:00"
 
 
-def _now_day_time() -> tuple[str, str]:
+def _campus_time() -> str:
     """
-    Campus day+time for timetable lookups. Never datetime.now() — see
-    config.CAMPUS_TZ — and never the raw weekday either: the academic calendar
-    reassigns some dates ("07-08-2026 to be treated as Tuesday"), and on those
-    days the campus runs the substituted day's timetable.
+    Current campus clock time. Never datetime.now() — see config.CAMPUS_TZ, the
+    deployed image runs UTC. Deliberately does no calendar lookup: the day a
+    lookup should query comes from _resolve_day, which resolves it once.
     """
-    now = config.campus_now()
-    day, _ = calendar_service.effective_day(now.date())
-    return day, now.strftime("%H:%M:%S")
-
-
-def _day_note() -> str:
-    """' (Friday, treated as Tuesday)' when today is reassigned, else ''."""
-    day, substituted_from = calendar_service.effective_day()
-    return f" ({substituted_from}, treated as {day})" if substituted_from else ""
+    return config.campus_now().strftime("%H:%M:%S")
 
 
 def _resolve_day(
@@ -57,6 +48,7 @@ def _resolve_day(
 
     Returns (day_to_query, note, error). `note` explains a substitution in the
     tool's own output; `error` is a message to return verbatim to the caller.
+    Costs at most one calendar lookup, and none when `day` is explicit.
     """
     if date:
         try:
@@ -72,8 +64,14 @@ def _resolve_day(
     if day:
         return day, "", None
     if default_to_today:
-        now_day, _ = _now_day_time()
-        return now_day, _day_note(), None
+        effective, substituted_from = calendar_service.effective_day(
+            config.campus_now().date()
+        )
+        note = (
+            f" ({substituted_from}, treated as {effective})"
+            if substituted_from else ""
+        )
+        return effective, note, None
     return None, "", None
 
 
@@ -122,11 +120,10 @@ async def get_faculty_location(faculty_name: str, day: Optional[str] = None, tim
             resolves that.
     """
     try:
-        _, now_time = _now_day_time()
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        time = time or now_time
+        time = time or _campus_time()
         name, err = _resolve_single(faculty_name)
         if err:
             return err
@@ -363,7 +360,11 @@ async def get_room_schedule(room: str, day: Optional[str] = None,
             rooms = timetable_service.list_rooms()
             near = [r for r in rooms if room.replace("-", "").replace(" ", "").lower() in r.replace("-", "").replace(" ", "").lower()]
             hint = f" Close matches: {', '.join(near)}." if near else " See list_rooms."
-            return f"No sessions found for room '{room}'.{hint}"
+            # Carry the resolved day and substitution note here too: "no sessions"
+            # on a reassigned date is exactly when the caller needs to be told the
+            # campus is running another day's timetable.
+            when = f" on {day}{note}" if day else ""
+            return f"No sessions found for room '{room}'{when}.{hint}"
         room_label = room.upper()
         lines = [f"Room {room_label}{f' — {day}{note}' if day else ''}:"]
         by_day: dict[str, list] = {}
@@ -398,11 +399,10 @@ async def find_free_rooms(day: Optional[str] = None, time: Optional[str] = None,
             resolves that.
     """
     try:
-        _, now_time = _now_day_time()
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        time = time or now_time
+        time = time or _campus_time()
         rooms = timetable_service.find_free_rooms(day, time)
         if not rooms:
             return f"No free rooms at {time} on {day}{note}."
@@ -428,11 +428,10 @@ async def check_room_availability(room: str, day: Optional[str] = None, time: Op
             resolves that.
     """
     try:
-        _, now_time = _now_day_time()
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        time = time or now_time
+        time = time or _campus_time()
         result = timetable_service.get_room_availability(room, day, time)
         if result:
             progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
