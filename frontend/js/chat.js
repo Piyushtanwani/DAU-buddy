@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const promptCards = document.querySelectorAll(".prompt-card");
 
     const sendBtn = document.getElementById("send-btn");
+    const micBtn = document.getElementById("mic-btn");
 
     // Client-side request budget. Slightly above the server's own deadline
     // (LLM_TIMEOUT_S in api/routes/chat.py) so the server normally answers first.
@@ -337,6 +338,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Submit user question
     async function handleSend(text) {
         if (!text.trim() || isResponding) return;
+
+        // Auto-stop dictation if active
+        if (window.stopDictation) window.stopDictation();
 
         // Require authentication to chat
         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
@@ -715,7 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const avatar = document.createElement("div");
         avatar.className = "avatar";
-        avatar.innerHTML = '<i class="fas fa-hat-wizard"></i>';
+        avatar.innerHTML = '<i class="fas fa-graduation-cap"></i>';
 
         const wrapper = document.createElement("div");
         wrapper.className = "bubble-wrapper";
@@ -745,10 +749,138 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Form Event Listener
+    // Voice Dictation (Web Speech API)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRequestingPermission = false;
+    let isListening = false;
+
+    // Configuration dictionary for easy language expansion later
+
+
+    if (SpeechRecognition && micBtn) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        // Set the primary listening engine. (Web Speech API only accepts one active lang code per session)
+        // Note: Chrome's engine is smart enough to parse English even when set to Hindi ('hi-IN')
+        recognition.lang = {
+            english: "en-IN",
+            hindi: "hi-IN"
+        };
+        recognition.onstart = () => {
+            isRequestingPermission = false;
+            isListening = true;
+            micBtn.classList.add("listening");
+            const icon = micBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-microphone');
+                icon.classList.add('fa-stop');
+            }
+            userInput.placeholder = "Listening...";
+        };
+
+        recognition.onresult = (event) => {
+            let newText = "";
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    newText += event.results[i][0].transcript;
+                }
+            }
+
+            const transcript = newText.trim();
+            if (transcript) {
+                const currentVal = userInput.value;
+                if (currentVal && !currentVal.endsWith(' ')) {
+                    userInput.value += ' ' + transcript;
+                } else {
+                    userInput.value += transcript;
+                }
+
+                // Auto resize textarea
+                userInput.style.height = "auto";
+                userInput.style.height = (userInput.scrollHeight) + "px";
+
+                userInput.focus();
+            }
+        };
+
+        recognition.onerror = (event) => {
+            isRequestingPermission = false;
+            if (event.error === 'not-allowed') {
+                userInput.placeholder = "Microphone access denied.";
+            } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                userInput.placeholder = `Mic error: ${event.error}`;
+            }
+        };
+
+        recognition.onend = () => {
+            stopListening();
+            userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
+            userInput.focus();
+        };
+
+        function stopListening() {
+            isListening = false;
+            micBtn.classList.remove("listening");
+            const icon = micBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-stop');
+                icon.classList.add('fa-microphone');
+            }
+        }
+
+        window.stopDictation = () => {
+            if (isListening && recognition) {
+                recognition.stop();
+            }
+        };
+
+        micBtn.addEventListener("click", () => {
+            if (isRequestingPermission) return;
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                isRequestingPermission = true;
+                try {
+                    recognition.start();
+                } catch (e) {
+                    isRequestingPermission = false;
+                    console.error("Speech recognition start error:", e);
+                }
+            }
+        });
+    } else if (micBtn) {
+        micBtn.style.display = "none";
+    }
+
+    // Auto-resize textarea and handle Enter vs Shift+Enter
+    userInput.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = (this.scrollHeight) + "px";
+    });
+
+    userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Prevent default newline
+            const text = userInput.value;
+            if (text.trim()) {
+                handleSend(text);
+                userInput.style.height = "auto"; // Reset height after send
+            }
+        }
+    });
+
     form.addEventListener("submit", (e) => {
         e.preventDefault();
         const text = userInput.value;
-        handleSend(text);
+        if (text.trim()) {
+            handleSend(text);
+            userInput.style.height = "auto"; // Reset height after send
+        }
     });
 
     // Suggested Actions / Prompts Click Event (Welcome screen prompt cards)
