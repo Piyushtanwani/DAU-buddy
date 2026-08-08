@@ -24,9 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const sendBtn = document.getElementById("send-btn");
     const micBtn = document.getElementById("mic-btn");
 
-    // Client-side request budget. Slightly above the server's own deadline
-    // (LLM_TIMEOUT_S in api/routes/chat.py) so the server normally answers first.
-    const CHAT_TIMEOUT_MS = 55000;
+    // Client-side request budget. Must cover worst case: Gemini timeout (30s)
+    // + OpenAI fallback (45s) + overhead. Server answers before this fires.
+    const CHAT_TIMEOUT_MS = 100000;
     // Turns posted back to the server; it re-caps this itself.
     const HISTORY_TURNS_SENT = 12;
 
@@ -337,10 +337,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Submit user question
     async function handleSend(text) {
-        if (!text.trim() || isResponding) return;
+        // Stop mic immediately on any send attempt (before the empty-text guard)
+        stopDictation();
 
-        // Auto-stop dictation if active
-        if (window.stopDictation) window.stopDictation();
+        if (!text.trim() || isResponding) return;
 
         // Require authentication to chat
         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
@@ -754,22 +754,28 @@ document.addEventListener("DOMContentLoaded", () => {
     let recognition = null;
     let isRequestingPermission = false;
     let isListening = false;
+    let permissionTimeout = null;
+    let placeholderOverride = false;
 
-    // Configuration dictionary for easy language expansion later
-
+    function stopDictation() {
+        if (isListening && recognition) {
+            recognition.abort(); // Force abort to prevent late audio processing from appending text after send
+            stopListening(); // Eagerly reset UI
+        }
+    }
 
     if (SpeechRecognition && micBtn) {
         recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = false;
 
-        // Set the primary listening engine. (Web Speech API only accepts one active lang code per session)
-        // Note: Chrome's engine is smart enough to parse English even when set to Hindi ('hi-IN')
-        recognition.lang = {
-            english: "en-IN",
-            hindi: "hi-IN"
-        };
+        recognition.lang = "en-IN";
+
         recognition.onstart = () => {
+            if (permissionTimeout) {
+                clearTimeout(permissionTimeout);
+                permissionTimeout = null;
+            }
             isRequestingPermission = false;
             isListening = true;
             micBtn.classList.add("listening");
@@ -808,17 +814,26 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         recognition.onerror = (event) => {
+            if (permissionTimeout) {
+                clearTimeout(permissionTimeout);
+                permissionTimeout = null;
+            }
             isRequestingPermission = false;
             if (event.error === 'not-allowed') {
                 userInput.placeholder = "Microphone access denied.";
+                placeholderOverride = true;
             } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 userInput.placeholder = `Mic error: ${event.error}`;
+                placeholderOverride = true;
             }
         };
 
         recognition.onend = () => {
             stopListening();
-            userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
+            if (!placeholderOverride) {
+                userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
+            }
+            placeholderOverride = false;
             userInput.focus();
         };
 
@@ -832,21 +847,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        window.stopDictation = () => {
-            if (isListening && recognition) {
-                recognition.stop();
-            }
-        };
 
         micBtn.addEventListener("click", () => {
             if (isRequestingPermission) return;
 
             if (isListening) {
                 recognition.stop();
+                stopListening(); // Eagerly reset UI
             } else {
                 isRequestingPermission = true;
                 try {
                     recognition.start();
+                    permissionTimeout = setTimeout(() => {
+                        isRequestingPermission = false;
+                        permissionTimeout = null;
+                    }, 5000);
                 } catch (e) {
                     isRequestingPermission = false;
                     console.error("Speech recognition start error:", e);
