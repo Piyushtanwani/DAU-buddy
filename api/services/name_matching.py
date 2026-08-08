@@ -94,8 +94,8 @@ def find_similar_names(
     table: str,
     query: str,
     limit: int = DEFAULT_CANDIDATE_LIMIT,
+    cursor=None,
 ) -> List[str]:
-    """
     Return directory names similar to `query`, best match first.
 
     Args:
