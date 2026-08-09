@@ -17,6 +17,7 @@ from api.services import (
     is_gemini_available,
     record_gemini_failure,
     SYSTEM_INSTRUCTIONS_TEMPLATE,
+    build_system_instruction,
 )
 from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
@@ -24,6 +25,7 @@ from api.services.openai_service import (
 from api.auth import verify_google_token, resolve_role
 from api.context import user_role_var
 from api.services.library_service import LibraryService
+from api.services import calendar_service
 
 from scrapers import faculty_scraper, staff_scraper
 
@@ -429,9 +431,9 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
             # details for non-privileged users.
             user_role_var.set(request.state.role)
 
-            system_instruction = SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-                current_day=datetime.now().strftime("%A"),
-            )
+            # Campus time, not server time: a naive now() in a UTC container is
+            # 5h30m off, which turns every "right now" answer confidently wrong.
+            system_instruction = await _run_blocking(build_system_instruction)
             
             response_text = None
 
