@@ -5,6 +5,7 @@ import psycopg2.extras
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.database import db_connection
+from api.services import venue_service
 
 DAY_ORDER_SQL = """
     CASE day_of_week
@@ -229,14 +230,14 @@ def get_program_timetable(program_name: str, day: Optional[str] = None, semester
             return cur.fetchall()
 
 
-def list_rooms() -> List[str]:
+def list_venues() -> List[str]:
     with db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT DISTINCT room FROM timetables WHERE room IS NOT NULL AND room <> '' ORDER BY room;")
             return [r[0] for r in cur.fetchall()]
 
 
-def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_venue_schedule(venue: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             base = f"""
@@ -250,32 +251,39 @@ def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, An
             """
             if day:
                 cur.execute(base.format(day_clause="AND day_of_week ILIKE %s"),
-                            (f"%{room}%", f"%{day}%"))
+                            (f"%{venue}%", f"%{day}%"))
             else:
-                cur.execute(base.format(day_clause=""), (f"%{room}%",))
+                cur.execute(base.format(day_clause=""), (f"%{venue}%",))
             return cur.fetchall()
 
 
-def get_room_availability(room: str, day: str, time: str) -> Optional[Dict[str, Any]]:
-    """Point-in-time room check: the session occupying `room` at `time`, or None if free."""
+def get_venue_availability(venue: str, day: str, time: str) -> Optional[Dict[str, Any]]:
+    """Point-in-time venue check: the session occupying `venue` at `time`, or None if free. Enriched with metadata."""
     query = """
         SELECT session_type, course_code, course_name, faculty_name, start_time, end_time,
-               array_agg(DISTINCT program) AS programs
+               array_agg(DISTINCT program) AS programs, room as venue_id
         FROM timetables
         WHERE REPLACE(REPLACE(room, '-', ''), ' ', '') ILIKE REPLACE(REPLACE(%s, '-', ''), ' ', '')
           AND day_of_week ILIKE %s
           AND start_time <= %s::TIME
           AND end_time > %s::TIME
-        GROUP BY session_type, course_code, course_name, faculty_name, start_time, end_time
+        GROUP BY session_type, course_code, course_name, faculty_name, start_time, end_time, room
     """
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(query, (f"%{room}%", f"%{day}%", time, time))
-            return cur.fetchone()
+            cur.execute(query, (f"%{venue}%", f"%{day}%", time, time))
+            result = cur.fetchone()
+            if result:
+                metadata = venue_service.get_venue(result['venue_id']) or {}
+                result['capacity'] = metadata.get('capacity')
+                result['booking_poc'] = metadata.get('booking_poc')
+                result['venue_type'] = metadata.get('venue_type')
+                return dict(result)
+            return None
 
 
-def find_free_rooms(day: str, time: str) -> List[str]:
-    """Rooms with no session covering `time` on `day` (among rooms seen in the timetable)."""
+def find_free_venues(day: str, time: str) -> List[Dict[str, Any]]:
+    """Venues with no session covering `time` on `day` (among venues seen in the timetable). Enriched with metadata."""
     query = """
         SELECT DISTINCT room FROM timetables
         WHERE room IS NOT NULL AND room <> ''
@@ -290,4 +298,18 @@ def find_free_rooms(day: str, time: str) -> List[str]:
     with db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(query, (f"%{day}%", time, time))
-            return [r[0] for r in cur.fetchall()]
+            venue_ids = [r[0] for r in cur.fetchall()]
+            
+            # Batch fetch metadata
+            metadata_map = venue_service.get_venues_by_ids(venue_ids)
+            
+            results = []
+            for vid in venue_ids:
+                meta = metadata_map.get(vid, {})
+                results.append({
+                    "venue_id": vid,
+                    "capacity": meta.get("capacity"),
+                    "venue_type": meta.get("venue_type"),
+                    "booking_poc": meta.get("booking_poc")
+                })
+            return results

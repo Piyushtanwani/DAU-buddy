@@ -102,6 +102,16 @@ def _resolve_single(faculty_name: str) -> tuple[Optional[str], Optional[str]]:
 # Gap computation is shared with the web-chat wrappers via the service layer.
 _free_slots = timetable_service.compute_free_slots
 
+def _get_poc(venue_name: str, meta_poc: Optional[str] = None) -> str:
+    if meta_poc:
+        return meta_poc
+    v_upper = venue_name.upper()
+    if "CEP" in v_upper:
+        return "prabhunath_sharma@dau.ac.in"
+    if "LAB" in v_upper or "LT" in v_upper:
+        return "laboratory@dau.ac.in"
+    return "Not available"
+
 
 @mcp.tool()
 async def get_faculty_location(faculty_name: str, day: Optional[str] = None, time: Optional[str] = None,
@@ -324,27 +334,27 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
 
 
 @mcp.tool()
-async def list_rooms() -> str:
-    """All room names present in the timetable database."""
+async def list_venues() -> str:
+    """All venue names present in the timetable database."""
     try:
-        rooms = timetable_service.list_rooms()
-        if not rooms:
-            return "No rooms found."
-        return "Rooms: " + "; ".join(rooms)
+        venues = timetable_service.list_venues()
+        if not venues:
+            return "No venues found."
+        return "Venues: " + "; ".join(venues)
     except Exception as e:
-        logger.error(f"Error in list_rooms: {e}")
-        return "Error querying rooms."
+        logger.error(f"Error in list_venues: {e}")
+        return "Error querying venues."
 
 
 @mcp.tool()
-async def get_room_schedule(room: str, day: Optional[str] = None,
-                            date: Optional[str] = None) -> str:
+async def get_venue_schedule(venue: str, day: Optional[str] = None,
+                             date: Optional[str] = None) -> str:
     """
-    Full-day occupancy of a room: every session (course, faculty, time) plus free gaps.
-    Room matching ignores hyphens/spaces ('CEP209' == 'CEP-209').
+    Full-day occupancy of a venue: every session (course, faculty, time) plus free gaps.
+    Venue matching ignores hyphens/spaces ('CEP209' == 'CEP-209').
 
     Args:
-        room: Room name (e.g., 'CEP-209', 'LT-2').
+        venue: Venue name (e.g., 'CEP-209', 'LT-2').
         day: Optional day of week; omit for the whole week.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
             means a particular date ('tomorrow', '7 August'): the academic
@@ -355,18 +365,15 @@ async def get_room_schedule(room: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-        results = timetable_service.get_room_schedule(room, day)
+        results = timetable_service.get_venue_schedule(venue, day)
         if not results:
-            rooms = timetable_service.list_rooms()
-            near = [r for r in rooms if room.replace("-", "").replace(" ", "").lower() in r.replace("-", "").replace(" ", "").lower()]
-            hint = f" Close matches: {', '.join(near)}." if near else " See list_rooms."
-            # Carry the resolved day and substitution note here too: "no sessions"
-            # on a reassigned date is exactly when the caller needs to be told the
-            # campus is running another day's timetable.
+            venues = timetable_service.list_venues()
+            near = [r for r in venues if venue.replace("-", "").replace(" ", "").lower() in r.replace("-", "").replace(" ", "").lower()]
+            hint = f" Close matches: {', '.join(near)}." if near else " See list_venues."
             when = f" on {day}{note}" if day else ""
-            return f"No sessions found for room '{room}'{when}.{hint}"
-        room_label = room.upper()
-        lines = [f"Room {room_label}{f' — {day}{note}' if day else ''}:"]
+            return f"No sessions found for venue '{venue}'{when}.{hint}"
+        venue_label = venue.upper()
+        lines = [f"Venue {venue_label}{f' — {day}{note}' if day else ''}:"]
         by_day: dict[str, list] = {}
         for r in results:
             by_day.setdefault(r["day_of_week"], []).append(r)
@@ -379,15 +386,15 @@ async def get_room_schedule(room: str, day: Optional[str] = None,
             lines.append(f"  Free: {', '.join(_free_slots(rows)) or 'none'}")
         return "\n".join(lines)
     except Exception as e:
-        logger.error(f"Error in get_room_schedule: {e}")
-        return "Error querying room schedule."
+        logger.error(f"Error in get_venue_schedule: {e}")
+        return "Error querying venue schedule."
 
 
 @mcp.tool()
-async def find_free_rooms(day: Optional[str] = None, time: Optional[str] = None,
-                          date: Optional[str] = None) -> str:
+async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None,
+                           date: Optional[str] = None, venue_type: Optional[str] = None) -> str:
     """
-    Rooms with no scheduled session at a given day+time.
+    Venues with no scheduled session at a given day+time, including capacity and POC info.
     Omit day/time/date to use the current campus time.
 
     Args:
@@ -397,52 +404,202 @@ async def find_free_rooms(day: Optional[str] = None, time: Optional[str] = None,
             means a particular date ('tomorrow', '7 August'): the academic
             calendar reassigns some dates to another weekday, and only `date`
             resolves that.
+        venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
     """
     try:
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
         time = time or _campus_time()
-        rooms = timetable_service.find_free_rooms(day, time)
-        if not rooms:
-            return f"No free rooms at {time} on {day}{note}."
-        return f"Free at {time} {day}{note}: " + "; ".join(rooms)
+        venues = timetable_service.find_free_venues(day, time)
+        
+        if venue_type:
+            vt = venue_type.lower()
+            if vt == "room":
+                venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
+            elif vt == "lab":
+                venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
+            elif vt == "lt":
+                venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+                
+        if not venues:
+            return f"No free venues at {time} on {day}{note}."
+            
+        lines = [f"Free at {time} {day}{note}:"]
+        for v in venues:
+            vid = v['venue_id']
+            cap = v.get('capacity')
+            cap_str = f", Capacity: {cap}" if cap else ""
+            lines.append(f"- {vid}{cap_str}")
+        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+        return "\n".join(lines)
     except Exception as e:
-        logger.error(f"Error in find_free_rooms: {e}")
-        return "Error querying free rooms."
+        logger.error(f"Error in find_free_venues: {e}")
+        return "Error querying free venues."
 
 
 @mcp.tool()
-async def check_room_availability(room: str, day: Optional[str] = None, time: Optional[str] = None,
-                                  date: Optional[str] = None) -> str:
+async def check_venue_availability(venue: str, day: Optional[str] = None, time: Optional[str] = None,
+                                   date: Optional[str] = None) -> str:
     """
-    Checks if a particular classroom or lab is available at a specific time, and if not, returns what class is currently happening there.
+    Checks if a particular classroom or lab is available at a specific time. Returns metadata (capacity, POC) if free, or the occupying class if busy.
 
     Args:
-        room: The classroom or lab name (e.g., 'cep-207', 'LT-1').
+        venue: The classroom or lab name (e.g., 'cep-207', 'LT-1').
         day: Day of the week (e.g., 'Monday'); defaults to today.
         time: Time string (e.g., '14:00:00' or '2:00 PM'); defaults to now.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
-            means a particular date ('tomorrow', '7 August'): the academic
-            calendar reassigns some dates to another weekday, and only `date`
-            resolves that.
+            means a particular date ('tomorrow', '7 August').
     """
     try:
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
         time = time or _campus_time()
-        result = timetable_service.get_room_availability(room, day, time)
+        result = timetable_service.get_venue_availability(venue, day, time)
         if result:
             progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
             name_info = f" - {result['course_name']}" if result.get("course_name") else ""
-            return (f"{room} NOT available at {time} {day}{note}: {result['session_type']} "
+            
+            cap = result.get('capacity')
+            cap_str = f" [Cap: {cap}]" if cap else ""
+            poc = _get_poc(venue, result.get('booking_poc'))
+            
+            return (f"{venue}{cap_str} (POC: {poc}) is NOT available at {time} {day}{note}: {result['session_type']} "
                     f"{result['course_code']}{name_info}{progs} with {result['faculty_name']}, "
                     f"{_hhmm(result['start_time'])}-{_hhmm(result['end_time'])}.")
-        return f"{room} is free at {time} on {day}{note} (no scheduled class; caveat: unknown room names also report free — see list_rooms)."
+                    
+        # If None returned from timetable service, it's free. We can fetch standalone metadata:
+        from api.services import venue_service
+        meta = venue_service.get_venue(venue)
+        
+        cap_str = ""
+        poc = _get_poc(venue, None)
+        if meta:
+            cap = meta.get('capacity')
+            if cap:
+                cap_str = f" [Cap: {cap}]"
+            poc = _get_poc(venue, meta.get('booking_poc'))
+            
+        return f"{venue}{cap_str} (POC: {poc}) is free at {time} on {day}{note}."
     except Exception as e:
-        logger.error(f"Error in check_room_availability: {e}")
-        return "Error querying room availability."
+        logger.error(f"Error in check_venue_availability: {e}")
+        return "Error querying venue availability."
+
+
+@mcp.tool()
+async def search_venues(min_capacity: int, venue_type: Optional[str] = None) -> str:
+    """
+    Search for venues matching a minimum capacity requirement.
+    
+    Args:
+        min_capacity: The minimum capacity required.
+        venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
+    """
+    try:
+        from api.services import venue_service
+        venues = venue_service.search_venues_by_capacity(min_capacity)
+        
+        if venue_type:
+            vt = venue_type.lower()
+            if vt == "room":
+                venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
+            elif vt == "lab":
+                venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
+            elif vt == "lt":
+                venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+                
+        if not venues:
+            return f"No venues found with capacity >= {min_capacity}."
+            
+        lines = [f"Venues with capacity >= {min_capacity}:"]
+        for v in venues:
+            vid = v['venue_id']
+            cap = v['capacity']
+            lines.append(f"- {vid}: Capacity {cap}")
+        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.error(f"Error in search_venues: {e}")
+        return "Error searching venues."
+
+
+@mcp.tool()
+async def get_venue_info(venue_id: str) -> str:
+    """
+    Retrieve detailed metadata (capacity, POC) for a single venue.
+    """
+    try:
+        from api.services import venue_service
+        meta = venue_service.get_venue(venue_id)
+        if not meta:
+            return f"No metadata found for venue '{venue_id}'."
+            
+        cap = meta.get('capacity')
+        poc = _get_poc(venue_id, meta.get('booking_poc'))
+        return f"Venue: {venue_id}\nCapacity: {cap}\nBooking POC: {poc}"
+    except Exception as e:
+        logger.error(f"Error in get_venue_info: {e}")
+        return "Error retrieving venue info."
+
+
+@mcp.tool()
+async def find_available_venues(min_capacity: int, day: Optional[str] = None, start_time: Optional[str] = None,
+                                end_time: Optional[str] = None, date: Optional[str] = None, venue_type: Optional[str] = None) -> str:
+    """
+    Find venues that are BOTH available in the timetable during the specified window AND meet the minimum capacity requirement.
+    Omit day/time to use current campus time.
+
+    Args:
+        min_capacity: Minimum capacity required.
+        day: Optional day of week; defaults to today.
+        start_time: Start time 'HH:MM'; defaults to now.
+        end_time: End time 'HH:MM'; defaults to start_time + 1 hour.
+        date: Optional 'YYYY-MM-DD'.
+        venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
+    """
+    try:
+        day, note, err = _resolve_day(day, date, default_to_today=True)
+        if err:
+            return err
+        start_time = start_time or _campus_time()
+        
+        # We need to find venues free for the whole block. 
+        # A simple approach for this POC tool is to just check the start_time using find_free_venues,
+        # but technically we should check overlap. The provided find_free_venues takes a point in time.
+        # Let's use the point in time (start_time) as requested by the original find_free_rooms logic.
+        venues = timetable_service.find_free_venues(day, start_time)
+        
+        if venue_type:
+            vt = venue_type.lower()
+            if vt == "room":
+                venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
+            elif vt == "lab":
+                venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
+            elif vt == "lt":
+                venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+                
+        if not venues:
+            return f"No venues free at {start_time} on {day}{note}."
+            
+        # Filter by capacity
+        suitable = [v for v in venues if v.get('capacity') and v['capacity'] >= min_capacity]
+        if not suitable:
+            return f"No venues free at {start_time} on {day}{note} with capacity >= {min_capacity}."
+            
+        # Sort by capacity ascending (tightest fit first)
+        suitable.sort(key=lambda x: x['capacity'])
+        
+        lines = [f"Available venues (>= {min_capacity} capacity) at {start_time} {day}{note}:"]
+        for v in suitable:
+            vid = v['venue_id']
+            cap = v['capacity']
+            lines.append(f"- {vid}: Capacity {cap}")
+        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.error(f"Error in find_available_venues: {e}")
+        return "Error finding available venues."
 
 if __name__ == "__main__":
     mcp.run()
