@@ -282,22 +282,22 @@ def get_venue_availability(venue: str, day: str, time: str) -> Optional[Dict[str
             return None
 
 
-def find_free_venues(day: str, time: str) -> List[Dict[str, Any]]:
-    """Venues with no session covering `time` on `day` (among venues seen in the timetable). Enriched with metadata."""
+def find_free_venues(day: str, start_time: str, end_time: str) -> List[Dict[str, Any]]:
+    """Venues with no session overlapping [start_time, end_time) on `day` (among venues seen in the timetable). Enriched with metadata."""
     query = """
         SELECT DISTINCT room FROM timetables
         WHERE room IS NOT NULL AND room <> ''
           AND room NOT IN (
             SELECT room FROM timetables
             WHERE day_of_week ILIKE %s
-              AND start_time <= %s::TIME AND end_time > %s::TIME
+              AND start_time < %s::TIME AND end_time > %s::TIME
               AND room IS NOT NULL AND room <> ''
           )
         ORDER BY room
     """
     with db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(query, (f"%{day}%", time, time))
+            cur.execute(query, (f"%{day}%", end_time, start_time))
             venue_ids = [r[0] for r in cur.fetchall()]
             
             # Batch fetch metadata

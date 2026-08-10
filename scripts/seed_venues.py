@@ -5,6 +5,7 @@ import psycopg2
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import config
+from core.utils.venue import normalize_venue_id
 
 def seed_venues():
     db_host = os.getenv("DB_HOST", "localhost")
@@ -38,6 +39,8 @@ def seed_venues():
                     if not venue_id:
                         continue
                         
+                    venue_id = normalize_venue_id(venue_id)
+                        
                     capacity_str = row.get("Capacity", "0").strip()
                     if not capacity_str.isdigit():
                         continue
@@ -50,9 +53,9 @@ def seed_venues():
                     booking_poc = None
                     vid_upper = venue_id.upper()
                     if vid_upper.startswith("CEP"):
-                        booking_poc = "prabhunath_sharma@dau.ac.in"
+                        booking_poc = config.CEP_BOOKING_POC
                     elif "LAB" in vid_upper or "LT" in vid_upper:
-                        booking_poc = "laboratory@dau.ac.in"
+                        booking_poc = config.LAB_LT_BOOKING_POC
 
                     cur.execute("""
                         INSERT INTO venues (venue_id, capacity, venue_type, booking_poc)

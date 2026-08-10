@@ -1,10 +1,12 @@
 from typing import List, Dict, Optional
 from core.database import db_connection
+from core.utils.venue import normalize_venue_id
 
 import psycopg2.extras
 
 def get_venue(venue_id: str) -> Optional[Dict]:
     """Retrieve metadata for a single venue."""
+    venue_id = normalize_venue_id(venue_id)
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""

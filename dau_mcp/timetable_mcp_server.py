@@ -1,7 +1,7 @@
 import os
 import sys
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -102,15 +102,16 @@ def _resolve_single(faculty_name: str) -> tuple[Optional[str], Optional[str]]:
 # Gap computation is shared with the web-chat wrappers via the service layer.
 _free_slots = timetable_service.compute_free_slots
 
-def _get_poc(venue_name: str, meta_poc: Optional[str] = None) -> str:
-    if meta_poc:
-        return meta_poc
-    v_upper = venue_name.upper()
-    if "CEP" in v_upper:
-        return "prabhunath_sharma@dau.ac.in"
-    if "LAB" in v_upper or "LT" in v_upper:
-        return "laboratory@dau.ac.in"
-    return "Not available"
+def _derive_end_time(start_time: str) -> str:
+    """Add DEFAULT_VENUE_DURATION_MINUTES to start_time HH:MM."""
+    try:
+        # handle partial times like '14:00:00' if it's from _campus_time
+        time_format = "%H:%M:%S" if start_time.count(":") == 2 else "%H:%M"
+        t = datetime.strptime(start_time, time_format)
+        t += timedelta(minutes=config.DEFAULT_VENUE_DURATION_MINUTES)
+        return t.strftime("%H:%M")
+    except ValueError:
+        return start_time
 
 
 @mcp.tool()
@@ -410,8 +411,9 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        time = time or _campus_time()
-        venues = timetable_service.find_free_venues(day, time)
+        start_time = time or _campus_time()
+        end_time = _derive_end_time(start_time)
+        venues = timetable_service.find_free_venues(day, start_time, end_time)
         
         if venue_type:
             vt = venue_type.lower()
@@ -423,15 +425,18 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
                 venues = [v for v in venues if "LT" in v["venue_id"].upper()]
                 
         if not venues:
-            return f"No free venues at {time} on {day}{note}."
+            return f"No free venues from {start_time} to {end_time} on {day}{note}."
             
-        lines = [f"Free at {time} {day}{note}:"]
+        lines = [f"Free from {start_time} to {end_time} on {day}{note}:"]
         for v in venues:
             vid = v['venue_id']
             cap = v.get('capacity')
-            cap_str = f", Capacity: {cap}" if cap else ""
+            cap_str = f", Capacity: {cap}" if cap and cap > 1 else ""
             lines.append(f"- {vid}{cap_str}")
-        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+            
+        from core import config
+        lines.append("")
+        lines.append(f"Note: For CEP rooms contact {config.CEP_BOOKING_POC}. For LABs and LT contact {config.LAB_LT_BOOKING_POC}.")
         return "\n".join(lines)
     except Exception as e:
         logger.error(f"Error in find_free_venues: {e}")
@@ -463,7 +468,7 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
             
             cap = result.get('capacity')
             cap_str = f" [Cap: {cap}]" if cap else ""
-            poc = _get_poc(venue, result.get('booking_poc'))
+            poc = result.get('booking_poc') or "Not available"
             
             return (f"{venue}{cap_str} (POC: {poc}) is NOT available at {time} {day}{note}: {result['session_type']} "
                     f"{result['course_code']}{name_info}{progs} with {result['faculty_name']}, "
@@ -473,13 +478,12 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
         from api.services import venue_service
         meta = venue_service.get_venue(venue)
         
-        cap_str = ""
-        poc = _get_poc(venue, None)
-        if meta:
-            cap = meta.get('capacity')
-            if cap:
-                cap_str = f" [Cap: {cap}]"
-            poc = _get_poc(venue, meta.get('booking_poc'))
+        if not meta:
+            return f"Venue '{venue}' not found in our records."
+            
+        cap = meta.get('capacity')
+        cap_str = f" [Cap: {cap}]" if cap else ""
+        poc = meta.get('booking_poc') or "Not available"
             
         return f"{venue}{cap_str} (POC: {poc}) is free at {time} on {day}{note}."
     except Exception as e:
@@ -516,8 +520,8 @@ async def search_venues(min_capacity: int, venue_type: Optional[str] = None) -> 
         for v in venues:
             vid = v['venue_id']
             cap = v['capacity']
-            lines.append(f"- {vid}: Capacity {cap}")
-        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+            poc = v.get('booking_poc') or "Not available"
+            lines.append(f"- {vid}: Capacity {cap} (POC: {poc})")
         return "\n".join(lines)
     except Exception as e:
         logger.error(f"Error in search_venues: {e}")
@@ -536,7 +540,7 @@ async def get_venue_info(venue_id: str) -> str:
             return f"No metadata found for venue '{venue_id}'."
             
         cap = meta.get('capacity')
-        poc = _get_poc(venue_id, meta.get('booking_poc'))
+        poc = meta.get('booking_poc') or "Not available"
         return f"Venue: {venue_id}\nCapacity: {cap}\nBooking POC: {poc}"
     except Exception as e:
         logger.error(f"Error in get_venue_info: {e}")
@@ -562,13 +566,11 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        start_time = start_time or _campus_time()
         
-        # We need to find venues free for the whole block. 
-        # A simple approach for this POC tool is to just check the start_time using find_free_venues,
-        # but technically we should check overlap. The provided find_free_venues takes a point in time.
-        # Let's use the point in time (start_time) as requested by the original find_free_rooms logic.
-        venues = timetable_service.find_free_venues(day, start_time)
+        effective_start = start_time or _campus_time()
+        effective_end = end_time if end_time else _derive_end_time(effective_start)
+        
+        venues = timetable_service.find_free_venues(day, effective_start, effective_end)
         
         if venue_type:
             vt = venue_type.lower()
@@ -580,22 +582,22 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
                 venues = [v for v in venues if "LT" in v["venue_id"].upper()]
                 
         if not venues:
-            return f"No venues free at {start_time} on {day}{note}."
+            return f"No venues free from {effective_start} to {effective_end} on {day}{note}."
             
         # Filter by capacity
         suitable = [v for v in venues if v.get('capacity') and v['capacity'] >= min_capacity]
         if not suitable:
-            return f"No venues free at {start_time} on {day}{note} with capacity >= {min_capacity}."
+            return f"No venues free from {effective_start} to {effective_end} on {day}{note} with capacity >= {min_capacity}."
             
         # Sort by capacity ascending (tightest fit first)
         suitable.sort(key=lambda x: x['capacity'])
         
-        lines = [f"Available venues (>= {min_capacity} capacity) at {start_time} {day}{note}:"]
+        lines = [f"Available venues (>= {min_capacity} capacity) from {effective_start} to {effective_end} on {day}{note}:"]
         for v in suitable:
             vid = v['venue_id']
             cap = v['capacity']
-            lines.append(f"- {vid}: Capacity {cap}")
-        lines.append("\nBooking Contacts:\n- CEP rooms: prabhunath_sharma@dau.ac.in\n- Labs & LTs: laboratory@dau.ac.in")
+            poc = v.get('booking_poc') or "Not available"
+            lines.append(f"- {vid}: Capacity {cap} (POC: {poc})")
         return "\n".join(lines)
     except Exception as e:
         logger.error(f"Error in find_available_venues: {e}")
