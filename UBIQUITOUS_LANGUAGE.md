@@ -25,7 +25,7 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 | Term             | Definition                                                                        | Aliases to avoid            |
 | ---------------- | --------------------------------------------------------------------------------- | --------------------------- |
 | **Timetable**    | The weekly grid of teaching Slots for a Program and Semester                      | Schedule, routine           |
-| **Slot**         | One timetabled interval on a day: a Course, **one** Faculty, room, and start/end time. A co-taught session is several Slots, one per instructor, so each name stays searchable | Session, period, class hour |
+| **Slot**         | One timetabled interval on a day: a Course, **one** Faculty, Venue, and start/end time. A co-taught session is several Slots, one per instructor, so each name stays searchable | Session, period, class hour |
 | **Short Name**   | A Faculty's initials as the timetable workbooks write them (`AC`); resolved at seeding time to the display form `Ankush Chander (AC)` so lecture and lab rows match one lookup | Abbreviation, code, initials |
 | **Section Header** | A row in the lab workbook naming the program and semester the rows beneath it belong to (`BTech (ICT and CS) Core: SEMESTER III (2025 Batch)`); parsed to attribute Slots to one Program | Group header, title row |
 | **Session Type** | The kind of Slot: Lecture, Lab, or Tutorial                                       | Class type, mode            |
@@ -33,6 +33,18 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 | **Program**      | A degree offering (e.g. BTech ICT) whose batches share a Timetable                | Course (never), degree, branch |
 | **Course**       | A single taught subject with a course code, name, and Course Type                 | Subject, class, paper       |
 | **Semester**     | One academic term; also the axis that positions Courses within a Program         | Term                        |
+| **Day Order**    | The canonical Monday→Sunday ordering applied to every multi-day Timetable result; unrecognised day values sort first so bad data stays visible | Sort order, week order |
+
+## Venues
+
+| Term            | Definition                                                                          | Aliases to avoid          |
+| --------------- | ------------------------------------------------------------------------------------ | ------------------------- |
+| **Venue**       | A teaching space a Slot can occupy — a classroom, lab, or lecture theatre             | Room, hall, location      |
+| **Venue ID**    | A Venue's identifier (`CEP-209`, `LT-2`); matched with hyphens and spaces stripped, so `CEP209` and `CEP-209` are the same Venue | Room number, room name |
+| **Capacity**    | The number of seats in a Venue; the axis venue search ranks and filters on           | Size, strength, seats     |
+| **Venue Type**  | The category of a Venue: room (CEP), lab, or LT                                      | Category, kind            |
+| **Booking POC** | The single email address a User contacts to book a Venue                             | Owner, admin, contact, in-charge |
+| **Free Venue**  | A Venue with no Slot scheduled at a given Effective Day and time                     | Empty room, available room |
 
 ## Academic calendar
 
@@ -41,6 +53,9 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 | **Academic Event** | A dated institutional activity in the academic calendar (exams, registration, convocation) | Calendar entry, activity |
 | **Holiday**        | A dated non-working day, kept separately from Academic Events             | Off day, vacation         |
 | **Midsem / Endsem**| The mid-semester and end-semester examination windows, found by searching Academic Events | Internals, finals |
+| **Day Substitution** | An Academic Event that reassigns a date's weekday to make up for a holiday (`07-08-2026 … to be treated as Tuesday`) | Compensatory day, swap |
+| **Effective Day**  | The weekday the campus actually runs on a given date, after any Day Substitution — the day every schedule lookup must key off | Weekday, today, real day |
+| **Campus Time**    | The current time in the campus timezone (IST), independent of the deployed image's clock, which runs UTC | Now, server time, local time |
 
 ## Documents & retrieval
 
@@ -51,6 +66,15 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 | **Collection**     | A named grouping of Documents queried together (e.g. academic requirements)    | Category, folder              |
 | **Curriculum**     | The structured mapping of Courses to Program and Semester, parsed from official sources | Syllabus, course list  |
 | **Retrieval**      | Fetching the top-ranked relevant records via PostgreSQL full-text search instead of loading everything | Search (when ranked), RAG lookup |
+
+## Directory matching
+
+| Term                  | Definition                                                                   | Aliases to avoid          |
+| --------------------- | ------------------------------------------------------------------------------ | ------------------------- |
+| **Exact Match**       | A directory hit on a substring of the name or email — the first step of every lookup | Direct match         |
+| **Token Overlap**     | A directory hit scored by how many of the query's words appear in a name; tried when Exact Match finds nothing | Partial match, word match |
+| **Similarity Fallback** | The last resort: trigram `word_similarity` (≥ 0.55) resolving a misspelled query to one real directory name | Fuzzy search, typo search |
+| **Fuzzy Match Notice** | The banner prefixed to any result whose name differs from what the User typed, naming both | Disclaimer, warning |
 
 ## Library
 
@@ -78,9 +102,13 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 ## Relationships
 
 - A **User** has exactly one **Role**, and *at most* one **API Key** — Web Chat Users authenticate with a **Credential** and may never hold a key.
-- A **Program** has one **Timetable** per **Semester**; a **Timetable** is made of **Slots**.
-- A **Slot** links one **Course**, one **Faculty**, and one room at one time; a **Free Slot** is derived, never stored.
+- A **Program** has one **Timetable** per **Semester**; a **Timetable** is made of **Slots**, ordered by **Day Order**.
+- A **Slot** links one **Course**, one **Faculty**, and one **Venue** at one time; a **Free Slot** is derived, never stored.
+- A **Slot** names its **Venue** by string, not by key: `timetables.room` is matched to `venues.venue_id` with hyphens and spaces stripped, so a Slot may name a Venue that has no record and therefore no **Capacity** or **Booking POC**.
+- A **Venue** has one **Capacity** and one **Booking POC**; a **Free Venue** is derived from the absence of **Slots**, never stored.
+- A date resolves to exactly one **Effective Day**, via at most one **Day Substitution**; a bare weekday cannot be resolved, because by then the date is gone.
 - A **Short Name** identifies a **Faculty** inside the timetable workbooks only; it is resolved to the full display name before it reaches the database.
+- A directory lookup tries **Exact Match**, then **Token Overlap**, then **Similarity Fallback**; the last two must carry a **Fuzzy Match Notice**.
 - A **Document** belongs to one **Collection** and is split into many **Chunks**; search returns **Chunks**, citations point at their **Document** page.
 - The **Curriculum** places each **Course** in a **Program** and **Semester**.
 - **Sync** Tools and **Seeding** scripts both write datasets; only **Sync** is reachable through MCP, and neither is exposed to **Web Chat**.
@@ -88,24 +116,28 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 
 ## Example dialogue
 
-> **Dev:** "When a student asks 'when is Prof. Khare free?', do we ask the model to work out the gaps?"
+> **Dev:** "A student asks 'is CEP-209 free right now?' — what does 'right now' mean?"
 >
-> **Domain expert:** "No — **Free Slots** are computed server-side by inverting the busy **Slots** in the **Timetable**. The model only formats the result; free/busy inversion never happens inside a model."
+> **Domain expert:** "**Campus Time**, never the server clock; the deployed image runs UTC. And 'right now' also fixes a day — that's the **Effective Day**, not the calendar weekday. On 7 August the calendar says *treated as Tuesday*, so a Friday query has to read Tuesday's **Timetable** and say so in the answer."
 >
-> **Dev:** "And that same Tool works from **Web Chat**?"
+> **Dev:** "If nothing is scheduled there, is it a **Free Venue**?"
 >
-> **Domain expert:** "Yes, through the **Tool Bridge** — it mirrors the **Unified MCP Server**'s registry, minus the **Sync** Tools, which are MCP-only because they mutate data."
+> **Domain expert:** "It's free in the timetable sense — no **Slot** occupies it. Booking it is a separate act: the answer carries the **Booking POC** so the student knows who to email. We never say 'available', because we don't own the booking system."
 >
-> **Dev:** "If the student asks for the professor's phone number?"
+> **Dev:** "The student typed 'cep209'. Same **Venue**?"
 >
-> **Domain expert:** "They get it. The directory's numbers are institute switchboard extensions and the addresses are campus office rooms — the same data daiict.ac.in publishes. **Role** gates *mutating* Tools, not contact details."
+> **Domain expert:** "Yes — **Venue ID** matching strips hyphens and spaces. That's not the same as the directory's **Similarity Fallback**, which guesses at a misspelled *person's* name and must always carry a **Fuzzy Match Notice**. Venue matching is exact after normalisation; there's nothing to disclose."
 >
-> **Dev:** "One more — is a Ph.D. student a **Scholar** or a **User**?"
+> **Dev:** "And if the room has no row in `venues`?"
 >
-> **Domain expert:** "Both, but in different contexts. **Scholar** is a directory record we serve data *about*; **User** is whoever holds the **API Key** making the request. The same person could be each, but the concepts never mix."
+> **Domain expert:** "Then it's a **Venue** with no **Capacity** and no **Booking POC**. The **Slot** still names it — the link is a normalised string, not a foreign key — so the honest answer is the schedule without the metadata."
 
 ## Flagged ambiguities
 
+- **"Room" vs "Venue"** — `timetables.room` and `venues.venue_id` are the same concept under two names, joined by normalised string comparison rather than a foreign key. Say **Venue** in tools, docs and conversation; `room` survives only as a legacy column name, and nothing guarantees a Slot's room exists in `venues`.
+- **Venue Type is derived, never stored** — `venues.venue_type` exists in the schema but `seed_venues.py` always inserts `NULL`, while `find_free_venues`/`search_venues` filter by substring on the **Venue ID** (`CEP` → room, `LAB` → lab, `LT` → lt). So the word means two different things: an unpopulated column and a runtime string test. Pick one home for it.
+- **Booking POC is mapped in two places** — `seed_venues.py` derives it at seeding time and `_get_poc()` in `timetable_mcp_server.py` re-derives the same CEP/LAB/LT rules at query time, and the two disagree on how they test (`startswith("CEP")` vs `"CEP" in name`). One rule, one place; a Venue's POC belongs to the Venue record.
+- **"Day" is three things** — the real weekday, the **Effective Day** after **Day Substitution**, and the `day` tool parameter, which is taken at face value and skips calendar resolution entirely. A tool given a `date` resolves an **Effective Day**; a tool given a bare `day` cannot. Never say "day" where the substitution matters.
 - **"Course" vs "Program"** — "course" is sometimes used colloquially for a degree ("the BTech course"). In this domain a **Course** is always a single subject (`course_code`); a degree is always a **Program**. Never use "course" for a Program.
 - **"Collection"** — used both for a **Document** grouping (`documents.collection`) and colloquially for the library's books. Reserve **Collection** for Documents; the library's set of books is the **Catalog**.
 - **"Sync" vs "Seeding"** — both populate the database, but **Sync** is a runtime, tool-triggered re-scrape while **Seeding** is an operator-run setup script. The distinction matters for security (Sync tools are excluded from Web Chat) — never use one word for the other.
@@ -116,9 +148,5 @@ Domain vocabulary for the DAU Buddy MCP Server — an MCP platform giving AI ass
 - **"Program" is not only programs** — `timetables.program` currently holds 21 distinct values including course categories (`General Elective (Technical)`, `Specialization Core`), raw **Section Headers** (`BTech Core: SEMESTER I (2026 Batch)`), four spellings of the same BTech branch, and 121 rows of `Unknown Program`. `list_programs` returns them verbatim, so the model is offered section headers as if a student could enrol in one. Tracked in issue #48; until it is settled, "Program" means different things in the glossary and in the column.
 - **Faculty name: Short Name vs display name** — the lecture workbook writes `Ankush Chander (AC)` while the lab workbook writes `AC`. Storing both forms in `faculty_name` made every faculty lookup miss that person's labs, and joining co-instructors into one cell then made their own name ambiguous against the compound value. One Slot, one instructor, one display form — never a **Short Name** and never a joined string.
 - **"Session"** — `session_type` in the timetable means Lecture/Lab/Tutorial (a property of a **Slot**), not an auth session or academic session (year). Prefer **Session Type** in full, never bare "session".
+- **"Free"** — a **Free Slot** is a gap in a *person's* day; a **Free Venue** is a gap in a *place's* day. Both are derived by inverting **Slots**, but they answer different questions. Always qualify which.
 
-## Retired terms
-
-Kept so that older code comments, commits and PRs remain readable.
-
-- **Redaction** / **Privileged Role** — until 2026-08-03, directory Tool results had phone numbers and office addresses stripped for non-privileged Roles. Removed: the numbers are institute switchboard extensions (`079-6826xxxx`) and the addresses are campus office rooms, both already public at daiict.ac.in, so there was nothing to withhold. Role still gates **Sync** Tools. If either term reappears in a diff, it is probably a bad merge — `tests/test_chat_guardrails.py` asserts the machinery stays gone.
