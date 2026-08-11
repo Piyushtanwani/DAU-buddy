@@ -104,6 +104,7 @@ MCP Project/
 │   ├── seed_faculty.py
 │   ├── seed_staff.py
 │   ├── seed_library.py
+│   ├── seed_venues.py
 │   ├── seed_timetable.py
 │   ├── seed_calendar.py
 │   ├── seed_scholars.py
@@ -215,6 +216,7 @@ pip install -r requirements.txt
    python scripts/seed_scholars.py
    python scripts/seed_library.py
    python scripts/seed_calendar.py
+   python scripts/seed_venues.py
    python scripts/seed_timetable.py          
    python scripts/seed_documents.py
    ```

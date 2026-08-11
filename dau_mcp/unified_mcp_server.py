@@ -27,8 +27,8 @@ from dau_mcp.library_mcp_server import (
 from dau_mcp.timetable_mcp_server import (
     get_faculty_location, get_faculty_schedule, find_faculty_free_time,
     find_common_free_time, get_course_schedule, get_program_timetable,
-    list_programs, list_rooms, get_room_schedule, find_free_rooms,
-    check_room_availability
+    list_programs, list_venues, get_venue_schedule, find_free_venues,
+    check_venue_availability, search_venues, get_venue_info, find_available_venues
 )
 from dau_mcp.calendar_mcp_server import (
     get_next_holiday, get_upcoming_holidays, get_all_holidays, get_midsem_dates, get_endsem_dates, get_next_academic_event, search_calendar, get_events_by_date
@@ -109,10 +109,13 @@ mcp.add_tool(find_common_free_time)
 mcp.add_tool(get_course_schedule)
 mcp.add_tool(list_programs)
 mcp.add_tool(get_program_timetable)
-mcp.add_tool(list_rooms)
-mcp.add_tool(get_room_schedule)
-mcp.add_tool(find_free_rooms)
-mcp.add_tool(check_room_availability)
+mcp.add_tool(list_venues)
+mcp.add_tool(get_venue_schedule)
+mcp.add_tool(find_free_venues)
+mcp.add_tool(check_venue_availability)
+mcp.add_tool(search_venues)
+mcp.add_tool(get_venue_info)
+mcp.add_tool(find_available_venues)
 
 # Register Calendar Tools
 mcp.add_tool(get_next_holiday)

@@ -123,6 +123,13 @@ def get_feedback_recipient_emails() -> list[str]:
     return [e.strip() for e in emails.split(",") if e.strip()]
 
 # ==============================================================================
+# Venue & Timetable Configuration
+# ==============================================================================
+CEP_BOOKING_POC = "prabhunath_sharma@dau.ac.in"
+LAB_LT_BOOKING_POC = "laboratory@dau.ac.in"
+DEFAULT_VENUE_DURATION_MINUTES = 60
+
+# ==============================================================================
 # Authentication Configuration
 # ==============================================================================
 def get_google_client_id() -> str:

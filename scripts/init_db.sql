@@ -372,3 +372,13 @@ ALTER TABLE timetables
 CREATE INDEX IF NOT EXISTS idx_timetables_search_vector ON timetables USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_timetables_faculty ON timetables (faculty_name, day_of_week);
 CREATE INDEX IF NOT EXISTS idx_timetables_course ON timetables (course_code, day_of_week);
+
+-- =============================================================================
+-- Venues Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS venues (
+    venue_id    VARCHAR(50) PRIMARY KEY,
+    capacity    INTEGER NOT NULL CHECK (capacity > 0),
+    venue_type  VARCHAR(50),
+    booking_poc VARCHAR(255)
+);

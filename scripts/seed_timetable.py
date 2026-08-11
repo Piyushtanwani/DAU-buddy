@@ -18,6 +18,7 @@ from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import config
 from core.database import db_connection
+from core.utils.venue import normalize_venue_id
 
 logger = config.get_logger("scripts.seed_timetable")
 
@@ -82,24 +83,12 @@ def _parse_time(t) -> str | None:
         hour += 12
     return f"{hour:02d}:{m.group(2)}:00"
 
-def _normalize_room(room: str) -> str:
-    r = re.sub(r"\s+", " ", room.strip())
-    # Canonical forms differ by building: CEP/LT are hyphenated (CEP-102, LT-2),
-    # LAB is not (LAB004).
-    m = re.match(r"^(CEP|LT)\s*-?\s*(\d+[A-Z]?)$", r, re.IGNORECASE)
-    if m:
-        return f"{m.group(1).upper()}-{m.group(2).upper()}"
-    m = re.match(r"^LAB\s*-?\s*(\d+[A-Z]?)$", r, re.IGNORECASE)
-    if m:
-        return f"LAB{m.group(1).upper()}"
-    return r
-
 def split_rooms(room_str: str) -> list:
     """Split compound room strings ("CEP-102 & CEP-110", "LAB207, LAB112 & LAB009")
     into normalized individual rooms. Returns [""] when no room is given so callers
     still emit one record."""
     parts = [p for p in re.split(r"\s*[&,]\s*", room_str or "") if p.strip()]
-    return [_normalize_room(p) for p in parts] or [""]
+    return [normalize_venue_id(p) for p in parts] or [""]
 
 def _resolve_slot(slot) -> tuple:
     if not slot:
@@ -562,6 +551,25 @@ def main():
                     ))
                     counts[prog] = counts.get(prog, 0) + 1
 
+                # Auto-vivify any rooms found in the timetable that are missing from the venues table.
+                # This ensures every room in the timetable has a basic venue record (and its official POC assigned).
+                from core import config
+                cur.execute("""
+                    INSERT INTO venues (venue_id, capacity, venue_type, booking_poc)
+                    SELECT DISTINCT room,
+                           1,
+                           CASE WHEN room ILIKE 'CEP%%' THEN 'room'
+                                WHEN room ILIKE '%%LT%%' THEN 'lt'
+                                WHEN room ILIKE '%%LAB%%' THEN 'lab'
+                                ELSE 'other' END,
+                           CASE WHEN room ILIKE 'CEP%%' THEN %s
+                                WHEN room ILIKE '%%LT%%' OR room ILIKE '%%LAB%%' THEN %s
+                                ELSE NULL END
+                    FROM timetables
+                    WHERE room IS NOT NULL AND room <> ''
+                    ON CONFLICT (venue_id) DO NOTHING
+                """, (config.CEP_BOOKING_POC, config.LAB_LT_BOOKING_POC))
+                
             conn.commit()
 
         logger.info("=== Timetable Seeded Successfully ===")
