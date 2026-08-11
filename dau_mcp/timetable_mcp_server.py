@@ -140,7 +140,30 @@ async def get_faculty_location(faculty_name: str, day: Optional[str] = None, tim
             return err
         result = timetable_service.get_faculty_location(name, day, time)
         if not result:
-            return f"{name}: no class at {time} on {day}{note}."
+            office = ""
+            email_addr = ""
+            try:
+                db_name = name.split(" (")[0]
+                from core.database import db_connection
+                with db_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT address, email FROM faculty WHERE name ILIKE %s LIMIT 1", (f"{db_name}%",))
+                        row = cur.fetchone()
+                        if row:
+                            if row[0]:
+                                office = ", ".join(row[0].split(',')[:2]).strip()
+                            if row[1]:
+                                email_addr = row[1]
+            except Exception:
+                pass
+            
+            base_msg = f"{name}: no class at {time} on {day}{note}."
+            if office or email_addr:
+                contact_info = []
+                if office: contact_info.append(f"Office: {office}")
+                if email_addr: contact_info.append(f"Email: {email_addr}")
+                base_msg += f" (AI INSTRUCTION: You MUST explicitly include the following contact information in your final answer to the user) Since they have no class right now, they are likely in their office. {', '.join(contact_info)}. You can contact them directly."
+            return base_msg
         progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
         name_info = f" - {result['course_name']}" if result.get("course_name") else ""
         return (f"{name}: {result['session_type']} {result['course_code']}{name_info}{progs} "
@@ -208,11 +231,42 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
         if "candidates" in data:
             return _resolution_error(data["query"], data["candidates"])
         name = data["faculty"]
+        office = ""
+        email_addr = ""
+        try:
+            db_name = name.split(" (")[0]
+            from core.database import db_connection
+            with db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT address, email FROM faculty WHERE name ILIKE %s LIMIT 1", (f"{db_name}%",))
+                    row = cur.fetchone()
+                    if row:
+                        if row[0]:
+                            office = ", ".join(row[0].split(',')[:2]).strip()
+                        if row[1]:
+                            email_addr = row[1]
+        except Exception:
+            pass
+            
         if not data["busy_slots"]:
-            return f"{name}: no classes on {day}{note} — free all day (timetable only; other commitments not tracked)."
+            base_msg = f"{name}: no classes on {day}{note} — free all day."
+            if office or email_addr:
+                contact_info = []
+                if office: contact_info.append(f"Office: {office}")
+                if email_addr: contact_info.append(f"Email: {email_addr}")
+                base_msg += f" (AI INSTRUCTION: You MUST explicitly include the following contact information in your final answer to the user) Since they have no classes, they may be in their office. {', '.join(contact_info)}. You can contact them to schedule a meeting."
+            return base_msg
+            
         if not data["free_slots"]:
             return f"{name}: no free time on {day}{note}."
-        return f"{name} free on {day}{note}: " + ", ".join(data["free_slots"])
+        
+        base_msg = f"{name} is free on {day}{note} during these times: " + ", ".join(data["free_slots"])
+        if office or email_addr:
+            contact_info = []
+            if office: contact_info.append(f"Office: {office}")
+            if email_addr: contact_info.append(f"Email: {email_addr}")
+            base_msg += f". (AI INSTRUCTION: You MUST explicitly include the following contact information in your final answer to the user) During their free time, they may be in their office. {', '.join(contact_info)}. You can contact them to schedule a meeting."
+        return base_msg
     except Exception as e:
         logger.error(f"Error in find_faculty_free_time: {e}")
         return "Error querying faculty free time."

@@ -62,7 +62,7 @@ def call_openai_api(api_key: str, system_instruction: str, history: List[ChatMes
         for msg in history:
             if not msg.text or not msg.text.strip():
                 continue
-            role = "user" if msg.sender == "user" else "assistant"
+            role = "user" if msg.sender in ("user", "human") else "assistant"
             messages.append({"role": role, "content": msg.text})
 
     if len(messages) == 1:

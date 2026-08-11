@@ -518,10 +518,10 @@ def call_gemini_api(
             if not msg.text or not msg.text.strip():
                 continue
             # The last message from user is the current turn
-            if i == len(history) - 1 and msg.sender == "user":
+            if i == len(history) - 1 and msg.sender in ("user", "human"):
                 latest_msg = msg.text
                 break
-            role = "user" if msg.sender == "user" else "model"
+            role = "user" if msg.sender in ("user", "human") else "model"
             contents.append(types.Content(
                 role=role,
                 parts=[types.Part.from_text(text=msg.text)],
