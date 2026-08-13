@@ -537,7 +537,7 @@ def call_gemini_api(
         system_instruction=system_instruction,
         tools=tools,
         temperature=0.3,
-        max_output_tokens=1200,
+        max_output_tokens=4000,
     )
 
     try:
