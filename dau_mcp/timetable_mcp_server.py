@@ -446,12 +446,12 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
                 lines[0] += " However, this semester primarily consists of electives. Here is the schedule of available electives:"
                 
         for r in results:
-            # We track all printed core slots
             slot_key = (r['course_code'], r['day_of_week'], _hhmm(r['start_time']), _hhmm(r['end_time']), r['room'], r['session_type'])
-            seen_slots.add(slot_key)
             
             # Print core courses here only if there is a core block
             if has_core and not _is_elective_course(r.get("course_type")):
+                # We track all printed core slots
+                seen_slots.add(slot_key)
                 name_info = f" - {r['course_name']}" if r.get("course_name") else ""
                 type_info = f" [{r['course_type']}]" if r.get("course_type") else ""
                 lines.append(f"- {r['day_of_week']} {_hhmm(r['start_time'])}-{_hhmm(r['end_time'])}: "

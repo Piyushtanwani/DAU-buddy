@@ -16,6 +16,16 @@ def normalize_program_name(name: str) -> str:
         return ""
     return name.lower().replace(" ", "").replace(".", "").replace("-", "").replace("(", "").replace(")", "")
 
+def get_sql_exact_program_match(column_name: str = "program") -> str:
+    """Returns an EXISTS clause that splits the column by commas and exact-matches against the normalized parts."""
+    norm = SQL_NORMALIZE_EXPR.replace("program", "prt")
+    return f"EXISTS (SELECT 1 FROM unnest(string_to_array({column_name}, ',')) AS prt WHERE {norm} = %s)"
+
+def get_sql_prefix_program_match(column_name: str = "program") -> str:
+    """Returns an EXISTS clause that splits the column by commas and prefix-matches against the normalized parts."""
+    norm = SQL_NORMALIZE_EXPR.replace("program", "prt")
+    return f"EXISTS (SELECT 1 FROM unnest(string_to_array({column_name}, ',')) AS prt WHERE {norm} LIKE %s || '%%')"
+
 def resolve_program(program_name: str) -> List[str]:
     """
     Resolves a requested program name to its canonical name(s) in the database.

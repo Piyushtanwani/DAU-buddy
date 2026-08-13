@@ -205,7 +205,7 @@ def list_programs() -> List[str]:
             return [r[0] for r in cur.fetchall()]
 
 
-from core.utils.program import SQL_NORMALIZE_EXPR, normalize_program_name
+from core.utils.program import SQL_NORMALIZE_EXPR, normalize_program_name, get_sql_exact_program_match, get_sql_prefix_program_match, resolve_program
 
 def get_program_timetable(program_name: str, day: Optional[str] = None, semester: Optional[str] = None) -> List[Dict[str, Any]]:
     with db_connection() as conn:
@@ -214,7 +214,7 @@ def get_program_timetable(program_name: str, day: Optional[str] = None, semester
                 SELECT day_of_week, start_time, end_time, session_type, course_code,
                        course_name, faculty_name, room, semester, course_type
                 FROM timetables
-                WHERE {SQL_NORMALIZE_EXPR} = %s
+                WHERE {get_sql_exact_program_match()}
             """
             params = [normalize_program_name(program_name)]
             if day:
@@ -243,7 +243,11 @@ def get_electives(program_name: Optional[str] = None, semester: Optional[str] = 
             """
             params = []
             if program_name:
-                query += f" AND {SQL_NORMALIZE_EXPR} = %s "
+                matches = resolve_program(program_name)
+                if len(matches) == 1:
+                    query += f" AND {get_sql_exact_program_match()} "
+                else:
+                    query += f" AND {get_sql_prefix_program_match()} "
                 params.append(normalize_program_name(program_name))
             if semester:
                 query += " AND semester = %s "
@@ -266,7 +270,8 @@ def get_electives_schedule(program_name: str, semester: str, day: Optional[str] 
                 SELECT day_of_week, start_time, end_time, session_type, course_code,
                        course_name, faculty_name, room, semester, string_agg(DISTINCT course_type, ', ') AS course_type, array_agg(DISTINCT program) AS programs
                 FROM timetables
-                WHERE course_type ILIKE '%%elective%%' AND {SQL_NORMALIZE_EXPR} = %s AND semester = %s
+                WHERE course_type ILIKE '%%elective%%'
+                AND {get_sql_exact_program_match()} AND semester = %s
             """
             params = [normalize_program_name(program_name), str(semester)]
             if day:
@@ -286,7 +291,7 @@ def get_program_busy_slots(program_name: str, day: str, semester: Optional[str] 
     query = f"""
         SELECT DISTINCT start_time, end_time
         FROM timetables
-        WHERE {SQL_NORMALIZE_EXPR} = %s AND day_of_week ILIKE %s
+        WHERE {get_sql_exact_program_match()} AND day_of_week ILIKE %s
     """
     params = [normalize_program_name(program_name), f"%{day}%"]
     if semester:
