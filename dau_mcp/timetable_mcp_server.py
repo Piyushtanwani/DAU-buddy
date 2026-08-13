@@ -5,11 +5,17 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel, Field
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import config
 from api.services import timetable_service
 from api.services import calendar_service
+from core.utils.program import normalize_program_name, resolve_program
+
+class ProgramQuery(BaseModel):
+    program_name: str = Field(description="Program/batch name (e.g., 'B Tech (ICT and CS)')")
+    semester: Optional[str] = Field(default=None, description="Optional semester number ('1', '3', '7', etc.)")
 
 logger = config.get_logger("dau_mcp.timetable_mcp_server")
 
@@ -114,6 +120,11 @@ def _derive_end_time(start_time: str) -> str:
         return start_time
 
 
+
+def _is_elective_course(course_type: Optional[str]) -> bool:
+    return "elective" in (course_type or "").lower()
+
+
 @mcp.tool()
 async def get_faculty_location(faculty_name: str, day: Optional[str] = None, time: Optional[str] = None,
                                date: Optional[str] = None) -> str:
@@ -194,13 +205,29 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
 
     Args:
         faculty_name: Name or initials of the faculty.
-        day: Day of the week (e.g., 'Monday'); defaults to today.
+        day: Day of the week (e.g., 'Monday', or 'All' for whole week); defaults to today.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
             means a particular date ('tomorrow', '7 August'): the academic
             calendar reassigns some dates to another weekday, and only `date`
             resolves that.
     """
     try:
+        if not date and day and day.lower() == "all":
+            results = []
+            name = ""
+            for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]:
+                data = timetable_service.get_free_time(faculty_name, d)
+                if "candidates" in data:
+                    return _resolution_error(data["query"], data["candidates"])
+                name = data["faculty"]
+                if not data["busy_slots"]:
+                    results.append(f"{d}: Free all day")
+                elif not data["free_slots"]:
+                    results.append(f"{d}: No free time")
+                else:
+                    results.append(f"{d}: " + ", ".join(data["free_slots"]))
+            return f"{name} free time for the whole week:\n" + "\n".join(results)
+
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
@@ -227,13 +254,27 @@ async def find_common_free_time(faculty_names: List[str], day: Optional[str] = N
 
     Args:
         faculty_names: List of names/initials (e.g., ['Sourish', 'Kalyan', 'AC']).
-        day: Day of the week; defaults to today.
+        day: Day of the week (e.g., 'Monday', or 'All' for whole week); defaults to today.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
             means a particular date ('tomorrow', '7 August'): the academic
             calendar reassigns some dates to another weekday, and only `date`
             resolves that.
     """
     try:
+        if not date and day and day.lower() == "all":
+            results = []
+            who = ""
+            for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]:
+                data = timetable_service.get_common_free_time(faculty_names, d)
+                if "candidates" in data:
+                    return _resolution_error(data["query"], data["candidates"])
+                who = ", ".join(data["faculty"])
+                if not data["free_slots"]:
+                    results.append(f"{d}: None")
+                else:
+                    results.append(f"{d}: " + ", ".join(data["free_slots"]))
+            return f"Common free slots for the whole week ({who}):\n" + "\n".join(results)
+
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
@@ -250,7 +291,7 @@ async def find_common_free_time(faculty_names: List[str], day: Optional[str] = N
 
 
 @mcp.tool()
-async def find_programs_common_free_time(programs: List[dict], day: Optional[str] = None,
+async def find_programs_common_free_time(programs: List[ProgramQuery], day: Optional[str] = None,
                                          date: Optional[str] = None) -> str:
     """
     Find common free slots for multiple programs/batches on a given day.
@@ -258,15 +299,48 @@ async def find_programs_common_free_time(programs: List[dict], day: Optional[str
 
     Args:
         programs: A list of objects, each containing 'program_name' (e.g., 'MSc (IT)') and optional 'semester' (e.g., '3').
-        day: Day of the week; defaults to today.
+        day: Day of the week (e.g., 'Monday', or 'All' for whole week); defaults to today.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
             means a particular date.
     """
     try:
+        if not programs:
+            return "Please provide at least one valid programme name in the 'programs' list."
+
+        resolved_queries = []
+        for p in programs:
+            p_name = p.program_name
+            if not p_name:
+                return "Please provide at least one valid programme name."
+                
+            matches = resolve_program(p_name)
+            if not matches:
+                return f"I couldn't find the programme '{p_name}'. Please use the 'list_programs' tool to find the exact name."
+            if len(matches) > 1:
+                return f"The programme '{p_name}' is ambiguous. It could match: {', '.join(matches)}. Please clarify which one you mean."
+                
+            resolved_queries.append({
+                "program_name": matches[0],
+                "semester": p.semester
+            })
+
+        if not date and day and day.lower() == "all":
+            results = []
+            who = ""
+            for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]:
+                data = timetable_service.get_programs_common_free_time(resolved_queries, d)
+                who = ", ".join(data["programs"])
+                if not data["free_slots"]:
+                    results.append(f"{d}: None")
+                else:
+                    results.append(f"{d}: " + ", ".join(data["free_slots"]))
+            return f"Common free slots for the whole week ({who}):\n" + "\n".join(results)
+
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        data = timetable_service.get_programs_common_free_time(programs, day)
+            
+        data = timetable_service.get_programs_common_free_time(resolved_queries, day)
         who = ", ".join(data["programs"])
         if not data["free_slots"]:
             return f"No common free time on {day}{note} for {who}."
@@ -337,55 +411,70 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
     the `get_electives` tool to provide them with the available elective courses.
 
     Args:
-        program_name: Program/batch name (see list_programs). If the user asks for a generic program (like 'BTech ICT'), just pick the closest representative program (e.g., 'B Tech (ICT and CS)') instead of asking the user to clarify between minor variants.
+        program_name: Program/batch name (see list_programs). If the programme name is ambiguous: 1. Call list_programs. 2. Find the exact match. 3. If multiple remain plausible, ask the user. 4. Never silently choose one or guess.
         day: Optional day of the week to filter by; omit for the whole week.
         semester: Optional semester number ('1', '3', ...).
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
-            means a particular date ('tomorrow', '7 August'): the academic
-            calendar reassigns some dates to another weekday, and only `date`
-            resolves that.
+            means a particular date ('tomorrow', '7 August').
     """
     try:
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-        results = timetable_service.get_program_timetable(program_name, day, semester)
+            
+        matches = resolve_program(program_name)
+        if not matches:
+            return f"I couldn't find the programme '{program_name}'. Please use the 'list_programs' tool to find the exact name."
+        if len(matches) > 1:
+            return f"The programme '{program_name}' is ambiguous. It could match: {', '.join(matches)}. Please clarify which one you mean."
+        
+        resolved_program = matches[0]
+        results = timetable_service.get_program_timetable(resolved_program, day, semester)
         sem_str = f" (Sem {semester})" if semester else ""
+        
+        seen_slots = set()
+        
+        # Determine if we have actual core courses
+        has_core = any(not _is_elective_course(r.get("course_type")) for r in results)
+        
         lines = []
-        if not results:
-            lines = [f"No core classes for {program_name}{sem_str}{f' on {day}' if day else ''}{note}."]
+        if has_core:
+            lines = [f"Core Schedule for {resolved_program}{sem_str}{f' — {day}{note}' if day else ''}:"]
         else:
-            lines = [f"Core Schedule for {program_name}{sem_str}{f' — {day}{note}' if day else ''}:"]
-            for r in results:
+            lines = [f"No core schedule found for {resolved_program}{sem_str}{f' on {day}' if day else ''}{note}."]
+            if semester:
+                lines[0] += " However, this semester primarily consists of electives. Here is the schedule of available electives:"
+                
+        for r in results:
+            # We track all printed core slots
+            slot_key = (r['course_code'], r['day_of_week'], _hhmm(r['start_time']), _hhmm(r['end_time']), r['room'], r['session_type'])
+            seen_slots.add(slot_key)
+            
+            # Print core courses here only if there is a core block
+            if has_core and not _is_elective_course(r.get("course_type")):
                 name_info = f" - {r['course_name']}" if r.get("course_name") else ""
                 type_info = f" [{r['course_type']}]" if r.get("course_type") else ""
                 lines.append(f"- {r['day_of_week']} {_hhmm(r['start_time'])}-{_hhmm(r['end_time'])}: "
                              f"{r['session_type']} {r['course_code']}{type_info}{name_info} "
                              f"with {r['faculty_name']} in {r['room']}")
 
-        if semester in ("7", "8", "VII", "VIII", "7th", "8th") or ("m tech" in program_name.lower() and semester in ("3", "4", "III", "IV")):
-            prog_type = "m tech" if "m tech" in program_name.lower() else "b tech"
-            electives_sched = timetable_service.get_electives_schedule(prog_type, day)
+        if semester:
+            electives_sched = timetable_service.get_electives_schedule(resolved_program, semester, day)
             if electives_sched:
-                if not results:
-                    lines = [f"No core schedule found. However, {program_name} {sem_str} consists mainly of electives. Here is the schedule of available electives:"]
-                else:
+                if has_core:
                     lines.append(f"\nAdditionally, here is the schedule for all available electives:")
                 
-                seen_slots = set()
                 for r in electives_sched:
-                    programs_list = r.get('programs', [])
-                    if any(program_name.lower() in p.lower() or prog_type in p.lower() for p in programs_list):
-                        slot_key = (r['day_of_week'], r['start_time'], r['end_time'], r['course_code'], r['session_type'])
-                        if slot_key in seen_slots:
-                            continue
-                        seen_slots.add(slot_key)
-                        
-                        name_info = f" - {r['course_name']}" if r.get("course_name") else ""
-                        type_info = f" [{r['course_type']}]" if r.get("course_type") else ""
-                        lines.append(f"- {r['day_of_week']} {_hhmm(r['start_time'])}-{_hhmm(r['end_time'])}: "
-                                     f"{r['session_type']} {r['course_code']}{type_info}{name_info} "
-                                     f"with {r['faculty_name']} in {r['room']}")
+                    slot_key = (r['course_code'], r['day_of_week'], _hhmm(r['start_time']), _hhmm(r['end_time']), r['room'], r['session_type'])
+                    if slot_key in seen_slots:
+                        continue
+                    seen_slots.add(slot_key)
+                    
+                    name_info = f" - {r['course_name']}" if r.get("course_name") else ""
+                    type_info = f" [{r['course_type']}]" if r.get("course_type") else ""
+                    lines.append(f"- {r['day_of_week']} {_hhmm(r['start_time'])}-{_hhmm(r['end_time'])}: "
+                                 f"{r['session_type']} {r['course_code']}{type_info}{name_info} "
+                                 f"with {r['faculty_name']} in {r['room']}")
 
         if len(lines) > 1:
             return "\n".join(lines)
@@ -396,20 +485,23 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
 
 
 @mcp.tool()
-async def get_electives(program_level: Optional[str] = None) -> str:
+async def get_electives(program_name: Optional[str] = None, semester: Optional[str] = None) -> str:
     """
-    Retrieve a list of elective courses, optionally filtered by program level (e.g., 'B Tech', 'M Tech').
-    Use this when users ask for electives generally or for a specific program level like B.Tech or M.Tech.
+    Retrieve a list of elective courses, optionally filtered by an exact program name (e.g. 'B Tech (ICT and CS)') and semester.
+    Use this when users ask for electives generally or for a specific program.
 
     Args:
-        program_level: Optional string to filter (e.g., 'B Tech' or 'M Tech'). Omit for all electives.
+        program_name: Optional exact program name.
+        semester: Optional semester number.
     """
     try:
-        results = timetable_service.get_electives(program_level)
+        results = timetable_service.get_electives(program_name, semester)
         if not results:
-            return f"No electives found{f' for {program_level}' if program_level else ''}."
+            sem_str = f" Sem {semester}" if semester else ""
+            return f"No electives found{f' for {program_name}{sem_str}' if program_name else ''}."
             
-        lines = [f"Electives{f' for {program_level}' if program_level else ''}:"]
+        sem_str = f" Sem {semester}" if semester else ""
+        lines = [f"Electives{f' for {program_name}{sem_str}' if program_name else ''}:"]
         for r in results:
             programs_list = r.get('programs', [])
             programs_str = f" [{', '.join(programs_list)}]" if programs_list else ""
