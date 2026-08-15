@@ -205,16 +205,18 @@ def list_programs() -> List[str]:
             return [r[0] for r in cur.fetchall()]
 
 
+from core.utils.program import SQL_NORMALIZE_EXPR, normalize_program_name, get_sql_exact_program_match, get_sql_prefix_program_match, resolve_program
+
 def get_program_timetable(program_name: str, day: Optional[str] = None, semester: Optional[str] = None) -> List[Dict[str, Any]]:
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            query = """
+            query = f"""
                 SELECT day_of_week, start_time, end_time, session_type, course_code,
                        course_name, faculty_name, room, semester, course_type
                 FROM timetables
-                WHERE program ILIKE %s
+                WHERE {get_sql_exact_program_match()}
             """
-            params = [f"%{program_name}%"]
+            params = [normalize_program_name(program_name)]
             if day:
                 query += " AND day_of_week ILIKE %s"
                 params.append(f"%{day}%")
@@ -228,6 +230,99 @@ def get_program_timetable(program_name: str, day: Optional[str] = None, semester
             """
             cur.execute(query, tuple(params))
             return cur.fetchall()
+
+
+def get_electives(program_name: Optional[str] = None, semester: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get all electives, optionally filtered by an exact program name and semester."""
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            query = f"""
+                SELECT course_code, course_name, string_agg(DISTINCT course_type, ', ') AS course_type, array_agg(DISTINCT program) AS programs 
+                FROM timetables 
+                WHERE course_type ILIKE '%%elective%%'
+            """
+            params = []
+            if program_name:
+                matches = resolve_program(program_name)
+                if len(matches) == 1:
+                    query += f" AND {get_sql_exact_program_match()} "
+                else:
+                    query += f" AND {get_sql_prefix_program_match()} "
+                params.append(normalize_program_name(program_name))
+            if semester:
+                query += " AND semester = %s "
+                params.append(str(semester))
+            
+            query += """
+                GROUP BY course_code, course_name
+                ORDER BY course_code;
+            """
+            
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_electives_schedule(program_name: str, semester: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get the schedule (timetable slots) for all electives for a given exact program."""
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            query = f"""
+                SELECT day_of_week, start_time, end_time, session_type, course_code,
+                       course_name, faculty_name, room, semester, string_agg(DISTINCT course_type, ', ') AS course_type, array_agg(DISTINCT program) AS programs
+                FROM timetables
+                WHERE course_type ILIKE '%%elective%%'
+                AND {get_sql_exact_program_match()} AND semester = %s
+            """
+            params = [normalize_program_name(program_name), str(semester)]
+            if day:
+                query += " AND day_of_week ILIKE %s"
+                params.append(f"%{day}%")
+                
+            query += f"""
+                GROUP BY day_of_week, start_time, end_time, session_type, course_code,
+                         course_name, faculty_name, room, semester
+                ORDER BY {DAY_ORDER_SQL}, start_time, course_code
+            """
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_program_busy_slots(program_name: str, day: str, semester: Optional[str] = None) -> List[Dict[str, Any]]:
+    query = f"""
+        SELECT DISTINCT start_time, end_time
+        FROM timetables
+        WHERE {get_sql_exact_program_match()} AND day_of_week ILIKE %s
+    """
+    params = [normalize_program_name(program_name), f"%{day}%"]
+    if semester:
+        query += " AND semester = %s"
+        params.append(str(semester))
+    query += " ORDER BY start_time"
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_programs_common_free_time(programs: List[Dict[str, Any]], day: str, min_minutes: int = 20) -> Dict[str, Any]:
+    """Common free windows when ALL listed programs/batches are free on a day.
+    `programs` is a list of dicts with 'program_name' and optional 'semester'.
+    """
+    all_busy = []
+    resolved = []
+    for p in programs:
+        p_name = p.get('program_name')
+        if not p_name:
+            continue
+        p_sem = p.get('semester')
+        all_busy.extend(get_program_busy_slots(p_name, day, p_sem))
+        resolved.append(f"{p_name}{f' (Sem {p_sem})' if p_sem else ''}")
+        
+    return {
+        "programs": resolved,
+        "day": day,
+        "free_slots": compute_free_slots(all_busy, min_minutes),
+    }
 
 
 def list_venues() -> List[str]:

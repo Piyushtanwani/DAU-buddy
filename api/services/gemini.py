@@ -119,7 +119,7 @@ You answer by calling TOOLS — you have no built-in directory. Available tools:
 - **Directory**: `search_faculty`, `get_faculty_details`, `search_faculty_by_expertise`, `list_faculty`, `search_staff`, `get_staff_details`, `list_staff` — ALWAYS use these for any question about a person; never answer people questions from memory.
 - **Library**: `search_library_books`, `get_book_details` — search the OPAC catalog
 - **Calendar**: `get_next_holiday`, `get_upcoming_holidays`, `get_all_holidays`, `get_midsem_dates`, `get_endsem_dates`, `get_next_academic_event`, `search_calendar`, `get_events_by_date` — holidays and academic events
-- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `find_common_free_time`, `get_course_schedule`, `get_program_timetable`, `get_venue_schedule`, `check_venue_availability`, `find_free_venues`, `search_venues`, `get_venue_info`, `find_available_venues`, `list_programs`, `list_venues` — class schedules, free-slot lookup, venue checks
+- **Timetable**: `get_faculty_schedule`, `get_faculty_location`, `find_faculty_free_time`, `find_common_free_time`, `find_programs_common_free_time`, `get_course_schedule`, `get_program_timetable`, `get_electives`, `get_venue_schedule`, `check_venue_availability`, `find_free_venues`, `search_venues`, `get_venue_info`, `find_available_venues`, `list_programs`, `list_venues` — class schedules, electives, free-slot lookup, venue checks
 - **Scholars**: `search_scholars`, `get_scholar_details`, `list_scholars` — PhD/doctoral scholar lookup (professors are faculty, NOT scholars)
 - **Academic Docs**: `search_academic_requirements`, `list_academic_documents`, `get_academic_document_pages` — rules, regulations, CPI requirements, graduation criteria
 - **About**: `get_creators_info` — creators, developers, and team info
@@ -129,7 +129,8 @@ R1. PEOPLE (who is X, who works on Y, whose contact): the Directory tools. For P
 R2. TIMETABLES AND VENUES (who teaches what, where someone is, what is free): the Timetable tools.
   - A QUESTION ABOUT A DATE MUST BE ASKED AS A DATE. When the user means a particular date — "tomorrow", "on 7 August", "next Monday" — pass `date` as 'YYYY-MM-DD' and do NOT pass `day`. The tools resolve a date through the academic calendar; a weekday you worked out yourself cannot be resolved, so "tomorrow is Friday" silently returns Friday's classes on a day the campus is running Tuesday's. Only use `day` when the user genuinely means any such weekday ("what happens on Fridays").
   - Program schedules: the database uses strict names like "MSc (IT)", "B Tech (CS)". Call `list_programs` FIRST to find the exact name, then pass that exact string to `get_program_timetable`. Never guess the name from what the user typed.
-  - Free time: ALWAYS use `find_faculty_free_time` / `find_common_free_time` and relay their windows verbatim — never derive free time from a schedule yourself.
+  - Electives: when checking available elective courses for a program or globally, use `get_electives`.
+  - Free time: ALWAYS use `find_faculty_free_time`, `find_common_free_time`, or `find_programs_common_free_time` and relay their windows verbatim — never derive free time from a schedule yourself. To check free time for the WHOLE WEEK, you MUST explicitly pass `day="All"`. Never omit 'day' when asked for the whole week, as omitting it defaults to today.
   - These tools take a DAY, not a time, so they return the whole day. When the user asks about a moment ("right now", "at 3pm"), check whether that moment falls inside a returned window and LEAD with that answer. If it does not, say they are busy and give the next window that starts after it. Never list windows that have already ended.
 R3. DATES AND WHAT THEY MEAN ACADEMICALLY (holidays, exam dates, "what is tomorrow", "is Friday treated as Tuesday"): the Calendar tools — call `get_events_by_date` for the date in question. The date in CURRENT CONTEXT is a plain calendar fact and is NOT the answer to these: the academic calendar reassigns individual dates, and an event named "To be treated as Tuesday" means the campus runs Tuesday's timetable that day whatever the real weekday is. Never answer a day-of-week question by arithmetic on the current date alone. When a date is reassigned, say both — "Friday, treated as Tuesday" — since the user needs the real date to show up and the effective day to know which classes run.
 R4. BOOKS: `search_library_books` first, then `get_book_details` to check availability.
@@ -476,6 +477,33 @@ def _extract_function_calls_genai(response) -> list:
         logger.warning(f"Could not read function calls off the Gemini response: {e}")
     return calls
 
+def resolve_json_schema(schema: dict, root_defs: dict = None) -> dict:
+    """Recursively resolve $ref references and remove $defs for Gemini compatibility."""
+    if not isinstance(schema, dict):
+        return schema
+    import copy
+    schema = copy.deepcopy(schema)
+    if root_defs is None:
+        root_defs = schema.pop("$defs", {})
+    
+    if "$ref" in schema:
+        ref_path = schema["$ref"]
+        if ref_path.startswith("#/$defs/"):
+            def_name = ref_path.split("/")[-1]
+            if def_name in root_defs:
+                resolved = copy.deepcopy(root_defs[def_name])
+                resolved = resolve_json_schema(resolved, root_defs)
+                schema.pop("$ref")
+                schema.update(resolved)
+    
+    for key, value in list(schema.items()):
+        if isinstance(value, dict):
+            schema[key] = resolve_json_schema(value, root_defs)
+        elif isinstance(value, list):
+            schema[key] = [resolve_json_schema(item, root_defs) if isinstance(item, dict) else item for item in value]
+            
+    return schema
+
 def call_gemini_api(
     api_key: str,
     system_instruction: str,
@@ -502,6 +530,8 @@ def call_gemini_api(
     func_decls = []
     for t in raw_tools:
         params = t.get("parameters", {})
+        if params:
+            params = resolve_json_schema(params)
         func_decls.append(types.FunctionDeclaration(
             name=t["name"],
             description=t.get("description", t["name"]),
@@ -537,7 +567,7 @@ def call_gemini_api(
         system_instruction=system_instruction,
         tools=tools,
         temperature=0.3,
-        max_output_tokens=1200,
+        max_output_tokens=4000,
     )
 
     try:
