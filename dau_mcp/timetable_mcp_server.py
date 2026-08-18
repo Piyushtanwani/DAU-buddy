@@ -27,6 +27,84 @@ mcp = FastMCP(
 DAY_START = "08:00"
 DAY_END = "18:00"
 
+def _parse_time(t_str: str) -> Optional[datetime.time]:
+    try:
+        t_str = t_str.strip()
+        if t_str.count(":") == 2:
+            return datetime.strptime(t_str, "%H:%M:%S").time()
+        if "M" in t_str.upper():
+            return datetime.strptime(t_str, "%I:%M %p").time()
+        return datetime.strptime(t_str, "%H:%M").time()
+    except ValueError:
+        return None
+
+def _check_working_hours(
+    day: Optional[str] = None,
+    time_str: Optional[str] = None,
+    end_time_str: Optional[str] = None,
+    is_derived_end_time: bool = False,
+    is_venue_query: bool = False
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    
+    parsed_start = None
+    if time_str:
+        parsed_start = _parse_time(time_str)
+        if not parsed_start:
+            return f"Invalid time format: '{time_str}'.", None, None
+
+    parsed_end = None
+    if end_time_str:
+        parsed_end = _parse_time(end_time_str)
+        if not parsed_end:
+            return f"Invalid time format: '{end_time_str}'.", None, None
+
+    venue_msg = ""
+    if is_venue_query:
+        prefix = ""
+        if parsed_start:
+            formatted_time = parsed_start.strftime("%I:%M %p")
+            # Strip leading zero if it looks nicer, but "%I:%M %p" is fine (e.g. 08:48 PM). Let's do lstrip("0") for nicer reading:
+            formatted_time = formatted_time.lstrip("0")
+            prefix = f"Currently it is {formatted_time}. "
+        venue_msg = f"{prefix}All classrooms are free outside regular hours for clubs and committees.\nFor CEP rooms, you can contact [{config.CEP_BOOKING_POC}](mailto:{config.CEP_BOOKING_POC}). For Labs and LTs, contact [{config.LAB_LT_BOOKING_POC}](mailto:{config.LAB_LT_BOOKING_POC})."
+
+    if day and day.lower() in ("saturday", "sunday"):
+        msg = venue_msg if is_venue_query else "The timetable only covers Monday to Friday (Saturday and Sunday are off for both students and faculties)."
+        return msg, None, None
+
+    if not time_str and not end_time_str:
+        return None, None, None
+
+    day_start = _parse_time(DAY_START)
+    day_end = _parse_time(DAY_END)
+    
+    fmt_start = day_start.strftime("%I:%M %p")
+    fmt_end = day_end.strftime("%I:%M %p")
+    out_of_hours_msg = venue_msg if is_venue_query else f"This time is outside college working hours, which are from {fmt_start} to {fmt_end}, Monday to Friday."
+
+    norm_start_str = None
+    if parsed_start:
+        if parsed_start < day_start or parsed_start >= day_end:
+            return out_of_hours_msg, None, None
+        norm_start_str = parsed_start.strftime("%H:%M")
+
+    norm_end_str = None
+    if parsed_end:
+        if not is_derived_end_time:
+            if parsed_end > day_end:
+                return out_of_hours_msg, None, None
+            if parsed_start and parsed_end < parsed_start:
+                return "End time cannot be earlier than start time.", None, None
+            norm_end_str = parsed_end.strftime("%H:%M")
+        else:
+            if parsed_end > day_end:
+                norm_end_str = day_end.strftime("%H:%M")
+            else:
+                norm_end_str = parsed_end.strftime("%H:%M")
+                
+    return None, norm_start_str, norm_end_str
+
+
 
 def _campus_time() -> str:
     """
@@ -146,6 +224,8 @@ async def get_faculty_location(faculty_name: str, day: Optional[str] = None, tim
         if err:
             return err
         time = time or _campus_time()
+        hours_err, time, _ = _check_working_hours(day=day, time_str=time)
+        if hours_err: return hours_err
         name, err = _resolve_single(faculty_name)
         if err:
             return err
@@ -180,6 +260,8 @@ async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
         name, err = _resolve_single(faculty_name)
         if err:
             return err
@@ -231,6 +313,8 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
         data = timetable_service.get_free_time(faculty_name, day)
         if "candidates" in data:
             return _resolution_error(data["query"], data["candidates"])
@@ -278,6 +362,8 @@ async def find_common_free_time(faculty_names: List[str], day: Optional[str] = N
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
         data = timetable_service.get_common_free_time(faculty_names, day)
         if "candidates" in data:
             return _resolution_error(data["query"], data["candidates"])
@@ -340,6 +426,9 @@ async def find_programs_common_free_time(programs: List[ProgramQuery], day: Opti
         if err:
             return err
             
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
+        
         data = timetable_service.get_programs_common_free_time(resolved_queries, day)
         who = ", ".join(data["programs"])
         if not data["free_slots"]:
@@ -369,6 +458,8 @@ async def get_course_schedule(course_code: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
         results = timetable_service.get_course_schedule(course_code, day)
         if not results:
             return f"No scheduled classes for {course_code}{f' on {day}' if day else ''}{note}."
@@ -421,6 +512,9 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
         day, note, err = _resolve_day(day, date)
         if err:
             return err
+            
+        hours_err, _, _ = _check_working_hours(day=day)
+        if hours_err: return hours_err
             
         matches = resolve_program(program_name)
         if not matches:
@@ -545,6 +639,8 @@ async def get_venue_schedule(venue: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
+        hours_err, _, _ = _check_working_hours(day=day, is_venue_query=True)
+        if hours_err: return hours_err
         results = timetable_service.get_venue_schedule(venue, day)
         if not results:
             venues = timetable_service.list_venues()
@@ -592,6 +688,8 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
             return err
         start_time = time or _campus_time()
         end_time = _derive_end_time(start_time)
+        hours_err, start_time, end_time = _check_working_hours(day=day, time_str=start_time, end_time_str=end_time, is_derived_end_time=True, is_venue_query=True)
+        if hours_err: return hours_err
         venues = timetable_service.find_free_venues(day, start_time, end_time)
         
         if venue_type:
@@ -640,6 +738,8 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
         if err:
             return err
         time = time or _campus_time()
+        hours_err, time, _ = _check_working_hours(day=day, time_str=time, is_venue_query=True)
+        if hours_err: return hours_err
         result = timetable_service.get_venue_availability(venue, day, time)
         if result:
             progs = f" [{', '.join(result['programs'])}]" if result.get("programs") else ""
@@ -747,7 +847,16 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
             return err
         
         effective_start = start_time or _campus_time()
-        effective_end = end_time if end_time else _derive_end_time(effective_start)
+        
+        if end_time:
+            effective_end = end_time
+            is_derived = False
+        else:
+            effective_end = _derive_end_time(effective_start)
+            is_derived = True
+            
+        hours_err, effective_start, effective_end = _check_working_hours(day=day, time_str=effective_start, end_time_str=effective_end, is_derived_end_time=is_derived, is_venue_query=True)
+        if hours_err: return hours_err
         
         venues = timetable_service.find_free_venues(day, effective_start, effective_end)
         
