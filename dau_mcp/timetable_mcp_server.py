@@ -236,7 +236,7 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
             return _resolution_error(data["query"], data["candidates"])
         name = data["faculty"]
         if not data["busy_slots"]:
-            return f"{name}: no classes on {day}{note} — free all day."
+            return f"{name}: no classes on {day}{note} — free all day (timetable only; other commitments not tracked)."
             
         if not data["free_slots"]:
             return f"{name}: no free time on {day}{note}."
