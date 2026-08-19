@@ -159,6 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (stored) {
             try {
                 chatSessions = JSON.parse(stored);
+                // Sort by timestamp descending
+                chatSessions.sort((a, b) => b.timestamp - a.timestamp);
             } catch (e) {
                 console.error("Error parsing stored chat sessions", e);
                 chatSessions = [];
@@ -368,12 +370,22 @@ document.addEventListener("DOMContentLoaded", () => {
             activeSession = chatSessions.find(s => s.id === activeChatId);
         }
 
+        // Move the active session to the top of the history list if it's not already there
+        const sessionIndex = chatSessions.findIndex(s => s.id === activeChatId);
+        if (sessionIndex > 0) {
+            chatSessions.splice(sessionIndex, 1);
+            chatSessions.unshift(activeSession);
+            activeSession.timestamp = Date.now();
+        }
+
         // Generate title if it's the first message
         if (activeSession.messages.length === 0) {
             const shortTitle = text.length > 28 ? text.substring(0, 25) + "..." : text;
             activeSession.title = shortTitle;
-            renderChatHistoryList();
         }
+        
+        // Re-render history list in all cases where message is sent to ensure order/title is updated
+        renderChatHistoryList();
 
         // Append to state history and save
         activeSession.messages.push({ sender: "user", text: text });
