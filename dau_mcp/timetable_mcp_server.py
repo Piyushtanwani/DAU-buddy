@@ -66,7 +66,7 @@ def _check_working_hours(
         prefix = ""
         if parsed_start:
             formatted_time = parsed_start.strftime("%I:%M %p").lstrip("0")
-            prefix = f"The requested time is {formatted_time}. "
+            prefix = f"For {formatted_time}: "
         venue_msg = f"{prefix}All classrooms are free outside regular hours for clubs and committees.\nFor CEP rooms, you can contact [{config.CEP_BOOKING_POC}](mailto:{config.CEP_BOOKING_POC}). For Labs and LTs, contact [{config.LAB_LT_BOOKING_POC}](mailto:{config.LAB_LT_BOOKING_POC})."
 
     if day and day.lower() in ("saturday", "sunday"):
@@ -90,9 +90,10 @@ def _check_working_hours(
     if parsed_end:
         if not is_derived_end_time:
             if parsed_end > day_end:
-                return out_of_hours_msg, None, None
-            if parsed_start and parsed_end < parsed_start:
-                return "End time cannot be earlier than start time.", None, None
+                fmt_parsed_end = parsed_end.strftime("%I:%M %p").lstrip("0")
+                return f"{fmt_parsed_end} is outside college working hours, which are from {fmt_start} to {fmt_end}, Monday to Friday.", None, None
+            if parsed_start and parsed_end <= parsed_start:
+                return "End time must be later than start time.", None, None
             norm_end_str = parsed_end.strftime("%H:%M")
         else:
             if parsed_end > day_end:
@@ -258,8 +259,6 @@ async def get_faculty_schedule(faculty_name: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
         name, err = _resolve_single(faculty_name)
         if err:
             return err
@@ -311,8 +310,6 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
         data = timetable_service.get_free_time(faculty_name, day)
         if "candidates" in data:
             return _resolution_error(data["query"], data["candidates"])
@@ -360,8 +357,6 @@ async def find_common_free_time(faculty_names: List[str], day: Optional[str] = N
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
         data = timetable_service.get_common_free_time(faculty_names, day)
         if "candidates" in data:
             return _resolution_error(data["query"], data["candidates"])
@@ -424,9 +419,6 @@ async def find_programs_common_free_time(programs: List[ProgramQuery], day: Opti
         if err:
             return err
             
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
-        
         data = timetable_service.get_programs_common_free_time(resolved_queries, day)
         who = ", ".join(data["programs"])
         if not data["free_slots"]:
@@ -456,8 +448,6 @@ async def get_course_schedule(course_code: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
         results = timetable_service.get_course_schedule(course_code, day)
         if not results:
             return f"No scheduled classes for {course_code}{f' on {day}' if day else ''}{note}."
@@ -510,9 +500,6 @@ async def get_program_timetable(program_name: str, day: Optional[str] = None, se
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-            
-        hours_err, _, _ = _check_working_hours(day=day)
-        if hours_err: return hours_err
             
         matches = resolve_program(program_name)
         if not matches:
@@ -637,8 +624,6 @@ async def get_venue_schedule(venue: str, day: Optional[str] = None,
         day, note, err = _resolve_day(day, date)
         if err:
             return err
-        hours_err, _, _ = _check_working_hours(day=day, is_venue_query=True)
-        if hours_err: return hours_err
         results = timetable_service.get_venue_schedule(venue, day)
         if not results:
             venues = timetable_service.list_venues()
@@ -670,6 +655,7 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
     """
     Venues with no scheduled session at a given day+time, including capacity and POC info.
     Omit day/time/date to use the current campus time.
+    Availability queries are supported only for Monday-Friday, 08:00-18:00.
 
     Args:
         day: Optional day of week; defaults to today.
@@ -681,6 +667,8 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
         venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
     """
     try:
+        if (day or date) and not time:
+            return "Please specify a time to check venue availability."
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
@@ -724,6 +712,7 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
                                    date: Optional[str] = None) -> str:
     """
     Checks if a particular classroom or lab is available at a specific time. Returns metadata (capacity, POC) if free, or the occupying class if busy.
+    Availability queries are supported only for Monday-Friday, 08:00-18:00.
 
     Args:
         venue: The classroom or lab name (e.g., 'cep-207', 'LT-1').
@@ -733,6 +722,8 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
             means a particular date ('tomorrow', '7 August').
     """
     try:
+        if (day or date) and not time:
+            return "Please specify a time to check venue availability."
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
@@ -831,6 +822,7 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
     """
     Find venues that are BOTH available in the timetable during the specified window AND meet the minimum capacity requirement.
     Omit day/time to use current campus time.
+    Availability queries are supported only for Monday-Friday, 08:00-18:00.
 
     Args:
         min_capacity: Minimum capacity required.
@@ -841,6 +833,8 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
         venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
     """
     try:
+        if (day or date) and not start_time:
+            return "Please specify a time to check venue availability."
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
