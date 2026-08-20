@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -24,16 +25,23 @@ mcp = FastMCP(
     dependencies=["psycopg2-binary"]
 )
 
-DAY_START = "08:00"
-DAY_END = "18:00"
 
 def _parse_time(t_str: str) -> Optional[datetime.time]:
     try:
-        t_str = t_str.strip()
+        t_str = t_str.strip().upper()
+        t_str = re.sub(r'(\d)(AM|PM)', r'\1 \2', t_str)
+        
+        if len(t_str) == 4 and t_str.isdigit():
+            return datetime.strptime(t_str, "%H%M").time()
+            
         if t_str.count(":") == 2:
+            if "M" in t_str:
+                return datetime.strptime(t_str, "%I:%M:%S %p").time()
             return datetime.strptime(t_str, "%H:%M:%S").time()
-        if "M" in t_str.upper():
+            
+        if "M" in t_str:
             return datetime.strptime(t_str, "%I:%M %p").time()
+            
         return datetime.strptime(t_str, "%H:%M").time()
     except ValueError:
         return None
@@ -43,7 +51,8 @@ def _check_working_hours(
     time_str: Optional[str] = None,
     end_time_str: Optional[str] = None,
     is_derived_end_time: bool = False,
-    is_venue_query: bool = False
+    is_venue_query: bool = False,
+    is_whole_day: bool = False
 ) -> tuple[Optional[str], Optional[str], Optional[str]]:
     
     parsed_start = None
@@ -64,7 +73,7 @@ def _check_working_hours(
     venue_msg = ""
     if is_venue_query:
         prefix = ""
-        if parsed_start:
+        if parsed_start and not is_whole_day:
             formatted_time = parsed_start.strftime("%I:%M %p").lstrip("0")
             prefix = f"For {formatted_time}: "
         venue_msg = f"{prefix}All classrooms are free outside regular hours for clubs and committees.\nFor CEP rooms, you can contact [{config.CEP_BOOKING_POC}](mailto:{config.CEP_BOOKING_POC}). For Labs and LTs, contact [{config.LAB_LT_BOOKING_POC}](mailto:{config.LAB_LT_BOOKING_POC})."
@@ -73,8 +82,8 @@ def _check_working_hours(
         msg = venue_msg if is_venue_query else "The timetable only covers Monday to Friday (Saturday and Sunday are off for both students and faculties)."
         return msg, None, None
 
-    day_start = _parse_time(DAY_START)
-    day_end = _parse_time(DAY_END)
+    day_start = _parse_time(timetable_service.DAY_START)
+    day_end = _parse_time(timetable_service.DAY_END)
     
     fmt_start = day_start.strftime("%I:%M %p")
     fmt_end = day_end.strftime("%I:%M %p")
@@ -654,12 +663,13 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
                            date: Optional[str] = None, venue_type: Optional[str] = None) -> str:
     """
     Venues with no scheduled session at a given day+time, including capacity and POC info.
-    Omit day/time/date to use the current campus time.
+    Omit `time` (when passing `day` or `date`) to get whole-day free windows for that day.
+    Omit all date/time parameters to query the current campus time.
     Availability queries are supported only for Monday-Friday, 08:00-18:00.
 
     Args:
         day: Optional day of week; defaults to today.
-        time: Optional 'HH:MM' 24h; defaults to now.
+        time: Optional 'HH:MM' 24h. Omit to query the whole day, unless checking right now.
         date: Optional 'YYYY-MM-DD'. PREFER THIS over `day` whenever the user
             means a particular date ('tomorrow', '7 August'): the academic
             calendar reassigns some dates to another weekday, and only `date`
@@ -667,37 +677,91 @@ async def find_free_venues(day: Optional[str] = None, time: Optional[str] = None
         venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
     """
     try:
-        if (day or date) and not time:
-            return "Please specify a time to check venue availability."
+        is_explicit_day = bool(day or date)
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        start_time = time or _campus_time()
-        parsed_start = _parse_time(start_time)
-        end_time = _derive_end_time(parsed_start.strftime("%H:%M") if parsed_start else start_time)
-        hours_err, start_time, end_time = _check_working_hours(day=day, time_str=start_time, end_time_str=end_time, is_derived_end_time=True, is_venue_query=True)
+            
+        is_whole_day = False
+        if is_explicit_day and not time:
+            start_time = "08:00"
+            end_time = "18:00"
+            is_derived_end_time = False
+            is_whole_day = True
+        else:
+            start_time = time or _campus_time()
+            parsed_start = _parse_time(start_time)
+            end_time = _derive_end_time(parsed_start.strftime("%H:%M") if parsed_start else start_time)
+            is_derived_end_time = True
+            
+        hours_err, start_time, end_time = _check_working_hours(
+            day=day, 
+            time_str=start_time, 
+            end_time_str=end_time, 
+            is_derived_end_time=is_derived_end_time, 
+            is_venue_query=True,
+            is_whole_day=is_whole_day
+        )
         if hours_err: return hours_err
-        venues = timetable_service.find_free_venues(day, start_time, end_time)
-        
-        if venue_type:
-            vt = venue_type.lower()
-            if vt == "room":
-                venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
-            elif vt == "lab":
-                venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
-            elif vt == "lt":
-                venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+        if is_whole_day:
+            free_windows = timetable_service.get_all_venue_free_windows(day)
+            
+            if venue_type:
+                vt = venue_type.lower()
+                if vt == "room":
+                    free_windows = {k: v for k, v in free_windows.items() if "CEP" in k.upper()}
+                elif vt == "lab":
+                    free_windows = {k: v for k, v in free_windows.items() if "LAB" in k.upper()}
+                elif vt == "lt":
+                    free_windows = {k: v for k, v in free_windows.items() if "LT" in k.upper()}
+                    
+            if not free_windows:
+                return f"No free windows found on {day}{note}."
                 
-        if not venues:
-            return f"No free venues from {start_time} to {end_time} on {day}{note}."
+            from api.services.venue_service import get_venues_by_ids
+            metadata_map = get_venues_by_ids(list(free_windows.keys()))
+                
+            fully_free = []
+            partial_free = []
+            full_day_str = f"{timetable_service.DAY_START}-{timetable_service.DAY_END}"
             
-        lines = [f"Free from {start_time} to {end_time} on {day}{note}:"]
-        for v in venues:
-            vid = v['venue_id']
-            cap = v.get('capacity')
-            cap_str = f", Capacity: {cap}" if cap and cap > 1 else ""
-            lines.append(f"- {vid}{cap_str}")
+            for k, v in free_windows.items():
+                meta = metadata_map.get(k, {})
+                cap = meta.get('capacity')
+                if len(v) == 1 and v[0] == full_day_str:
+                    fully_free.append((k, cap))
+                else:
+                    partial_free.append((k, v, cap))
+                    
+            lines = [f"During {day}'s working hours ({full_day_str}), these venues are available:"]
+            if fully_free:
+                fully_strs = [f"{k} (Cap: {c})" if c else k for k, c in fully_free]
+                lines.append(f"Free all day: {', '.join(sorted(fully_strs))}")
+            for k, v, cap in sorted(partial_free, key=lambda x: x[0]):
+                cap_str = f" (Cap: {cap})" if cap else ""
+                lines.append(f"- {k}{cap_str}: {', '.join(v)}")
+                
+        else:
+            venues = timetable_service.find_free_venues(day, start_time, end_time)
             
+            if venue_type:
+                vt = venue_type.lower()
+                if vt == "room":
+                    venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
+                elif vt == "lab":
+                    venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
+                elif vt == "lt":
+                    venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+                    
+            if not venues:
+                return f"No free venues from {start_time} to {end_time} on {day}{note}."
+            lines = [f"Free from {start_time} to {end_time} on {day}{note}:"]
+            for v in venues:
+                vid = v['venue_id']
+                cap = v.get('capacity')
+                cap_str = f", Capacity: {cap}" if cap and cap > 1 else ""
+                lines.append(f"- {vid}{cap_str}")
+                
         from core import config
         lines.append("")
         lines.append(f"Note: For CEP rooms contact {config.CEP_BOOKING_POC}. For LABs and LT contact {config.LAB_LT_BOOKING_POC}.")
@@ -713,6 +777,7 @@ async def check_venue_availability(venue: str, day: Optional[str] = None, time: 
     """
     Checks if a particular classroom or lab is available at a specific time. Returns metadata (capacity, POC) if free, or the occupying class if busy.
     Availability queries are supported only for Monday-Friday, 08:00-18:00.
+    For a whole-day view of a venue, use `get_venue_schedule`.
 
     Args:
         venue: The classroom or lab name (e.g., 'cep-207', 'LT-1').
@@ -821,65 +886,127 @@ async def find_available_venues(min_capacity: int, day: Optional[str] = None, st
                                 end_time: Optional[str] = None, date: Optional[str] = None, venue_type: Optional[str] = None) -> str:
     """
     Find venues that are BOTH available in the timetable during the specified window AND meet the minimum capacity requirement.
-    Omit day/time to use current campus time.
+    Omit `start_time` and `end_time` (when passing `day` or `date`) to get whole-day free windows for that day.
+    Omit all date/time parameters to query the current campus time.
     Availability queries are supported only for Monday-Friday, 08:00-18:00.
 
     Args:
         min_capacity: Minimum capacity required.
         day: Optional day of week; defaults to today.
-        start_time: Start time 'HH:MM'; defaults to now.
-        end_time: End time 'HH:MM'; defaults to start_time + 1 hour.
+        start_time: Start time 'HH:MM'. Omit along with end_time to query the whole day.
+        end_time: End time 'HH:MM'; defaults to start_time + 1 hour if start_time is given.
         date: Optional 'YYYY-MM-DD'.
         venue_type: Optional filter: 'room' (for CEP/classroom), 'lab', or 'lt'.
     """
     try:
-        if (day or date) and not start_time:
-            return "Please specify a time to check venue availability."
+        is_explicit_day = bool(day or date)
         day, note, err = _resolve_day(day, date, default_to_today=True)
         if err:
             return err
-        
-        effective_start = start_time or _campus_time()
-        parsed_start = _parse_time(effective_start)
-        
-        if end_time:
-            effective_end = end_time
+            
+        is_whole_day = False
+        if is_explicit_day and not start_time and not end_time:
+            effective_start = "08:00"
+            effective_end = "18:00"
             is_derived = False
+            is_whole_day = True
+        elif not start_time and end_time:
+            return "Please provide a start time with the end time."
         else:
-            effective_end = _derive_end_time(parsed_start.strftime("%H:%M") if parsed_start else effective_start)
-            is_derived = True
+            effective_start = start_time or _campus_time()
+            parsed_start = _parse_time(effective_start)
             
-        hours_err, effective_start, effective_end = _check_working_hours(day=day, time_str=effective_start, end_time_str=effective_end, is_derived_end_time=is_derived, is_venue_query=True)
-        if hours_err: return hours_err
-        
-        venues = timetable_service.find_free_venues(day, effective_start, effective_end)
-        
-        if venue_type:
-            vt = venue_type.lower()
-            if vt == "room":
-                venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
-            elif vt == "lab":
-                venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
-            elif vt == "lt":
-                venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+            if end_time:
+                effective_end = end_time
+                is_derived = False
+            else:
+                effective_end = _derive_end_time(parsed_start.strftime("%H:%M") if parsed_start else effective_start)
+                is_derived = True
                 
-        if not venues:
-            return f"No venues free from {effective_start} to {effective_end} on {day}{note}."
+        hours_err, effective_start, effective_end = _check_working_hours(
+            day=day, 
+            time_str=effective_start, 
+            end_time_str=effective_end, 
+            is_derived_end_time=is_derived, 
+            is_venue_query=True,
+            is_whole_day=is_whole_day
+        )
+        if hours_err: return hours_err
+        if is_whole_day:
+            free_windows = timetable_service.get_all_venue_free_windows(day)
             
-        # Filter by capacity
-        suitable = [v for v in venues if v.get('capacity') and v['capacity'] >= min_capacity]
-        if not suitable:
-            return f"No venues free from {effective_start} to {effective_end} on {day}{note} with capacity >= {min_capacity}."
+            if venue_type:
+                vt = venue_type.lower()
+                if vt == "room":
+                    free_windows = {k: v for k, v in free_windows.items() if "CEP" in k.upper()}
+                elif vt == "lab":
+                    free_windows = {k: v for k, v in free_windows.items() if "LAB" in k.upper()}
+                elif vt == "lt":
+                    free_windows = {k: v for k, v in free_windows.items() if "LT" in k.upper()}
+                    
+            if not free_windows:
+                return f"No free windows found on {day}{note}."
+                
+            from api.services.venue_service import get_venues_by_ids
+            metadata_map = get_venues_by_ids(list(free_windows.keys()))
             
-        # Sort by capacity ascending (tightest fit first)
-        suitable.sort(key=lambda x: x['capacity'])
-        
-        lines = [f"Available venues (>= {min_capacity} capacity) from {effective_start} to {effective_end} on {day}{note}:"]
-        for v in suitable:
-            vid = v['venue_id']
-            cap = v['capacity']
-            poc = v.get('booking_poc') or "Not available"
-            lines.append(f"- {vid}: Capacity {cap} (POC: {poc})")
+            suitable = {}
+            for k, v in free_windows.items():
+                meta = metadata_map.get(k, {})
+                cap = meta.get('capacity')
+                if cap and cap >= min_capacity:
+                    suitable[k] = (v, cap)
+                    
+            if not suitable:
+                return f"No free windows found on {day}{note} for venues with capacity >= {min_capacity}."
+                
+            fully_free = []
+            partial_free = []
+            full_day_str = f"{timetable_service.DAY_START}-{timetable_service.DAY_END}"
+            
+            for k, (v, cap) in suitable.items():
+                if len(v) == 1 and v[0] == full_day_str:
+                    fully_free.append((k, cap))
+                else:
+                    partial_free.append((k, v, cap))
+                    
+            lines = [f"During {day}'s working hours ({full_day_str}), these venues (>= {min_capacity} capacity) are available:"]
+            if fully_free:
+                fully_free.sort(key=lambda x: x[1]) # Sort by capacity ascending
+                lines.append(f"Free all day: {', '.join([f'{k} (Cap: {c})' for k, c in fully_free])}")
+            
+            if partial_free:
+                partial_free.sort(key=lambda x: x[2]) # Sort by capacity ascending
+                for k, v, cap in partial_free:
+                    lines.append(f"- {k} (Cap: {cap}): {', '.join(v)}")
+        else:
+            venues = timetable_service.find_free_venues(day, effective_start, effective_end)
+            
+            if venue_type:
+                vt = venue_type.lower()
+                if vt == "room":
+                    venues = [v for v in venues if "CEP" in v["venue_id"].upper()]
+                elif vt == "lab":
+                    venues = [v for v in venues if "LAB" in v["venue_id"].upper()]
+                elif vt == "lt":
+                    venues = [v for v in venues if "LT" in v["venue_id"].upper()]
+                    
+            if not venues:
+                return f"No venues free from {effective_start} to {effective_end} on {day}{note}."
+                
+            # Filter by capacity
+            suitable_list = [v for v in venues if v.get('capacity') and v['capacity'] >= min_capacity]
+            if not suitable_list:
+                return f"No venues free from {effective_start} to {effective_end} on {day}{note} with capacity >= {min_capacity}."
+                
+            # Sort by capacity ascending (tightest fit first)
+            suitable_list.sort(key=lambda x: x['capacity'])
+            lines = [f"Available venues (>= {min_capacity} capacity) from {effective_start} to {effective_end} on {day}{note}:"]
+            for v in suitable_list:
+                vid = v['venue_id']
+                cap = v['capacity']
+                poc = v.get('booking_poc') or "Not available"
+                lines.append(f"- {vid}: Capacity {cap} (POC: {poc})")
         return "\n".join(lines)
     except Exception as e:
         logger.error(f"Error in find_available_venues: {e}")

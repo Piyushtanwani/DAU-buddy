@@ -408,3 +408,31 @@ def find_free_venues(day: str, start_time: str, end_time: str) -> List[Dict[str,
                     "booking_poc": meta.get("booking_poc")
                 })
             return results
+
+def get_all_venue_free_windows(day: str, min_minutes: int = 20) -> Dict[str, List[str]]:
+    """Return free gaps ('HH:MM-HH:MM') for all venues on a specific day.
+    Unions venues from the timetable with the canonical 'venues' table to include CSV-only bookable rooms.
+    """
+    query = """
+        SELECT room, start_time, end_time FROM timetables
+        WHERE day_of_week ILIKE %s AND room IS NOT NULL AND room <> ''
+        ORDER BY room, start_time
+    """
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (f"%{day}%",))
+            
+            room_rows = {}
+            for row in cur.fetchall():
+                room = row['room'].strip()
+                room_rows.setdefault(room, []).append(row)
+                
+            free_windows = {room: compute_free_slots(rows, min_minutes) for room, rows in room_rows.items()}
+            
+            cur.execute("SELECT venue_id FROM venues")
+            for row in cur.fetchall():
+                room = row['venue_id'].strip()
+                if room not in free_windows:
+                    free_windows[room] = [f"{DAY_START}-{DAY_END}"]
+                    
+            return {k: v for k, v in free_windows.items() if v}
