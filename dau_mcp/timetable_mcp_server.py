@@ -325,9 +325,11 @@ async def find_faculty_free_time(faculty_name: str, day: Optional[str] = None,
         name = data["faculty"]
         if not data["busy_slots"]:
             return f"{name}: no classes on {day}{note} — free all day (timetable only; other commitments not tracked)."
+            
         if not data["free_slots"]:
             return f"{name}: no free time on {day}{note}."
-        return f"{name} free on {day}{note}: " + ", ".join(data["free_slots"])
+        
+        return f"{name} is free on {day}{note} during these times: " + ", ".join(data["free_slots"])
     except Exception as e:
         logger.error(f"Error in find_faculty_free_time: {e}")
         return "Error querying faculty free time."
