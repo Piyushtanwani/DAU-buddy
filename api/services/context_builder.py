@@ -20,18 +20,39 @@ def build_caller_context(identity: CallerIdentity) -> str:
 
     if identity.display_name:
         out.append(f"Name: {identity.display_name}")
+
+    # Only name a timetable identity that was actually confirmed against the
+    # timetable. The directory spelling is not usable as a timetable query for
+    # 29 of 121 faculty, and naming an unconfirmed one would send the model to
+    # fetch a schedule under a name that returns nothing — or, with any fuzzy
+    # bridge, a colleague's. When it is absent the model still has rules A3/A4,
+    # which tell it these are two name spaces and to fall back to searching.
+    if identity.timetable_name:
         out.append(
             f"For their own schedule, location or free time, call the timetable "
-            f"tools with \"{identity.display_name}\"."
+            f"tools with \"{identity.timetable_name}\"."
         )
+
     out.append(f"Email: {identity.email}")
 
     if not identity.is_student:
         return "\n".join(out)
 
-    if identity.roll_number:
-        out.append(f"Roll number: {identity.roll_number}")
-        out.append(f"Admitted: {identity.admission_year}")
+    # 'Student' is also what resolve_role returns for an address it cannot place
+    # and when the directory lookup raises, so it is not evidence of studenthood
+    # on its own. A roll number is. Six faculty rows hold two comma-separated
+    # addresses, which resolve_role's `WHERE email = %s` misses, so they arrive
+    # here labelled Student today.
+    if not identity.roll_number:
+        out.append(
+            "Their programme and semester are not known — the sign-in address is "
+            "not a roll number, so they may be faculty or staff missing from the "
+            "directory. Do not assert they are a student; ask what they need."
+        )
+        return "\n".join(out)
+
+    out.append(f"Roll number: {identity.roll_number}")
+    out.append(f"Admitted: {identity.admission_year}")
 
     if identity.is_probably_alumnus:
         out.append(

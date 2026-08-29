@@ -89,8 +89,16 @@ def get_gemini_api_key() -> str:
     return os.getenv("GEMINI_API_KEY", "")
 
 
+# Pinned, not an alias. 'gemini-flash-latest' floats: the API will not even
+# say which version it currently resolves to, so behaviour, latency and cost
+# could all change with no commit and nothing to bisect. This is the version
+# the system prompt and the tool-calling loop were built against; set
+# GEMINI_MODEL to try another.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+
+
 def get_gemini_model() -> str:
-    return os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+    return os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
 
 # ==============================================================================

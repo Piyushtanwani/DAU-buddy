@@ -12,6 +12,7 @@ from api.services import caller_identity, gemini
 from api.services.caller_identity import (
     CallerIdentity,
     estimate_semester,
+    normalize_person_name,
     parse_roll_number,
     resolve_caller,
 )
@@ -20,12 +21,21 @@ from api.services.context_builder import build_caller_context
 TODAY = date(2026, 8, 6)
 
 
-def mock_directory(mocker, name):
+def mock_directory(mocker, name, timetable_name=None):
+    """
+    Stub the one connection resolve_caller opens for a non-student caller.
+
+    `fetchone` answers the directory lookup; `fetchall` answers the separate
+    timetables probe, which returns no row unless `timetable_name` is given —
+    the common case, since most directory spellings do not occur in the
+    timetable.
+    """
     conn = MagicMock()
     cur = MagicMock()
     conn.__enter__.return_value = conn
     conn.cursor.return_value.__enter__.return_value = cur
     cur.fetchone.return_value = (name,) if name else None
+    cur.fetchall.return_value = [(timetable_name,)] if timetable_name else []
     mocker.patch("api.services.caller_identity.db_connection", return_value=conn)
     return cur
 
@@ -62,6 +72,18 @@ class TestSemesterEstimate:
 
     def test_first_semester_in_admission_year(self):
         assert estimate_semester(2026, TODAY) == 1
+
+
+    def test_fresher_before_july_is_never_below_first_semester(self):
+        """
+        Admitted 2026, asking in February 2026: the term arithmetic puts them
+        in the 2025-26 academic year, which scored 0 and reached the prompt as
+        "Likely semester: 0".
+        """
+        assert estimate_semester(2026, date(2026, 2, 15)) == 1
+
+    def test_admission_year_ahead_of_today_is_never_below_first_semester(self):
+        assert estimate_semester(2027, date(2026, 8, 29)) == 1
 
 
 class TestResolveCaller:
@@ -114,7 +136,7 @@ class TestResolveCaller:
         assert not i.is_probably_alumnus
 
     def test_faculty_identity_carries_their_directory_name(self, mocker):
-        mock_directory(mocker, "Ankush Chander")
+        mock_directory(mocker, "Ankush Chander", "Ankush Chander (AC)")
         i = resolve_caller("ankush@dau.ac.in", "Faculty", TODAY)
 
         assert i.display_name == "Ankush Chander"
@@ -140,7 +162,7 @@ class TestResolveCaller:
 
 class TestCallerContextBlock:
     def test_faculty_block_names_them_for_the_timetable_tools(self, mocker):
-        mock_directory(mocker, "Ankush Chander")
+        mock_directory(mocker, "Ankush Chander", "Ankush Chander (AC)")
         block = build_caller_context(resolve_caller("ankush@dau.ac.in", "Faculty", TODAY))
 
         assert "Ankush Chander" in block
@@ -175,12 +197,94 @@ class TestCallerContextBlock:
 
     def test_block_never_leaks_a_programme_it_could_not_resolve(self):
         """An UNKNOWN programme must not also print a candidate as if it were the answer."""
+        # A program_code only ever exists because parse_roll_number succeeded,
+        # so the roll number goes in too — without it this is a shape
+        # resolve_caller cannot produce, and the no-roll-number guard answers
+        # first.
         block = build_caller_context(
-            CallerIdentity(email="x@dau.ac.in", role="Student", program_code="15")
+            CallerIdentity(
+                email="202415034@dau.ac.in",
+                role="Student",
+                roll_number="202415034",
+                program_code="15",
+            )
         )
 
         assert "UNKNOWN" in block
         assert "M Tech (EC)" not in block
+
+
+    def test_next_years_intake_is_given_no_semester_at_all(self):
+        """
+        parse_roll_number accepts one year ahead, but someone who has not
+        started has no semester to estimate — not even a clamped one.
+        """
+        i = resolve_caller("202711034@dau.ac.in", "Student", date(2026, 8, 29))
+
+        assert i.semester_estimate is None
+        assert "Likely semester" not in build_caller_context(i)
+
+    def test_student_role_without_a_roll_number_claims_no_programme(self):
+        """
+        resolve_role falls back to 'Student' for an address it cannot place and
+        when the directory query raises, so the role alone must not be stated as
+        fact. Six faculty rows carry two comma-separated addresses and land here
+        labelled Student today.
+        """
+        block = build_caller_context(
+            resolve_caller("hemant_patil@dau.ac.in", "Student", TODAY)
+        )
+
+        assert "Do not assert they are a student" in block
+        assert "Programme:" not in block
+        assert "Likely semester" not in block
+
+    def test_faculty_block_omits_the_timetable_line_when_the_name_is_unconfirmed(
+        self, mocker
+    ):
+        """
+        The directory spelling is not a usable timetable query for 29 of 121
+        faculty. Naming one anyway sends the model to fetch a schedule that
+        comes back empty, so the line is omitted and rules A3/A4 take over.
+        """
+        mock_directory(mocker, "Dhaval joshi", timetable_name=None)
+        block = build_caller_context(
+            resolve_caller("dhaval_joshi@dau.ac.in", "Faculty", TODAY)
+        )
+
+        assert "Dhaval joshi" in block
+        assert "timetable tools" not in block
+
+    def test_faculty_block_uses_the_timetable_spelling_not_the_directory_one(
+        self, mocker
+    ):
+        mock_directory(mocker, "Manjunath v. joshi", "Manjunath V Joshi (MVJ)")
+        block = build_caller_context(
+            resolve_caller("mv_joshi@dau.ac.in", "Faculty", TODAY)
+        )
+
+        assert 'timetable tools with "Manjunath V Joshi (MVJ)"' in block
+
+
+class TestNormalizePersonName:
+    @pytest.mark.parametrize("directory, timetable", [
+        ("Manjunath v. joshi", "Manjunath V Joshi (MVJ)"),
+        ("Jayesh  malaviya", "Jayesh Malaviya (JM)"),
+    ])
+    def test_directory_and_timetable_spellings_reduce_to_the_same_key(
+        self, directory, timetable
+    ):
+        assert normalize_person_name(directory) == normalize_person_name(timetable)
+
+    def test_initials_are_a_different_name_not_a_spelling_variant(self):
+        """"P m jat" / "Pokhar M Jat" is the gap normalisation cannot close —
+        and the reason the timetable line is omitted rather than guessed."""
+        assert normalize_person_name("P m jat") != normalize_person_name("Pokhar M Jat")
+
+    def test_different_people_do_not_collide(self):
+        assert normalize_person_name("Dhaval joshi") != normalize_person_name(
+            "Manjunath V Joshi (MVJ)"
+        )
 
 
 class TestIdentityGuardrails:
