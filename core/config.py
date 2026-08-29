@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -27,6 +28,22 @@ def get_logger(name: str) -> logging.Logger:
 
 
 logger = get_logger("core.config")
+
+
+# ==============================================================================
+# Campus Time
+# ==============================================================================
+# Every "now" in this codebase means campus time, never container time. The
+# deployed image is python:3.12-slim with no TZ set, so a naive datetime.now()
+# is UTC — 5h30m adrift, which silently breaks "is this room free right now"
+# and "is Prof X free right now". A fixed offset rather than ZoneInfo on
+# purpose: India has never observed DST, and slim images ship no tzdata.
+CAMPUS_TZ = timezone(timedelta(hours=5, minutes=30), name="IST")
+
+
+def campus_now() -> datetime:
+    """Timezone-aware current time on campus. Use this instead of datetime.now()."""
+    return datetime.now(CAMPUS_TZ)
 
 
 # ==============================================================================
@@ -108,6 +125,13 @@ def get_feedback_recipient_emails() -> list[str]:
     """Return a list of feedback recipient emails."""
     emails = os.getenv("FEEDBACK_RECIPIENT_EMAILS", "")
     return [e.strip() for e in emails.split(",") if e.strip()]
+
+# ==============================================================================
+# Venue & Timetable Configuration
+# ==============================================================================
+CEP_BOOKING_POC = "prabhunath_sharma@dau.ac.in"
+LAB_LT_BOOKING_POC = "laboratory@dau.ac.in"
+DEFAULT_VENUE_DURATION_MINUTES = 60
 
 # ==============================================================================
 # Authentication Configuration

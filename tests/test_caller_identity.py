@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from core import config
 from api.services import caller_identity, gemini
 from api.services.caller_identity import (
     CallerIdentity,
@@ -196,13 +197,14 @@ class TestIdentityGuardrails:
         assert clause in gemini.SYSTEM_INSTRUCTIONS_TEMPLATE
 
     def test_template_renders_with_the_caller_block(self):
-        rendered = gemini.SYSTEM_INSTRUCTIONS_TEMPLATE.format(
-            current_date="06 August 2026",
-            current_day="Thursday",
-            caller_context=build_caller_context(
+        """Goes through build_system_instruction rather than formatting the
+        template here: that is the one place the prompt is filled, so this
+        test cannot drift from the template's real placeholder set."""
+        rendered = gemini.build_system_instruction(
+            build_caller_context(
                 CallerIdentity(email="202411034@dau.ac.in", role="Student")
-            ),
+            )
         )
 
-        assert "06 August 2026" in rendered
+        assert config.campus_now().strftime("%d %B %Y") in rendered
         assert "202411034@dau.ac.in" in rendered

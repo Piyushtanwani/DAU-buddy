@@ -6,6 +6,14 @@
 -- =============================================================================
 
 
+-- =============================================================================
+-- Extensions
+-- =============================================================================
+-- pg_trgm powers the typo-tolerant directory fallback (see
+-- api/services/name_matching.py). Requires superuser, or a database owner on
+-- PostgreSQL 13+ where pg_trgm is a trusted extension.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 
 -- =============================================================================
 -- Faculty Table
@@ -46,6 +54,10 @@ CREATE INDEX IF NOT EXISTS idx_faculty_search_vector
 CREATE INDEX IF NOT EXISTS idx_faculty_email
     ON faculty (email);
 
+-- Trigram index for the similarity fallback on misspelled names
+CREATE INDEX IF NOT EXISTS idx_faculty_name_trgm
+    ON faculty USING GIN (name gin_trgm_ops);
+
 -- =============================================================================
 -- Staff Table
 -- =============================================================================
@@ -79,6 +91,10 @@ CREATE INDEX IF NOT EXISTS idx_staff_search_vector
 -- Optional: index on email for direct lookups
 CREATE INDEX IF NOT EXISTS idx_staff_email
     ON staff (email);
+
+-- Trigram index for the similarity fallback on misspelled names
+CREATE INDEX IF NOT EXISTS idx_staff_name_trgm
+    ON staff USING GIN (name gin_trgm_ops);
 
 -- =============================================================================
 -- Library Books Table
@@ -356,3 +372,13 @@ ALTER TABLE timetables
 CREATE INDEX IF NOT EXISTS idx_timetables_search_vector ON timetables USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_timetables_faculty ON timetables (faculty_name, day_of_week);
 CREATE INDEX IF NOT EXISTS idx_timetables_course ON timetables (course_code, day_of_week);
+
+-- =============================================================================
+-- Venues Table
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS venues (
+    venue_id    VARCHAR(50) PRIMARY KEY,
+    capacity    INTEGER NOT NULL CHECK (capacity > 0),
+    venue_type  VARCHAR(50),
+    booking_poc VARCHAR(255)
+);

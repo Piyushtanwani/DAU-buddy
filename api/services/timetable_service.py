@@ -5,6 +5,7 @@ import psycopg2.extras
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.database import db_connection
+from api.services import venue_service
 
 DAY_ORDER_SQL = """
     CASE day_of_week
@@ -204,16 +205,18 @@ def list_programs() -> List[str]:
             return [r[0] for r in cur.fetchall()]
 
 
+from core.utils.program import SQL_NORMALIZE_EXPR, normalize_program_name, get_sql_exact_program_match, get_sql_prefix_program_match, resolve_program
+
 def get_program_timetable(program_name: str, day: Optional[str] = None, semester: Optional[str] = None) -> List[Dict[str, Any]]:
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            query = """
+            query = f"""
                 SELECT day_of_week, start_time, end_time, session_type, course_code,
                        course_name, faculty_name, room, semester, course_type
                 FROM timetables
-                WHERE program ILIKE %s
+                WHERE {get_sql_exact_program_match()}
             """
-            params = [f"%{program_name}%"]
+            params = [normalize_program_name(program_name)]
             if day:
                 query += " AND day_of_week ILIKE %s"
                 params.append(f"%{day}%")
@@ -229,14 +232,107 @@ def get_program_timetable(program_name: str, day: Optional[str] = None, semester
             return cur.fetchall()
 
 
-def list_rooms() -> List[str]:
+def get_electives(program_name: Optional[str] = None, semester: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get all electives, optionally filtered by an exact program name and semester."""
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            query = f"""
+                SELECT course_code, course_name, string_agg(DISTINCT course_type, ', ') AS course_type, array_agg(DISTINCT program) AS programs 
+                FROM timetables 
+                WHERE course_type ILIKE '%%elective%%'
+            """
+            params = []
+            if program_name:
+                matches = resolve_program(program_name)
+                if len(matches) == 1:
+                    query += f" AND {get_sql_exact_program_match()} "
+                else:
+                    query += f" AND {get_sql_prefix_program_match()} "
+                params.append(normalize_program_name(program_name))
+            if semester:
+                query += " AND semester = %s "
+                params.append(str(semester))
+            
+            query += """
+                GROUP BY course_code, course_name
+                ORDER BY course_code;
+            """
+            
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_electives_schedule(program_name: str, semester: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get the schedule (timetable slots) for all electives for a given exact program."""
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            query = f"""
+                SELECT day_of_week, start_time, end_time, session_type, course_code,
+                       course_name, faculty_name, room, semester, string_agg(DISTINCT course_type, ', ') AS course_type, array_agg(DISTINCT program) AS programs
+                FROM timetables
+                WHERE course_type ILIKE '%%elective%%'
+                AND {get_sql_exact_program_match()} AND semester = %s
+            """
+            params = [normalize_program_name(program_name), str(semester)]
+            if day:
+                query += " AND day_of_week ILIKE %s"
+                params.append(f"%{day}%")
+                
+            query += f"""
+                GROUP BY day_of_week, start_time, end_time, session_type, course_code,
+                         course_name, faculty_name, room, semester
+                ORDER BY {DAY_ORDER_SQL}, start_time, course_code
+            """
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_program_busy_slots(program_name: str, day: str, semester: Optional[str] = None) -> List[Dict[str, Any]]:
+    query = f"""
+        SELECT DISTINCT start_time, end_time
+        FROM timetables
+        WHERE {get_sql_exact_program_match()} AND day_of_week ILIKE %s
+    """
+    params = [normalize_program_name(program_name), f"%{day}%"]
+    if semester:
+        query += " AND semester = %s"
+        params.append(str(semester))
+    query += " ORDER BY start_time"
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, tuple(params))
+            return cur.fetchall()
+
+
+def get_programs_common_free_time(programs: List[Dict[str, Any]], day: str, min_minutes: int = 20) -> Dict[str, Any]:
+    """Common free windows when ALL listed programs/batches are free on a day.
+    `programs` is a list of dicts with 'program_name' and optional 'semester'.
+    """
+    all_busy = []
+    resolved = []
+    for p in programs:
+        p_name = p.get('program_name')
+        if not p_name:
+            continue
+        p_sem = p.get('semester')
+        all_busy.extend(get_program_busy_slots(p_name, day, p_sem))
+        resolved.append(f"{p_name}{f' (Sem {p_sem})' if p_sem else ''}")
+        
+    return {
+        "programs": resolved,
+        "day": day,
+        "free_slots": compute_free_slots(all_busy, min_minutes),
+    }
+
+
+def list_venues() -> List[str]:
     with db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT DISTINCT room FROM timetables WHERE room IS NOT NULL AND room <> '' ORDER BY room;")
             return [r[0] for r in cur.fetchall()]
 
 
-def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_venue_schedule(venue: str, day: Optional[str] = None) -> List[Dict[str, Any]]:
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             base = f"""
@@ -250,44 +346,93 @@ def get_room_schedule(room: str, day: Optional[str] = None) -> List[Dict[str, An
             """
             if day:
                 cur.execute(base.format(day_clause="AND day_of_week ILIKE %s"),
-                            (f"%{room}%", f"%{day}%"))
+                            (f"%{venue}%", f"%{day}%"))
             else:
-                cur.execute(base.format(day_clause=""), (f"%{room}%",))
+                cur.execute(base.format(day_clause=""), (f"%{venue}%",))
             return cur.fetchall()
 
 
-def get_room_availability(room: str, day: str, time: str) -> Optional[Dict[str, Any]]:
-    """Point-in-time room check: the session occupying `room` at `time`, or None if free."""
+def get_venue_availability(venue: str, day: str, time: str) -> Optional[Dict[str, Any]]:
+    """Point-in-time venue check: the session occupying `venue` at `time`, or None if free. Enriched with metadata."""
     query = """
         SELECT session_type, course_code, course_name, faculty_name, start_time, end_time,
-               array_agg(DISTINCT program) AS programs
+               array_agg(DISTINCT program) AS programs, room as venue_id
         FROM timetables
         WHERE REPLACE(REPLACE(room, '-', ''), ' ', '') ILIKE REPLACE(REPLACE(%s, '-', ''), ' ', '')
           AND day_of_week ILIKE %s
           AND start_time <= %s::TIME
           AND end_time > %s::TIME
-        GROUP BY session_type, course_code, course_name, faculty_name, start_time, end_time
+        GROUP BY session_type, course_code, course_name, faculty_name, start_time, end_time, room
     """
     with db_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(query, (f"%{room}%", f"%{day}%", time, time))
-            return cur.fetchone()
+            cur.execute(query, (f"%{venue}%", f"%{day}%", time, time))
+            result = cur.fetchone()
+            if result:
+                metadata = venue_service.get_venue(result['venue_id']) or {}
+                result['capacity'] = metadata.get('capacity')
+                result['booking_poc'] = metadata.get('booking_poc')
+                result['venue_type'] = metadata.get('venue_type')
+                return dict(result)
+            return None
 
 
-def find_free_rooms(day: str, time: str) -> List[str]:
-    """Rooms with no session covering `time` on `day` (among rooms seen in the timetable)."""
+def find_free_venues(day: str, start_time: str, end_time: str) -> List[Dict[str, Any]]:
+    """Venues with no session overlapping [start_time, end_time) on `day` (among venues seen in the timetable). Enriched with metadata."""
     query = """
         SELECT DISTINCT room FROM timetables
         WHERE room IS NOT NULL AND room <> ''
           AND room NOT IN (
             SELECT room FROM timetables
             WHERE day_of_week ILIKE %s
-              AND start_time <= %s::TIME AND end_time > %s::TIME
+              AND start_time < %s::TIME AND end_time > %s::TIME
               AND room IS NOT NULL AND room <> ''
           )
         ORDER BY room
     """
     with db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(query, (f"%{day}%", time, time))
-            return [r[0] for r in cur.fetchall()]
+            cur.execute(query, (f"%{day}%", end_time, start_time))
+            venue_ids = [r[0] for r in cur.fetchall()]
+            
+            # Batch fetch metadata
+            metadata_map = venue_service.get_venues_by_ids(venue_ids)
+            
+            results = []
+            for vid in venue_ids:
+                meta = metadata_map.get(vid, {})
+                results.append({
+                    "venue_id": vid,
+                    "capacity": meta.get("capacity"),
+                    "venue_type": meta.get("venue_type"),
+                    "booking_poc": meta.get("booking_poc")
+                })
+            return results
+
+def get_all_venue_free_windows(day: str, min_minutes: int = 20) -> Dict[str, List[str]]:
+    """Return free gaps ('HH:MM-HH:MM') for all venues on a specific day.
+    Unions venues from the timetable with the canonical 'venues' table to include CSV-only bookable rooms.
+    """
+    query = """
+        SELECT room, start_time, end_time FROM timetables
+        WHERE day_of_week ILIKE %s AND room IS NOT NULL AND room <> ''
+        ORDER BY room, start_time
+    """
+    with db_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (f"%{day}%",))
+            
+            room_rows = {}
+            for row in cur.fetchall():
+                room = row['room'].strip()
+                room_rows.setdefault(room, []).append(row)
+                
+            free_windows = {room: compute_free_slots(rows, min_minutes) for room, rows in room_rows.items()}
+            
+            cur.execute("SELECT venue_id FROM venues")
+            for row in cur.fetchall():
+                room = row['venue_id'].strip()
+                if room not in free_windows:
+                    free_windows[room] = [f"{DAY_START}-{DAY_END}"]
+                    
+            return {k: v for k, v in free_windows.items() if v}
