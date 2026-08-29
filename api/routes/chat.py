@@ -23,7 +23,9 @@ from api.services.openai_service import (
     call_openai_api, is_openai_available, record_openai_failure
 )
 from api.auth import verify_google_token, resolve_role
-from api.context import user_role_var
+from api.context import user_role_var, user_email_var
+from api.services.caller_identity import CallerIdentity, resolve_caller
+from api.services.context_builder import build_caller_context
 from api.services.library_service import LibraryService
 from api.services import calendar_service
 
@@ -430,10 +432,29 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
             # published via contextvar so tool dispatch can redact contact
             # details for non-privileged users.
             user_role_var.set(request.state.role)
+            user_email_var.set(request.state.email)
+
+            # resolve_caller runs synchronous directory and timetable queries
+            # for any non-student caller, so it goes to a worker thread like every other
+            # blocking call here: on the event loop a slow or hung DB stalls the
+            # single uvicorn worker, i.e. every concurrent request, not just this
+            # one. Identity is an enhancement, so a failure degrades to the bare
+            # caller rather than failing the chat.
+            try:
+                identity = await _run_blocking(
+                    resolve_caller, request.state.email, request.state.role
+                )
+            except Exception:
+                logger.exception("Caller identity resolution failed.")
+                identity = CallerIdentity(
+                    email=request.state.email, role=request.state.role
+                )
 
             # Campus time, not server time: a naive now() in a UTC container is
             # 5h30m off, which turns every "right now" answer confidently wrong.
-            system_instruction = await _run_blocking(build_system_instruction)
+            system_instruction = await _run_blocking(
+                build_system_instruction, build_caller_context(identity)
+            )
             
             response_text = None
 
