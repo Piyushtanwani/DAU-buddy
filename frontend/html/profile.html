@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/assets/favicon.png">
+    <title>Profile — DAU Buddy</title>
+    <meta name="description" content="DAU Buddy Student Profile">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+
+<body>
+    <div style="display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-color);">
+        <div class="top-accent-bar"></div>
+        <nav class="landing-nav" id="profile-top-nav">
+            <div class="nav-brand">
+                <img src="/assets/dau_buddy_icon.png" alt="DAU Buddy"
+                    style="width: 24px; height: 24px; object-fit: contain; transform: scale(2.0) translate(6px, -1px); transform-origin: center; margin: 0 18px;">
+                <span>DAU Buddy</span>
+            </div>
+            <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
+                <button onclick="localStorage.setItem('dau_buddy_view', 'landing'); window.location.href='/'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+                <button onclick="window.location.href='/docs'" class="nav-docs-btn"
+                    style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                    <i class="fa-solid fa-book"></i> Docs
+                </button>
+                <div class="community-dropdown-container">
+                    <button class="nav-docs-btn"
+                        style="padding: 8px 16px; background: transparent; color: #0f3b73; border: 1px solid #0f3b73; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: 'Open Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;">
+                        <i class="fa-solid fa-users"></i> Community <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                    </button>
+                    <div class="community-dropdown-menu">
+                        <a href="https://github.com/Piyushtanwani/mcp-server/blob/Main/docs/contribution.md#contributing-to-dau-buddy-mcp-server" target="_blank" class="community-dropdown-item">
+                            <i class="fa-brands fa-github" style="width: 16px; text-align: center;"></i> Contribute
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server/issues/new/choose" target="_blank" class="community-dropdown-item">
+                            <i class="fa-solid fa-bug" style="width: 16px; text-align: center;"></i> Raise an issue
+                        </a>
+                        <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank" class="community-dropdown-item">
+                            <i class="fa-solid fa-star" style="width: 16px; text-align: center;"></i> Leave a star
+                        </a>
+                    </div>
+                </div>
+                <button onclick="event.preventDefault(); if(window.openLoginModal) window.openLoginModal(); else window.location.href='/?view=login';" class="nav-signout-btn" id="docs-login-btn">Sign In</button>
+                <div class="profile-container" id="landing-profile-container" style="position: relative; display: block;">
+                    <img id="landing-profile-trigger" src="https://lh3.googleusercontent.com/a/default-user"
+                        referrerpolicy="no-referrer" alt="Profile"
+                        style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #0f3b73; transition: transform 0.2s; object-fit: cover;">
+
+                    <div id="landing-profile-dropdown" class="profile-dropdown"
+                        style="display: none; flex-direction: column; position: absolute; top: 50px; right: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 300px; z-index: 1000; overflow: hidden;">
+                        <div class="profile-info" style="position: relative; padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <button id="landing-close-profile-btn" style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px; color: #555; transition: color 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                            <img id="landing-dropdown-avatar" src="https://lh3.googleusercontent.com/a/default-user" referrerpolicy="no-referrer" style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid #0f3b73; margin-bottom: 12px; object-fit: cover;">
+                            <h3 id="landing-dropdown-name" style="margin: 0 0 4px 0; font-size: 18px; color: #111; font-family: 'Open Sans', sans-serif; font-weight: 600;">Welcome!</h3>
+                            <p id="landing-dropdown-email" style="margin: 0 0 8px 0; font-size: 14px; color: #555; font-family: 'Open Sans', sans-serif;">Authenticated User</p>
+                            <span id="landing-dropdown-role" style="display: inline-block; background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: 'Open Sans', sans-serif; border: 1px solid #bae6fd;">Role</span>
+                        </div>
+                        <div class="profile-actions" style="padding: 8px;">
+                            <button id="landing-nav-profile-btn" onclick="window.location.href='/profile'"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-user" style="color: #555; font-size: 18px;"></i> Profile
+                            </button>
+                            <button id="landing-nav-dashboard-btn" onclick="window.location.href='/maintainer'"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-code" style="color: #555; font-size: 18px;"></i> Analytics
+                            </button>
+                            <button id="landing-feedback-btn" class="nav-feedback-btn"
+                                style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-regular fa-comment-dots" style="color: #555; font-size: 18px;"></i> Feedback
+                            </button>
+                            <button id="landing-logout-btn" style="width: 100%; padding: 12px 16px; background: transparent; border: none; text-align: left; cursor: pointer; font-size: 15px; color: #333; font-family: 'Open Sans', sans-serif; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-right-from-bracket" style="color: #555; font-size: 18px;"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="profile-app-container">
+            
+            <main class="profile-content-area">
+                <div class="profile-content-wrapper">
+
+                <div class="profile-viewport">
+                    <!-- Profile Header Card -->
+                    <div class="profile-header-card" id="profile-header-card">
+                        <div class="profile-avatar-container">
+                            <img id="main-profile-avatar" src="https://lh3.googleusercontent.com/a/default-user" referrerpolicy="no-referrer" alt="Profile Avatar">
+                        </div>
+                        <div class="profile-header-info">
+                            <h2 id="main-profile-name">Loading...</h2>
+                            <p class="profile-affiliation"><i class="fa-solid fa-building-columns"></i> Dhirubhai Ambani University</p>
+                            <p id="main-profile-email" class="profile-email">loading@dau.ac.in</p>
+                            <span id="main-profile-role" class="profile-role-badge">Student</span>
+                        </div>
+                    </div>
+
+                    <!-- Academic Info Card -->
+                    <div class="academic-info-card" id="academic-info-card" style="display: none;">
+                        <h3>Academic Information</h3>
+                        <div class="academic-grid" id="academic-grid">
+                            <!-- Populated dynamically if available -->
+                        </div>
+                    </div>
+
+                    <!-- Weekly Timetable -->
+                    <div class="timetable-section">
+                        <div class="section-header">
+                            <h3>Weekly Timetable</h3>
+                            <div style="display:flex; gap: 8px; align-items:center;">
+                                <span id="timetable-meta-info" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
+                                <button class="view-all-btn" onclick="window.location.href='/chat?prompt=Show%20full%20timetable'">Ask Buddy &rarr;</button>
+                            </div>
+                        </div>
+                        <div class="timetable-card" id="timetable-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 400px;">
+                            <div id="timetable-content" class="timetable-empty-state" style="padding: 24px;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                <p>Loading your schedule...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-split-section">
+                        <!-- Quick Actions -->
+                        <div class="quick-actions-section">
+                            <div class="section-header">
+                                <h3 style="margin: 0; font-size: 18px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Quick Actions</h3>
+                            </div>
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=Which%20classrooms%20are%20free%20right%20now%3F'">
+                                    <div class="qa-icon"><i class="fa-solid fa-building"></i></div>
+                                    <h4>Find a Classroom</h4>
+                                    <p>Find available classrooms</p>
+                                </button>
+                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=When%20are%20faculty%20available%20for%20a%20meeting%3F'">
+                                    <div class="qa-icon"><i class="fa-solid fa-user-tie"></i></div>
+                                    <h4>Find Faculty</h4>
+                                    <p>Check faculty availability</p>
+                                </button>
+                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=Find%20me%20a%20book%20in%20the%20library'">
+                                    <div class="qa-icon"><i class="fa-solid fa-book"></i></div>
+                                    <h4>Library</h4>
+                                    <p>Search books and resources</p>
+                                </button>
+                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=When%20is%20the%20next%20holiday%3F'">
+                                    <div class="qa-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                                    <h4>Holidays</h4>
+                                    <p>Check upcoming holidays</p>
+                                </button>
+                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=What%20is%20my%20timetable%20for%20today%3F'">
+                                    <div class="qa-icon"><i class="fa-solid fa-clock"></i></div>
+                                    <h4>Timetable</h4>
+                                    <p>View your daily schedule</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Conversations -->
+                        <div class="recent-chats-section">
+                            <div class="section-header">
+                                <h3>Recent Conversations</h3>
+                                <button class="view-all-btn" onclick="window.location.href='/chat'">View All &rarr;</button>
+                            </div>
+                            <div class="recent-chats-list" id="recent-chats-list">
+                                <div class="loading-state">Loading recent chats...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer class="landing-footer" style="margin-top: 0; border-radius: 0;">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h4>DAU</h4>
+                    <p>Dhirubhai Ambani University (formerly DA-IICT)</p>
+                    <p>Gandhinagar, Gujarat</p>
+                </div>
+                <div class="footer-links" style="display: flex; flex-direction: column; gap: 12px; text-align: right;">
+                    <a href="https://github.com/Piyushtanwani/mcp-server" target="_blank"
+                        style="color: #cccccc; text-decoration: none; font-size: 14px; transition: color 0.2s;"
+                        onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cccccc'">About Us</a>
+                    <a href="/setup-guide"
+                        style="color: #cccccc; text-decoration: none; font-size: 14px; transition: color 0.2s;"
+                        onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cccccc'">Setup Guide</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with ❤️ by DAU Students</p>
+            </div>
+        </footer>
+
+        <script src="/js/app.js"></script>
+        <script src="/js/profile.js"></script>
+
+    </div>
+</body>
+
+</html>

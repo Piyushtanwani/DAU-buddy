@@ -15,6 +15,8 @@ from core.database import db_connection
 from api.routes import router as api_router
 from dau_mcp.unified_mcp_server import mcp
 from api.auth import verify_google_token, resolve_role
+from api.services.caller_identity import resolve_caller
+from api.services.timetable_service import get_program_timetable, get_faculty_schedule
 
 oauth_codes = {}
 
@@ -132,6 +134,38 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.error(f"DB Error: {e}")
             raise HTTPException(status_code=500, detail="Database error")
+
+    @app.post("/api/me/timetable")
+    @limiter.limit("20/minute")
+    def get_me_timetable(request: Request, req: KeyRequest):
+        email = verify_google_token(req.credential)
+        assigned_role = resolve_role(email)
+        identity = resolve_caller(email, assigned_role)
+        
+        response_data = {
+            "is_student": identity.is_student,
+            "program": None,
+            "semester": identity.semester_estimate,
+            "schedule": []
+        }
+
+        try:
+            if identity.is_student:
+                if identity.program_candidates:
+                    # Default to the first candidate if ambiguous
+                    program = identity.program_candidates[0]
+                    response_data["program"] = program
+                    # Get the full week's timetable (no day filter)
+                    response_data["schedule"] = get_program_timetable(program, semester=identity.semester_estimate)
+            else:
+                if identity.timetable_name:
+                    response_data["program"] = "Faculty"
+                    response_data["schedule"] = get_faculty_schedule(identity.timetable_name)
+                    
+            return response_data
+        except Exception as e:
+            logger.error(f"Error fetching timetable for {email}: {e}")
+            raise HTTPException(status_code=500, detail="Error fetching timetable")
 
     @app.post("/api/generate-key")
     @limiter.limit("5/minute")
@@ -490,6 +524,10 @@ def create_app() -> FastAPI:
         @app.get("/chat")
         def serve_chat():
             return FileResponse(os.path.join(frontend_dir, "html", "chat.html"))
+
+        @app.get("/profile")
+        def serve_profile():
+            return FileResponse(os.path.join(frontend_dir, "html", "profile.html"))
     else:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 
