@@ -343,3 +343,7 @@ The local PostgreSQL database is actively seeded with:
 - Python 3.10+
 - PostgreSQL
 - Node.js (required for Claude Desktop configuration via npx)
+
+
+## Kudos
+Many thanks to our open source contributors: [@Piyushtanwani](https://github.com/Piyushtanwani), [@Ankush-Chander](https://github.com/Ankush-Chander), [@Afif-Momin](https://github.com/Afif-Momin), [@divya-m984](https://github.com/divya-m984), and [@Tirthgandhi05](https://github.com/Tirthgandhi05); also to [@tiangolo](https://github.com/tiangolo) and the community for developing [FastAPI](https://fastapi.tiangolo.com/), plus general support and foundational technology from the [PostgreSQL Global Development Group](https://www.postgresql.org/) and the broader open-source ecosystem.
