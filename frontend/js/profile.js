@@ -175,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Load Timetable
     loadWeeklyTimetable(authData);
+    loadElectives(authData);
 });
 
 async function loadWeeklyTimetable(authData) {
@@ -280,13 +281,21 @@ async function loadWeeklyTimetable(authData) {
                                 <div>${startStr}</div>
                                 <div style="font-size:12px; color:var(--text-muted); font-weight:400;">to ${endStr}</div>
                             </div>
-                            <div class="slot-details">
+                            <div class="slot-details" style="flex-grow: 1;">
                                 <div class="slot-course">${slot.course_code || ''} ${slot.course_name ? '- ' + slot.course_name : ''}</div>
                                 <div class="slot-meta">
                                     ${slot.room ? `<span><i class="fa-solid fa-location-dot"></i> ${slot.room}</span>` : ''}
                                     ${slot.faculty_name ? `<span><i class="fa-solid fa-user-tie"></i> ${slot.faculty_name}</span>` : ''}
                                     ${slot.session_type ? `<span style="background:#e2e8f0; padding:2px 8px; border-radius:12px; font-weight:500;">${slot.session_type}</span>` : ''}
                                 </div>
+                            </div>
+                            <div class="slot-actions" style="display: flex; gap: 4px; flex-direction: column;">
+                                ${slot.is_personal_modification ? `
+                                    <button title="Revert to Official" onclick="deleteModification(${slot.modification_id || 'null'}, ${slot.id})" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-rotate-left"></i></button>
+                                ` : `
+                                    <button title="Edit Slot" onclick="openEditModal(${slot.id}, '${slot.course_code || ''}', '${slot.room || ''}', '${day}', '${slot.start_time}', '${slot.end_time}')" style="background:none; border:none; color:#64748b; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                                    <button title="Cancel/Remove Slot" onclick="addModification('delete', ${slot.id})" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                                `}
                             </div>
                         </div>
                     `;
@@ -326,5 +335,243 @@ async function loadWeeklyTimetable(authData) {
                 <button class="chat-fallback-btn" onclick="loadWeeklyTimetable(JSON.parse(localStorage.getItem('dau_buddy_auth')))" style="margin-top: 8px;">Retry</button>
             </div>
         `;
+    }
+}
+
+
+/* ==============================================================================
+   Electives Management
+   ============================================================================== */
+async function loadElectives(authData) {
+    if (!authData.role.startsWith('Student')) return;
+    document.getElementById('electives-section').style.display = 'block';
+    
+    try {
+        const response = await fetch('/api/me/electives', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authData.credential}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch electives');
+        const data = await response.json();
+        renderElectives(data.selected_electives || []);
+        populateElectiveDropdown(data.available_electives || []);
+    } catch (e) {
+        console.error(e);
+        document.getElementById('electives-container').innerHTML = '<div style="color: #ef4444; font-size: 14px;">Failed to load electives.</div>';
+    }
+}
+
+
+function populateElectiveDropdown(availableElectives) {
+    const select = document.getElementById('new-elective-input');
+    if (!select || select.tagName !== 'SELECT') return; // Defensive check
+    select.innerHTML = '<option value="">Select an elective...</option>';
+    
+    // Sort by course code
+    availableElectives.sort((a, b) => (a.course_code || '').localeCompare(b.course_code || ''));
+    
+    availableElectives.forEach(e => {
+        if (!e.course_code) return;
+        const option = document.createElement('option');
+        option.value = e.course_code;
+        option.textContent = `${e.course_code} - ${e.course_name || 'Elective'}`;
+        select.appendChild(option);
+    });
+}
+
+function renderElectives(electives) {
+    const container = document.getElementById('electives-container');
+    if (electives.length === 0) {
+        container.innerHTML = '<div style="font-size: 14px; color: #64748b; padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">No electives selected.</div>';
+        return;
+    }
+    
+    let html = '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+    electives.forEach(code => {
+        html += `
+            <div style="background: #e0f2fe; color: #0284c7; padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid #bae6fd;">
+                ${code}
+                <i class="fa-solid fa-xmark" style="cursor: pointer; opacity: 0.7;" onclick="removeElective('${code}')" title="Remove"></i>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function addElective() {
+    const input = document.getElementById('new-elective-input');
+    const courseCode = input.value;
+    if (!courseCode) return;
+    
+    const authDataRaw = localStorage.getItem("dau_buddy_auth");
+    if (!authDataRaw) return;
+    const authData = JSON.parse(authDataRaw);
+    
+    try {
+        const response = await fetch('/api/me/electives', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authData.credential}`
+            },
+            body: JSON.stringify({ action: 'add', course_code: courseCode })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            alert(err.detail || 'Failed to add elective');
+            return;
+        }
+        input.value = '';
+        await loadElectives(authData);
+        await loadWeeklyTimetable(authData);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to add elective.');
+    }
+}
+
+async function removeElective(courseCode) {
+    if (!confirm(`Are you sure you want to remove ${courseCode}?`)) return;
+    
+    const authDataRaw = localStorage.getItem("dau_buddy_auth");
+    if (!authDataRaw) return;
+    const authData = JSON.parse(authDataRaw);
+    
+    try {
+        const response = await fetch('/api/me/electives', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authData.credential}`
+            },
+            body: JSON.stringify({ action: 'remove', course_code: courseCode })
+        });
+        if (!response.ok) throw new Error('Failed to remove elective');
+        await loadElectives(authData);
+        await loadWeeklyTimetable(authData);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to remove elective.');
+    }
+}
+
+/* ==============================================================================
+   Timetable Modifications
+   ============================================================================== */
+function openEditModal(timetableId, courseCode, room, day, startTime, endTime) {
+    document.getElementById('edit-timetable-id').value = timetableId;
+    document.getElementById('edit-course').value = courseCode || '';
+    document.getElementById('edit-room').value = room || '';
+    document.getElementById('edit-day').value = day || 'Monday';
+    
+    if(startTime) document.getElementById('edit-start').value = startTime.substring(0, 5);
+    if(endTime) document.getElementById('edit-end').value = endTime.substring(0, 5);
+    
+    document.getElementById('edit-schedule-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-schedule-modal').style.display = 'none';
+}
+
+async function saveScheduleEdit() {
+    const timetableId = document.getElementById('edit-timetable-id').value;
+    const newCourse = document.getElementById('edit-course').value.trim();
+    const newRoom = document.getElementById('edit-room').value.trim();
+    const newDay = document.getElementById('edit-day').value;
+    const newStart = document.getElementById('edit-start').value;
+    const newEnd = document.getElementById('edit-end').value;
+    
+    if (!newStart || !newEnd || !newCourse) {
+        alert("Course, Start Time, and End Time are required.");
+        return;
+    }
+    
+    const payload = {
+        action: "update",
+        timetable_id: parseInt(timetableId),
+        new_course_code: newCourse,
+        new_room: newRoom,
+        new_day_of_week: newDay,
+        new_start_time: newStart + ":00",
+        new_end_time: newEnd + ":00"
+    };
+    
+    await addModificationDirect(payload);
+    closeEditModal();
+}
+
+async function addModification(actionType, timetableId) {
+    if (actionType === 'delete' && !confirm("Remove this slot from your personal schedule?")) return;
+    
+    const payload = {
+        action: actionType,
+        timetable_id: parseInt(timetableId)
+    };
+    
+    await addModificationDirect(payload);
+}
+
+async function addModificationDirect(payload) {
+    const authDataRaw = localStorage.getItem("dau_buddy_auth");
+    if (!authDataRaw) return;
+    const authData = JSON.parse(authDataRaw);
+    
+    try {
+        const response = await fetch('/api/me/schedule/modifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authData.credential}`
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            alert(err.detail || 'Failed to modify schedule. Check for conflicts.');
+            return;
+        }
+        
+        await loadWeeklyTimetable(authData);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to save modification.');
+    }
+}
+
+async function deleteModification(modId, timetableId) {
+    if (!confirm("Revert to the original official slot?")) return;
+    
+    const authDataRaw = localStorage.getItem("dau_buddy_auth");
+    if (!authDataRaw) return;
+    const authData = JSON.parse(authDataRaw);
+    
+    try {
+        let url = '/api/me/schedule/modifications';
+        if (modId) {
+            url += `?modification_id=${modId}`;
+        } else if (timetableId) {
+            url += `?timetable_id=${timetableId}`;
+        }
+        
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authData.credential}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to revert modification');
+        }
+        
+        await loadWeeklyTimetable(authData);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to revert modification.');
     }
 }

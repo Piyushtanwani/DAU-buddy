@@ -120,6 +120,23 @@
                         </div>
                     </div>
 
+                    <!-- Electives Section (Students Only) -->
+                    <div class="electives-section" id="electives-section" style="display: none; margin-bottom: 24px;">
+                        <div class="section-header">
+                            <h3>My Electives</h3>
+                        </div>
+                        <div class="academic-info-card" style="padding: 16px;">
+                            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Select your electives. Your timetable will only show the electives you select.</p>
+                            <div class="electives-container" id="electives-container">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div style="margin-top: 16px; display: flex; gap: 8px;">
+                                <select id="new-elective-input" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 300px; font-size: 14px; background: white;"><option value="">Select an elective...</option></select>
+                                <button onclick="addElective()" style="padding: 8px 16px; background: #0284c7; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer;">Add Elective</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Weekly Timetable -->
                     <div class="timetable-section">
                         <div class="section-header">
@@ -137,52 +154,7 @@
                         </div>
                     </div>
 
-                    <div class="bottom-split-section">
-                        <!-- Quick Actions -->
-                        <div class="quick-actions-section">
-                            <div class="section-header">
-                                <h3 style="margin: 0; font-size: 18px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Quick Actions</h3>
-                            </div>
-                            <div class="quick-actions-grid">
-                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=Which%20classrooms%20are%20free%20right%20now%3F'">
-                                    <div class="qa-icon"><i class="fa-solid fa-building"></i></div>
-                                    <h4>Find a Classroom</h4>
-                                    <p>Find available classrooms</p>
-                                </button>
-                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=When%20are%20faculty%20available%20for%20a%20meeting%3F'">
-                                    <div class="qa-icon"><i class="fa-solid fa-user-tie"></i></div>
-                                    <h4>Find Faculty</h4>
-                                    <p>Check faculty availability</p>
-                                </button>
-                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=Find%20me%20a%20book%20in%20the%20library'">
-                                    <div class="qa-icon"><i class="fa-solid fa-book"></i></div>
-                                    <h4>Library</h4>
-                                    <p>Search books and resources</p>
-                                </button>
-                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=When%20is%20the%20next%20holiday%3F'">
-                                    <div class="qa-icon"><i class="fa-solid fa-calendar-days"></i></div>
-                                    <h4>Holidays</h4>
-                                    <p>Check upcoming holidays</p>
-                                </button>
-                                <button class="quick-action-card" onclick="window.location.href='/chat?prompt=What%20is%20my%20timetable%20for%20today%3F'">
-                                    <div class="qa-icon"><i class="fa-solid fa-clock"></i></div>
-                                    <h4>Timetable</h4>
-                                    <p>View your daily schedule</p>
-                                </button>
-                            </div>
-                        </div>
 
-                        <!-- Recent Conversations -->
-                        <div class="recent-chats-section">
-                            <div class="section-header">
-                                <h3>Recent Conversations</h3>
-                                <button class="view-all-btn" onclick="window.location.href='/chat'">View All &rarr;</button>
-                            </div>
-                            <div class="recent-chats-list" id="recent-chats-list">
-                                <div class="loading-state">Loading recent chats...</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </main>
         </div>
@@ -211,6 +183,54 @@
         <script src="/js/app.js"></script>
         <script src="/js/profile.js"></script>
 
+    </div>
+    <!-- Edit Schedule Modal -->
+    <div id="edit-schedule-modal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Edit Timetable Slot</h3>
+                <button onclick="closeEditModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="edit-timetable-id">
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">Course</label>
+                <input type="text" id="edit-course" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. CS101">
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">Room</label>
+                <input type="text" id="edit-room" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. CEP 108">
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">Day</label>
+                <select id="edit-day" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">Start Time</label>
+                    <input type="time" id="edit-start" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">End Time</label>
+                    <input type="time" id="edit-end" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="closeEditModal()" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: none; border-radius: 6px; font-weight: 500; cursor: pointer;">Cancel</button>
+                <button onclick="saveScheduleEdit()" style="padding: 8px 16px; background: #0284c7; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer;">Save Changes</button>
+            </div>
+        </div>
     </div>
 </body>
 

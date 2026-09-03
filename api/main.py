@@ -1,4 +1,5 @@
 import os
+from typing import Optional, List, Dict, Any
 import hashlib
 import secrets
 from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks, Query
@@ -16,7 +17,7 @@ from api.routes import router as api_router
 from dau_mcp.unified_mcp_server import mcp
 from api.auth import verify_google_token, resolve_role
 from api.services.caller_identity import resolve_caller
-from api.services.timetable_service import get_program_timetable, get_faculty_schedule
+from api.services.timetable_service import get_program_timetable, get_faculty_schedule, get_personalized_student_schedule, get_personalized_faculty_schedule, get_electives_schedule, get_student_electives, save_student_electives, save_schedule_modification, delete_schedule_modification
 
 oauth_codes = {}
 
@@ -152,15 +153,19 @@ def create_app() -> FastAPI:
         try:
             if identity.is_student:
                 if identity.program_candidates:
-                    # Default to the first candidate if ambiguous
                     program = identity.program_candidates[0]
                     response_data["program"] = program
-                    # Get the full week's timetable (no day filter)
-                    response_data["schedule"] = get_program_timetable(program, semester=identity.semester_estimate)
+                    # Get personalized schedule which includes electives and modifications
+                    personalized = get_personalized_student_schedule(identity, None)
+                    response_data["schedule"] = personalized.get("schedule", [])
+                    response_data["conflicts"] = personalized.get("conflicts", [])
+                    response_data["selected_electives"] = personalized.get("selected_electives", [])
             else:
                 if identity.timetable_name:
                     response_data["program"] = "Faculty"
-                    response_data["schedule"] = get_faculty_schedule(identity.timetable_name)
+                    personalized = get_personalized_faculty_schedule(identity, None)
+                    response_data["schedule"] = personalized.get("schedule", [])
+                    response_data["conflicts"] = personalized.get("conflicts", [])
                     
             return response_data
         except Exception as e:
@@ -531,14 +536,128 @@ def create_app() -> FastAPI:
     else:
         logger.error(f"Frontend directory not found at: {frontend_dir}")
 
+
+
+    def get_token_from_header(request: Request) -> str:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid or missing Authorization header")
+        return auth_header.split(" ")[1]
+
+    @app.get("/api/me/electives")
+    @limiter.limit("20/minute")
+    def get_my_electives(request: Request):
+        credential = get_token_from_header(request)
+        email = verify_google_token(credential)
+        assigned_role = resolve_role(email)
+        identity = resolve_caller(email, assigned_role)
+        
+        if not identity.is_student or not identity.program or not identity.semester_estimate:
+            return {"available_electives": [], "selected_electives": []}
+            
+        available = get_electives_schedule(identity.program, str(identity.semester_estimate))
+        
+        unique_electives = {}
+        for e in available:
+            code = e.get('course_code')
+            if code and code not in unique_electives:
+                unique_electives[code] = e
+                
+        selected = get_student_electives(identity.email)
+        return {
+            "available_electives": list(unique_electives.values()),
+            "selected_electives": selected
+        }
+
+    class ElectivesUpdate(BaseModel):
+        action: str
+        course_code: str
+
+    @app.post("/api/me/electives")
+    @limiter.limit("10/minute")
+    def update_my_electives(request: Request, req: ElectivesUpdate):
+        credential = get_token_from_header(request)
+        email = verify_google_token(credential)
+        assigned_role = resolve_role(email)
+        identity = resolve_caller(email, assigned_role)
+        if not identity.is_student:
+            raise HTTPException(status_code=403, detail="Only students can select electives")
+            
+        current_electives = get_student_electives(identity.email)
+        if req.action == 'add' and req.course_code not in current_electives:
+            current_electives.append(req.course_code)
+        elif req.action == 'remove' and req.course_code in current_electives:
+            current_electives.remove(req.course_code)
+            
+        save_student_electives(identity.email, current_electives)
+        return {"status": "success"}
+
+    class ScheduleModification(BaseModel):
+        action: str
+        timetable_id: Optional[int] = None
+        new_course_code: Optional[str] = None
+        new_room: Optional[str] = None
+        new_day_of_week: Optional[str] = None
+        new_start_time: Optional[str] = None
+        new_end_time: Optional[str] = None
+
+    @app.post("/api/me/schedule/modifications")
+    @limiter.limit("20/minute")
+    def create_modification(request: Request, req: ScheduleModification):
+        credential = get_token_from_header(request)
+        email = verify_google_token(credential)
+        assigned_role = resolve_role(email)
+        identity = resolve_caller(email, assigned_role)
+        
+        try:
+            # Map frontend payload names to backend names expected by DB
+            mod_data = req.model_dump()
+            if req.action == 'update':
+                mod_data['course_code'] = mod_data.pop('new_course_code', None)
+                mod_data['room'] = mod_data.pop('new_room', None)
+                mod_data['day_of_week'] = mod_data.pop('new_day_of_week', None)
+                mod_data['start_time'] = mod_data.pop('new_start_time', None)
+                mod_data['end_time'] = mod_data.pop('new_end_time', None)
+                
+            res = save_schedule_modification(identity, mod_data)
+            return res
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Error saving modification: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    @app.delete("/api/me/schedule/modifications")
+    @limiter.limit("20/minute")
+    def delete_modification_route(request: Request, modification_id: Optional[int] = Query(None), timetable_id: Optional[int] = Query(None)):
+        credential = get_token_from_header(request)
+        email = verify_google_token(credential)
+        assigned_role = resolve_role(email)
+        identity = resolve_caller(email, assigned_role)
+        
+        if not modification_id and not timetable_id:
+            raise HTTPException(status_code=400, detail="Must provide modification_id or timetable_id")
+            
+        try:
+            if timetable_id and not modification_id:
+                # Find modification_id by timetable_id
+                with db_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM personal_schedule_modifications WHERE email = %s AND timetable_id = %s", (email, timetable_id))
+                        row = cur.fetchone()
+                        if row:
+                            modification_id = row[0]
+                        else:
+                            return {"status": "success"} # Nothing to delete
+                            
+            delete_schedule_modification(identity, modification_id)
+            return {"status": "success"}
+        except Exception as e:
+            logger.error(f"Error deleting modification: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
     return app
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "api.main:create_app",
-        host="0.0.0.0",
-        port=8080,
-        factory=True,
-        reload=True,
-    )
+    uvicorn.run("api.main:create_app", host="0.0.0.1", port=8001, reload=True)
