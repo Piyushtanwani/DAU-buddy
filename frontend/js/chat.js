@@ -940,6 +940,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initialize/Load chat history
     loadChatHistory();
 
+    // Handle Quick Action prompt from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPrompt = urlParams.get('prompt');
+    if (initialPrompt) {
+        // Remove prompt from URL to prevent resending on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Force a new chat if the active one isn't empty
+        const currentActive = chatSessions.find(s => s.id === activeChatId);
+        if (currentActive && currentActive.messages.length > 0) {
+            createNewChat();
+        }
+        
+        // Use setTimeout to ensure DOM is fully ready and new chat is rendered
+        setTimeout(() => {
+            handleSend(initialPrompt);
+        }, 100);
+    }
     // Mobile Responsive Sidebar Navigation Toggle
     const sidebarToggle = document.getElementById("mobile-menu-btn");
     const sidebar = document.getElementById("sidebar") || document.querySelector(".sidebar");
