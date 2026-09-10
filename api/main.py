@@ -612,12 +612,21 @@ def create_app() -> FastAPI:
         try:
             # Map frontend payload names to backend names expected by DB
             mod_data = req.model_dump()
+            
+            # Action Normalization
             if req.action == 'update':
+                mod_data['action'] = 'OVERRIDE'
                 mod_data['course_code'] = mod_data.pop('new_course_code', None)
                 mod_data['room'] = mod_data.pop('new_room', None)
                 mod_data['day_of_week'] = mod_data.pop('new_day_of_week', None)
                 mod_data['start_time'] = mod_data.pop('new_start_time', None)
                 mod_data['end_time'] = mod_data.pop('new_end_time', None)
+            elif req.action == 'delete':
+                mod_data['action'] = 'REMOVE'
+            elif req.action == 'add':
+                pass # Preserve exact ADD handling if supported
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported schedule modification action")
                 
             res = save_schedule_modification(identity, mod_data)
             return res

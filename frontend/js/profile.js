@@ -290,11 +290,13 @@ async function loadWeeklyTimetable(authData) {
                                 </div>
                             </div>
                             <div class="slot-actions" style="display: flex; gap: 4px; flex-direction: column;">
-                                ${slot.is_personal_modification ? `
-                                    <button title="Revert to Official" onclick="deleteModification(${slot.modification_id || 'null'}, ${slot.id})" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-rotate-left"></i></button>
+                                ${slot.is_custom ? `
+                                    <button title="Delete Custom Slot" onclick="deleteModification(${slot.modification_id || 'null'}, '${slot.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                                ` : (slot.is_overridden && (!slot.is_authoritative || (authData && authData.role && authData.role.startsWith('Faculty')))) ? `
+                                    <button title="Revert to Official" onclick="deleteModification(${slot.modification_id || 'null'}, '${slot.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-rotate-left"></i></button>
                                 ` : `
-                                    <button title="Edit Slot" onclick="openEditModal(${slot.id}, '${slot.course_code || ''}', '${slot.room || ''}', '${day}', '${slot.start_time}', '${slot.end_time}')" style="background:none; border:none; color:#64748b; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-                                    <button title="Cancel/Remove Slot" onclick="addModification('delete', ${slot.id})" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                                    <button title="Edit Slot" onclick="openEditModal('${slot.id}', '${slot.course_code || ''}', '${slot.room || ''}', '${day}', '${slot.start_time}', '${slot.end_time}')" style="background:none; border:none; color:#64748b; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                                    <button title="Cancel/Remove Slot" onclick="addModification('delete', '${slot.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                                 `}
                             </div>
                         </div>

@@ -405,6 +405,7 @@ CREATE TABLE IF NOT EXISTS personal_schedule_modifications (
     start_time TIME,
     end_time TIME,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_authoritative BOOLEAN NOT NULL DEFAULT FALSE,
     CHECK (end_time > start_time)
 );
 
@@ -412,5 +413,11 @@ CREATE TABLE IF NOT EXISTS personal_schedule_modifications (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_personal_modifications_unique_override 
     ON personal_schedule_modifications (email, timetable_id) 
     WHERE action IN ('OVERRIDE', 'REMOVE');
+
+-- Uniqueness Constraint: A timetable_id can have at most one active authoritative modification.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_authoritative_modification 
+    ON personal_schedule_modifications (timetable_id)
+    WHERE is_authoritative = TRUE
+      AND action IN ('OVERRIDE', 'REMOVE');
 
 CREATE INDEX IF NOT EXISTS idx_personal_modifications_email ON personal_schedule_modifications(email);
