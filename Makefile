@@ -32,6 +32,12 @@ seed: seed-faculty seed-staff
 test:
 	python -m pytest tests/ -v
 
+# Behavioural evals: real prompt, real tools, real model. Needs GEMINI_API_KEY
+# and a database, costs a model call per turn — kept out of `make test` so the
+# unit suite stays fast, free and offline. See evals/README.md.
+eval:
+	python -m evals.run_eval
+
 # ── Help ───────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
@@ -43,4 +49,5 @@ help:
 	@echo "  make seed-staff     Scrape & seed staff data"
 	@echo "  make seed           Seed both faculty and staff"
 	@echo "  make test           Run the test suite"
+	@echo "  make eval           Run behavioural evals (needs GEMINI_API_KEY)"
 	@echo ""
