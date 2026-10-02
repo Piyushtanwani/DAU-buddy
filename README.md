@@ -112,6 +112,10 @@ MCP Project/
 │
 ├── tests/                      # Unit and integration tests
 │
+├── evals/                      # Behavioural evals: real prompt, tools and model
+│   ├── cases.yaml              # Cases, each naming the bug it catches
+│   └── run_eval.py             # Runner (`make eval`)
+│
 ├── .env.example                # Template for .env
 ├── requirements.txt
 ├── Makefile                    # Make commands

@@ -11,21 +11,42 @@ somebody happened to ask the right follow-up question in chat.
 ## Running
 
 ```bash
-export GEMINI_API_KEY=...            # the harness needs the live model
-python -m evals.run_eval             # all cases
+make eval                            # all cases
 python -m evals.run_eval --tag day-order
 python -m evals.run_eval --case dated-schedule-uses-effective-day
 python -m evals.run_eval -v          # print every answer and tool call
 ```
 
-Needs a reachable database too — this drives the real pipeline, so a failure
-here is a failure a user would have seen. Roughly one model call per turn;
-the full set is about 20 calls.
+Needs `GEMINI_API_KEY` (read from `.env`, like the server) and a reachable
+database — this drives the real pipeline, so a failure here is a failure a user
+would have seen.
 
-**Not wired into `make test` on purpose.** The unit suite must stay fast, free
-and offline. This layer is slow, costs money, and can wobble on phrasing. Run it
-before merging anything that touches the system prompt, the tool signatures, or
-the calendar/timetable services.
+Every model round-trip is one call, so a turn that uses one tool costs two. The
+full set is roughly 40 calls. A free-tier key allows 5 a minute; the runner
+waits out each rate limit with the delay the API asks for, and each model
+overload (503) with a 30-second backoff. A per-day quota stops the run, since
+waiting cannot clear it — and the free tier's daily quota runs out partway
+through the set, so a complete run needs a paid key.
+
+`make test` checks that every tool named in `cases.yaml` is registered, so a
+tool rename breaks the unit suite, not a paid eval run.
+
+Run it before merging anything that touches the system prompt, the tool
+signatures, or the calendar/timetable services. It stays out of `make test`:
+the unit suite is fast, free and offline, and this layer is slow, paid, and can
+wobble on phrasing.
+
+## Reading a run
+
+| Status | Meaning | Exit code |
+|---|---|---|
+| `PASS` | every assertion held | 0 when all pass |
+| `FAIL` | the assistant misbehaved — a regression candidate | 1 if any case fails |
+| `ERROR` | the pipeline could not run (quota, network, database); says nothing about behaviour | 2 if cases errored and none failed |
+
+An answer of *"I checked the system, but there is no additional information to
+provide right now."* is the pipeline's reply when the model returns neither
+text nor a tool call. It counts as `FAIL`: the user saw it.
 
 ## Writing a case
 

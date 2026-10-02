@@ -128,6 +128,12 @@ docker run -p 8080:8080 --env-file .env dau-mcp-server
    ```bash
    make test
    ```
+   If the change touches the system prompt, a tool signature, or the calendar or
+   timetable services, also run the behavioural evals against the live model
+   (see [`evals/README.md`](../evals/README.md)):
+   ```bash
+   make eval
+   ```
 
 4. **Commit and push**:
    ```bash
@@ -237,6 +243,7 @@ dau-mcp-server/
 ├── scripts/              # DB init SQL and data seeding scripts
 ├── frontend/             # Web dashboard (HTML, JS)
 ├── tests/                # pytest test suite
+├── evals/                # Behavioural evals against the live model
 └── docs/                 # Documentation
 ```
 

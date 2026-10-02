@@ -90,7 +90,7 @@
   turns:
     - user: Which classroom is free right now?
       expect_tools:
-        - name: find_free_rooms
+        - name: find_free_venues
       answer_contains: ["CEP"]
 
 # ─────────────────────────────────────────────────────────────────────────────
