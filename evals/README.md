@@ -44,6 +44,11 @@ wobble on phrasing.
 | `FAIL` | the assistant misbehaved — a regression candidate | 1 if any case fails |
 | `ERROR` | the pipeline could not run (quota, network, database); says nothing about behaviour | 2 if cases errored and none failed |
 
+A case is `ERROR` when the model API fails, when a tool raises a database,
+network or timeout error, or when the database does not answer `SELECT 1`
+before or after the case. A tool that rejects the model's arguments is
+behaviour, and the case's assertions decide it.
+
 An answer of *"I checked the system, but there is no additional information to
 provide right now."* is the pipeline's reply when the model returns neither
 text nor a tool call. It counts as `FAIL`: the user saw it.
@@ -77,6 +82,7 @@ Assertions, in the order you should reach for them:
 | `forbid_tools` | a tool was **not** called with those arguments |
 | `answer_contains` / `answer_excludes` | case-insensitive substrings |
 | `answer_matches` | regex, case-insensitive |
+| `answer_not_matches` | regex that must not match, case-insensitive; `\b` word boundaries catch a word at the start of the answer or next to punctuation |
 
 **Prefer trajectory assertions to text assertions.** `get_faculty_schedule` being
 called with `date=2026-08-07` is a fact; whether the reply says "Tuesday" or
@@ -106,6 +112,9 @@ surfaced in the first place.
   changed rather than because the assistant regressed. Names and numbers in
   assertions are the fragile part; `68261641` is stable, a timetable slot in week
   three of term may not be.
+- A database that drops and recovers inside one case can go unnoticed: many
+  services turn a query error into answer text, and the check before and after
+  the case both see a working database.
 - Nothing here checks latency, cost, or the OpenAI fallback path.
 - The model is nondeterministic. A single failure is a signal to look, not proof
   of a regression — re-run the case before you go hunting.

@@ -4,8 +4,12 @@ Offline checks for the behavioural eval harness (evals/run_eval.py).
 The harness itself needs a live model; these cover the parts that decide what
 a run reports, so a quota error can never be counted as a behaviour failure.
 """
+import asyncio
+
+import psycopg2
 import pytest
 import yaml
+from mcp.server.fastmcp.exceptions import ToolError
 
 from api.services import tool_bridge
 from evals import run_eval
@@ -74,6 +78,7 @@ def test_pipeline_error_makes_the_case_error_not_fail(monkeypatch):
 
     monkeypatch.setattr(run_eval.gemini, "build_system_instruction", lambda: "")
     monkeypatch.setattr(run_eval.gemini, "call_gemini_api", broken_call)
+    monkeypatch.setattr(run_eval, "_database_unreachable", lambda: None)
 
     case = {"id": "probe", "turns": [{"user": "hi", "answer_contains": ["x"]}]}
     status, messages = run_eval.run_case(case, "key", verbose=False)
@@ -89,12 +94,13 @@ def test_check_turn_reports_each_assertion_kind():
         "answer_contains": ["Tuesday"],
         "answer_excludes": ["12:00"],
         "answer_matches": [r"\b14:00\b"],
+        "answer_not_matches": [r"\bfriday\b"],
     }
     calls = [("get_faculty_schedule", {"day": "friday", "faculty_name": "V Sunitha"})]
 
     failures = run_eval.check_turn(turn, "Friday at 12:00", calls)
 
-    assert len(failures) == 5
+    assert len(failures) == 6
 
 
 def _tool_names_in_cases() -> set[str]:
@@ -117,3 +123,68 @@ def test_cases_name_only_tools_the_model_can_call():
 
     unknown = names - {t["name"] for t in tool_bridge.list_tools()}
     assert not unknown, f"cases.yaml names tools the model cannot call: {sorted(unknown)}"
+
+
+def _tool_raising(cause: Exception):
+    """A tool manager call_tool that fails the way FastMCP wraps a tool exception."""
+    async def call_tool(name, arguments, *args, **kwargs):
+        raise ToolError(f"Error executing tool {name}: {cause}") from cause
+    return call_tool
+
+
+def _model_calling_one_tool(api_key, system_instruction, history):
+    """Stands in for the model loop: one tool call whose failure dispatch swallows."""
+    manager = run_eval.tool_bridge._mcp()._tool_manager
+    try:
+        asyncio.run(manager.call_tool("search_staff", {"query": "x"}))
+    except ToolError:
+        pass
+    return "answer", {}
+
+
+@pytest.mark.parametrize("cause", [
+    psycopg2.OperationalError("server closed the connection"),
+    ConnectionRefusedError("connection refused"),
+])
+def test_tool_failing_in_the_environment_errors_the_turn(monkeypatch, cause):
+    manager = run_eval.tool_bridge._mcp()._tool_manager
+    monkeypatch.setattr(manager, "call_tool", _tool_raising(cause))
+    monkeypatch.setattr(run_eval.gemini, "build_system_instruction", lambda: "")
+    monkeypatch.setattr(run_eval.gemini, "call_gemini_api", _model_calling_one_tool)
+
+    with pytest.raises(run_eval.PipelineError, match="search_staff"):
+        run_eval._answer_turn("key", [])
+
+
+def test_tool_rejecting_its_input_is_left_to_the_assertions(monkeypatch):
+    manager = run_eval.tool_bridge._mcp()._tool_manager
+    monkeypatch.setattr(manager, "call_tool", _tool_raising(ValueError("Invalid day: Funday")))
+    monkeypatch.setattr(run_eval.gemini, "build_system_instruction", lambda: "")
+    monkeypatch.setattr(run_eval.gemini, "call_gemini_api", _model_calling_one_tool)
+
+    answer, _calls = run_eval._answer_turn("key", [])
+
+    assert answer == "answer"
+
+
+@pytest.mark.parametrize("when", ["before", "after"])
+def test_database_down_errors_the_case(monkeypatch, when):
+    checks = iter([None, "OperationalError('down')"] if when == "after" else ["OperationalError('down')"])
+    monkeypatch.setattr(run_eval, "_database_unreachable", lambda: next(checks))
+    monkeypatch.setattr(run_eval.gemini, "build_system_instruction", lambda: "")
+    monkeypatch.setattr(run_eval.gemini, "call_gemini_api", lambda *a: ("answer", {}))
+
+    case = {"id": "probe", "turns": [{"user": "hi"}]}
+    status, messages = run_eval.run_case(case, "key", verbose=False)
+
+    assert status == "ERROR"
+    assert f"database unreachable {when} the case" in messages[0]
+
+
+def test_pronoun_case_catches_a_pronoun_opening_the_answer():
+    case = next(c for c in yaml.safe_load(run_eval.CASES_FILE.read_text())
+                if c["id"] == "no-gender-guessed-from-name")
+    turn = case["turns"][0]
+
+    assert run_eval.check_turn(turn, "His available slots are 10:00-11:00.", [])
+    assert not run_eval.check_turn(turn, "There are three sections. The schedule follows.", [])

@@ -126,7 +126,7 @@
     no pronouns, so any gendered pronoun is a guess about a real colleague.
   turns:
     - user: Tell me about Prof V Sunitha and what they teach.
-      answer_excludes: [" his ", " her ", " he ", " she "]
+      answer_not_matches: ['\b(he|him|his|she|her|hers)\b']
 
 - id: contact-details-are-shared
   tags: [people, directory]
@@ -166,11 +166,14 @@
 
 - id: library-search-then-availability
   tags: [library, routing]
-  why: Availability comes from get_book_details; search alone cannot answer it.
+  why: >
+    Availability comes from get_book_details; search results carry no copy
+    status, so an availability answer without the details call is invented.
   turns:
-    - user: Find me a book on computer networks
+    - user: Is a book on computer networks available to borrow in the library?
       expect_tools:
         - name: search_library_books
+        - name: get_book_details
 
 - id: next-holiday-comes-from-the-calendar
   tags: [calendar, routing]

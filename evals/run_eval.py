@@ -40,11 +40,12 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import psycopg2
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core import config
+from core import config, database
 from core.schemas import ChatMessage
 from api.services import gemini, tool_bridge
 
@@ -58,6 +59,11 @@ MAX_TRANSIENT_ATTEMPTS = 4
 # Wait after a 503 overload, which carries no retry delay of its own.
 OVERLOAD_BACKOFF_S = 30.0
 
+# Causes that mean a tool could not run, as opposed to the model calling it
+# badly. tool_bridge.dispatch turns every tool exception into text for the
+# model, so the recorder reads the cause before that happens.
+ENVIRONMENT_ERRORS = (psycopg2.Error, OSError, TimeoutError)
+
 
 class PipelineError(Exception):
     """The pipeline could not produce an answer for reasons outside behaviour."""
@@ -68,10 +74,18 @@ class DailyQuotaExhausted(PipelineError):
 
 
 class ToolRecorder:
-    """Wraps tool_bridge.dispatch to record (name, args) of every tool call."""
+    """
+    Records (name, args) of every tool call, and every tool that failed for an
+    environment reason (see ENVIRONMENT_ERRORS).
+
+    Two patch points: tool_bridge.dispatch sees what the model asked for, and
+    the MCP tool manager's call_tool sees the exception dispatch would
+    otherwise turn into text.
+    """
 
     def __init__(self):
         self.calls = []
+        self.environment_failures = []
         self._real = tool_bridge.dispatch
 
     def __enter__(self):
@@ -79,16 +93,43 @@ class ToolRecorder:
             self.calls.append((name, dict(arguments or {})))
             return self._real(name, arguments)
 
-        self._patcher = patch.object(tool_bridge, "dispatch", recording_dispatch)
-        self._patcher.start()
+        manager = tool_bridge._mcp()._tool_manager
+        real_call_tool = manager.call_tool
+
+        async def watching_call_tool(name, arguments, *args, **kwargs):
+            try:
+                return await real_call_tool(name, arguments, *args, **kwargs)
+            except Exception as e:
+                cause = e.__cause__ or e
+                if isinstance(cause, ENVIRONMENT_ERRORS):
+                    self.environment_failures.append(f"{name}: {cause!r}")
+                raise
+
+        self._patchers = [
+            patch.object(tool_bridge, "dispatch", recording_dispatch),
+            patch.object(manager, "call_tool", watching_call_tool),
+        ]
+        for patcher in self._patchers:
+            patcher.start()
         # gemini.py holds its own reference to the module, so patching the
         # attribute is enough — but assert it, or a refactor silently blinds us.
         assert tool_bridge.dispatch is not self._real
         return self
 
     def __exit__(self, *exc):
-        self._patcher.stop()
+        for patcher in reversed(self._patchers):
+            patcher.stop()
         return False
+
+
+def _database_unreachable():
+    """None when the database answers SELECT 1, else a description of why not."""
+    try:
+        with database.db_connection() as conn, conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        return None
+    except Exception as e:
+        return repr(e)
 
 
 def _pin_clock(today: str):
@@ -132,11 +173,17 @@ def _answer_turn(api_key: str, history: list) -> tuple[str, list]:
         with ToolRecorder() as recorder:
             try:
                 answer, _usage = gemini.call_gemini_api(api_key, system_instruction, history)
-                return answer, recorder.calls
             except Exception as e:
                 delay = _retry_delay(e)
                 if delay is None:
                     raise PipelineError(f"pipeline raised {e!r}") from e
+            else:
+                if recorder.environment_failures:
+                    raise PipelineError(
+                        "tool failed in the environment: "
+                        + "; ".join(recorder.environment_failures)
+                    )
+                return answer, recorder.calls
         if attempt < MAX_TRANSIENT_ATTEMPTS:
             print(f"          transient API error; waiting {delay:.0f}s", flush=True)
             time.sleep(delay)
@@ -189,13 +236,28 @@ def check_turn(turn: dict, answer: str, calls: list) -> list:
     for pattern in turn.get("answer_matches", []):
         if not re.search(pattern, answer, re.IGNORECASE):
             failures.append(f"answer does not match /{pattern}/")
+    for pattern in turn.get("answer_not_matches", []):
+        found = re.search(pattern, answer, re.IGNORECASE)
+        if found:
+            failures.append(f"answer matches /{pattern}/ at {found.group(0)!r}")
     return failures
 
 
 def run_case(case: dict, api_key: str, verbose: bool) -> tuple[str, list]:
-    """Returns (status, messages) where status is PASS, FAIL or ERROR."""
+    """
+    Returns (status, messages) where status is PASS, FAIL or ERROR.
+
+    The database is checked before and after the case: services turn many
+    database errors into answer text, so an outage during the case can surface
+    only as a wrong answer, and a verdict reached with the database down says
+    nothing about behaviour.
+    """
     history: list[ChatMessage] = []
     failures = []
+
+    down = _database_unreachable()
+    if down:
+        return "ERROR", [f"database unreachable before the case: {down}"]
 
     with _pin_clock(case.get("today")):
         for index, turn in enumerate(case["turns"], start=1):
@@ -217,6 +279,9 @@ def run_case(case: dict, api_key: str, verbose: bool) -> tuple[str, list]:
 
             failures += [f"turn {index}: {f}" for f in check_turn(turn, answer, calls)]
 
+    down = _database_unreachable()
+    if down:
+        return "ERROR", [f"database unreachable after the case: {down}"]
     return ("FAIL" if failures else "PASS"), failures
 
 
