@@ -18,6 +18,7 @@ from core.database import db_connection
 from scrapers import staff_scraper
 from api.context import user_role_var
 from api.services.pagination import envelope
+from api.services.name_matching import find_similar_names, fuzzy_match_notice
 
 # ==============================================================================
 # Server Setup
@@ -62,7 +63,6 @@ def search_staff(query: str) -> str:
     Search for staff members matching a query string.
     Matches against names, designations, qualifications, and emails.
     
-    IMPORTANT ROUTING RULES FOR AI AGENTS:
     - If the user asks about "WiFi", "Internet", or "Network" problems, search for "IT & SYSTEMS" or "Network".
     - If the user asks about "light", "AC", "fan", "electricity", or "power" problems, search for "Electrician", "Electrical", or "Maintenance".
     """
@@ -119,6 +119,30 @@ def get_staff_details(name_or_email: str) -> str:
                     LIMIT 1;
                 """, (pattern, pattern))
                 row = cursor.fetchone()
+
+                # Trigram similarity fallback, only after the exact lookup missed.
+                fuzzy_notice = ""
+                if not row:
+                    # The cursor above is still open, so it is reused rather
+                    # than checking a second connection out of the pool.
+                    for candidate in find_similar_names(
+                        "staff",
+                        name_or_email,
+                        limit=1,
+                        cursor=cursor,
+                    ):
+                        cursor.execute("""
+                            SELECT name, email, phone, address, qualification,
+                                   designation, profile_url, image_url, scraped_at
+                            FROM staff
+                            WHERE name = %s
+                            LIMIT 1;
+                        """, (candidate,))
+                        row = cursor.fetchone()
+                        if row:
+                            fuzzy_notice = fuzzy_match_notice(name_or_email.strip(), candidate) + "\n"
+                            break
+
                 if not row:
                     return f"No staff member found matching '{name_or_email}'."
                 name, email, phone, addr, qual, desig, url, img, ts = row
@@ -133,7 +157,7 @@ def get_staff_details(name_or_email: str) -> str:
                 if url: out.append(f"- **Profile URL:** [{url}]({url})")
                 if img: out.append(f"- **Profile Image:** [{img}]({img})")
                 out.append(f"- **Data Scraped At:** {ts.strftime('%Y-%m-%d %H:%M:%S')}")
-                return "\n".join(out)
+                return fuzzy_notice + "\n".join(out)
     except Exception as e:
         logger.error(f"get_staff_details error: {e}")
         return f"Error retrieving staff details: {e}"

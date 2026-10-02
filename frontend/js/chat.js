@@ -22,10 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const promptCards = document.querySelectorAll(".prompt-card");
 
     const sendBtn = document.getElementById("send-btn");
+    const micBtn = document.getElementById("mic-btn");
 
-    // Client-side request budget. Slightly above the server's own deadline
-    // (LLM_TIMEOUT_S in api/routes/chat.py) so the server normally answers first.
-    const CHAT_TIMEOUT_MS = 55000;
+    // Client-side request budget. Must cover worst case: Gemini timeout (30s)
+    // + OpenAI fallback (45s) + overhead. Server answers before this fires.
+    const CHAT_TIMEOUT_MS = 100000;
     // Turns posted back to the server; it re-caps this itself.
     const HISTORY_TURNS_SENT = 12;
 
@@ -158,6 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (stored) {
             try {
                 chatSessions = JSON.parse(stored);
+                // Sort by timestamp descending
+                chatSessions.sort((a, b) => b.timestamp - a.timestamp);
             } catch (e) {
                 console.error("Error parsing stored chat sessions", e);
                 chatSessions = [];
@@ -336,7 +339,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Submit user question
     async function handleSend(text) {
+        // Stop mic immediately on any send attempt (before the empty-text guard)
+        stopDictation();
+
         if (!text.trim() || isResponding) return;
+
+        // Auto-stop dictation if active
+        if (window.stopDictation) window.stopDictation();
 
         // Require authentication to chat
         const authData = JSON.parse(localStorage.getItem("dau_buddy_auth") || "null");
@@ -361,12 +370,22 @@ document.addEventListener("DOMContentLoaded", () => {
             activeSession = chatSessions.find(s => s.id === activeChatId);
         }
 
+        // Move the active session to the top of the history list if it's not already there
+        const sessionIndex = chatSessions.findIndex(s => s.id === activeChatId);
+        if (sessionIndex > 0) {
+            chatSessions.splice(sessionIndex, 1);
+            chatSessions.unshift(activeSession);
+            activeSession.timestamp = Date.now();
+        }
+
         // Generate title if it's the first message
         if (activeSession.messages.length === 0) {
             const shortTitle = text.length > 28 ? text.substring(0, 25) + "..." : text;
             activeSession.title = shortTitle;
-            renderChatHistoryList();
         }
+        
+        // Re-render history list in all cases where message is sent to ensure order/title is updated
+        renderChatHistoryList();
 
         // Append to state history and save
         activeSession.messages.push({ sender: "user", text: text });
@@ -715,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const avatar = document.createElement("div");
         avatar.className = "avatar";
-        avatar.innerHTML = '<i class="fas fa-hat-wizard"></i>';
+        avatar.innerHTML = '<i class="fas fa-graduation-cap"></i>';
 
         const wrapper = document.createElement("div");
         wrapper.className = "bubble-wrapper";
@@ -745,10 +764,163 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Form Event Listener
+    // Voice Dictation (Web Speech API)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRequestingPermission = false;
+    let isListening = false;
+    let permissionTimeout = null;
+    let placeholderOverride = false;
+
+    function stopDictation() {
+        if (isListening && recognition) {
+            recognition.abort(); // Force abort to prevent late audio processing from appending text after send
+            stopListening(); // Eagerly reset UI
+        }
+    }
+
+    if (SpeechRecognition && micBtn) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        // Set the primary listening engine. (Web Speech API only accepts one active lang code per session)
+        // Note: Chrome's engine is smart enough to parse English even when set to Hindi ('hi-IN')
+        recognition.lang = {
+            english: "en-IN",
+            hindi: "hi-IN"
+        };
+
+        recognition.onstart = () => {
+            if (permissionTimeout) {
+                clearTimeout(permissionTimeout);
+                permissionTimeout = null;
+            }
+            isRequestingPermission = false;
+            isListening = true;
+            micBtn.classList.add("listening");
+            const icon = micBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-microphone');
+                icon.classList.add('fa-stop');
+            }
+            userInput.placeholder = "Listening...";
+        };
+
+        recognition.onresult = (event) => {
+            let newText = "";
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    newText += event.results[i][0].transcript;
+                }
+            }
+
+            const transcript = newText.trim();
+            if (transcript) {
+                const currentVal = userInput.value;
+                if (currentVal && !currentVal.endsWith(' ')) {
+                    userInput.value += ' ' + transcript;
+                } else {
+                    userInput.value += transcript;
+                }
+
+                // Auto resize textarea
+                userInput.style.height = "auto";
+                userInput.style.height = (userInput.scrollHeight) + "px";
+
+                userInput.focus();
+            }
+        };
+
+        recognition.onerror = (event) => {
+            if (permissionTimeout) {
+                clearTimeout(permissionTimeout);
+                permissionTimeout = null;
+            }
+            isRequestingPermission = false;
+            if (event.error === 'not-allowed') {
+                userInput.placeholder = "Microphone access denied.";
+                placeholderOverride = true;
+            } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                userInput.placeholder = `Mic error: ${event.error}`;
+                placeholderOverride = true;
+            }
+        };
+
+        recognition.onend = () => {
+            stopListening();
+            if (!placeholderOverride) {
+                userInput.placeholder = "Ask about a faculty member, specialization, or staff role…";
+            }
+            placeholderOverride = false;
+            userInput.focus();
+        };
+
+        function stopListening() {
+            isListening = false;
+            micBtn.classList.remove("listening");
+            const icon = micBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-stop');
+                icon.classList.add('fa-microphone');
+            }
+        }
+
+        window.stopDictation = () => {
+            if (isListening && recognition) {
+                recognition.stop();
+            }
+        };
+
+        micBtn.addEventListener("click", () => {
+            if (isRequestingPermission) return;
+
+            if (isListening) {
+                recognition.stop();
+                stopListening(); // Eagerly reset UI
+            } else {
+                isRequestingPermission = true;
+                try {
+                    recognition.start();
+                    permissionTimeout = setTimeout(() => {
+                        isRequestingPermission = false;
+                        permissionTimeout = null;
+                    }, 5000);
+                } catch (e) {
+                    isRequestingPermission = false;
+                    console.error("Speech recognition start error:", e);
+                }
+            }
+        });
+    } else if (micBtn) {
+        micBtn.style.display = "none";
+    }
+
+    // Auto-resize textarea and handle Enter vs Shift+Enter
+    userInput.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = (this.scrollHeight) + "px";
+    });
+
+    userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Prevent default newline
+            const text = userInput.value;
+            if (text.trim()) {
+                handleSend(text);
+                userInput.style.height = "auto"; // Reset height after send
+            }
+        }
+    });
+
     form.addEventListener("submit", (e) => {
         e.preventDefault();
         const text = userInput.value;
-        handleSend(text);
+        if (text.trim()) {
+            handleSend(text);
+            userInput.style.height = "auto"; // Reset height after send
+        }
     });
 
     // Suggested Actions / Prompts Click Event (Welcome screen prompt cards)

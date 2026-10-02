@@ -43,7 +43,7 @@ Service Service Service   Service    Service   Service   Service   Service
 - **Database**: PostgreSQL (Local)
 - **Frontend**: HTML5, Vanilla CSS3, JavaScript, Google Identity Services (OAuth 2.0)
 - **Data Processing**: `pandas`, `BeautifulSoup4`, `pdfplumber`
-- **Search**: PostgreSQL `tsvector` and GIN Indexes
+- **Search**: PostgreSQL `tsvector` and GIN Indexes, with a `pg_trgm` similarity fallback for misspelled directory names
 - **Integration**: SSE (Server-Sent Events) over HTTP with dynamic Stdio bridging via `mcp-remote`.
 
 ## Project Structure
@@ -104,6 +104,7 @@ MCP Project/
 │   ├── seed_faculty.py
 │   ├── seed_staff.py
 │   ├── seed_library.py
+│   ├── seed_venues.py
 │   ├── seed_timetable.py
 │   ├── seed_calendar.py
 │   ├── seed_scholars.py
@@ -200,6 +201,13 @@ pip install -r requirements.txt
      python scripts/setup_db.py --only calendar
      ```
 
+   > **Existing databases:** `init_db.sql` now enables the `pg_trgm` extension and
+   > creates trigram indexes on `faculty.name` and `staff.name`, which power the
+   > typo-tolerant directory fallback. Re-run the schema step once after pulling:
+   > `python scripts/setup_db.py --only schema`. The script is idempotent and needs
+   > superuser rights (or a database owner on PostgreSQL 13+, where `pg_trgm` is a
+   > trusted extension) to install the extension.
+
 3. **Manual / Individual Seeding (Optional):**
    ```bash
    psql -U postgres -d daiict_db -f scripts/init_db.sql
@@ -208,6 +216,7 @@ pip install -r requirements.txt
    python scripts/seed_scholars.py
    python scripts/seed_library.py
    python scripts/seed_calendar.py
+   python scripts/seed_venues.py
    python scripts/seed_timetable.py          
    python scripts/seed_documents.py
    ```

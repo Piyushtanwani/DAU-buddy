@@ -136,7 +136,7 @@ def main():
     parser.add_argument("--skip-library",  action="store_true", help="Skip the slow 28k-book library seed")
     parser.add_argument("--skip-documents",action="store_true", help="Skip document PDF indexing")
     parser.add_argument("--only", choices=["schema","faculty","staff","library",
-                                           "calendar","scholars","timetable","documents","all"],
+                                           "calendar","scholars","timetable","venues","documents","all"],
                         default="all", help="Run only a specific step")
     args = parser.parse_args()
 
@@ -173,8 +173,9 @@ def main():
     # ── 4. Calendar ────────────────────────────────────────────────────────────
     step("calendar", run, "seed_calendar.py", "Academic & holiday calendar")
 
-    # ── 5. Timetable ───────────────────────────────────────────────────────────
+    # ── 5. Timetable & Venues ──────────────────────────────────────────────────
     step("timetable", run, "seed_timetable.py", "Timetable (Active Excel dataset)")
+    step("venues", run, "seed_venues.py", "Venues (Capacity and POC mappings)")
 
     # ── 6. Documents (PDF indexing) ────────────────────────────────────────────
     if args.skip_documents:

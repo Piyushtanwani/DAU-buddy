@@ -74,7 +74,7 @@ def call_openai_api(api_key: str, system_instruction: str, history: List[ChatMes
         "tools": OPENAI_TOOLS,
         "tool_choice": "auto",
         "temperature": 0.3,
-        "max_tokens": 1200
+        "max_tokens": 4000
     }
 
     usage_dict = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}

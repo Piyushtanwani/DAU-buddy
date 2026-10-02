@@ -89,6 +89,18 @@ def get_gemini_api_key() -> str:
     return os.getenv("GEMINI_API_KEY", "")
 
 
+# Pinned, not an alias. 'gemini-flash-latest' floats: the API will not even
+# say which version it currently resolves to, so behaviour, latency and cost
+# could all change with no commit and nothing to bisect. This is the version
+# the system prompt and the tool-calling loop were built against; set
+# GEMINI_MODEL to try another.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+
+
+def get_gemini_model() -> str:
+    return os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
+
 # ==============================================================================
 # Retrieval and RAG Configuration
 # ==============================================================================
@@ -121,6 +133,13 @@ def get_feedback_recipient_emails() -> list[str]:
     """Return a list of feedback recipient emails."""
     emails = os.getenv("FEEDBACK_RECIPIENT_EMAILS", "")
     return [e.strip() for e in emails.split(",") if e.strip()]
+
+# ==============================================================================
+# Venue & Timetable Configuration
+# ==============================================================================
+CEP_BOOKING_POC = "prabhunath_sharma@dau.ac.in"
+LAB_LT_BOOKING_POC = "laboratory@dau.ac.in"
+DEFAULT_VENUE_DURATION_MINUTES = 60
 
 # ==============================================================================
 # Authentication Configuration

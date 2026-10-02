@@ -41,3 +41,4 @@ Thumbs.db
 # Downloaded Data
 data/documents/
 *.orig
+data/room_capacity.csv
