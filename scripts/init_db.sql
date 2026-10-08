@@ -382,3 +382,42 @@ CREATE TABLE IF NOT EXISTS venues (
     venue_type  VARCHAR(50),
     booking_poc VARCHAR(255)
 );
+
+-- =============================================================================
+-- Personal Schedules
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS student_electives (
+    email VARCHAR(255),
+    course_code VARCHAR(100),
+    PRIMARY KEY (email, course_code)
+);
+
+CREATE TABLE IF NOT EXISTS personal_schedule_modifications (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('ADD', 'OVERRIDE', 'REMOVE')),
+    timetable_id INTEGER REFERENCES timetables(id) ON DELETE CASCADE,
+    course_code VARCHAR(100),
+    course_name VARCHAR(255),
+    room VARCHAR(255),
+    session_type VARCHAR(50),
+    day_of_week VARCHAR(20),
+    start_time TIME,
+    end_time TIME,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_authoritative BOOLEAN NOT NULL DEFAULT FALSE,
+    CHECK (end_time > start_time)
+);
+
+-- Uniqueness Constraint: A user may have at most one active OVERRIDE or REMOVE modification for a given timetable_id.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_personal_modifications_unique_override 
+    ON personal_schedule_modifications (email, timetable_id) 
+    WHERE action IN ('OVERRIDE', 'REMOVE');
+
+-- Uniqueness Constraint: A timetable_id can have at most one active authoritative modification.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_authoritative_modification 
+    ON personal_schedule_modifications (timetable_id)
+    WHERE is_authoritative = TRUE
+      AND action IN ('OVERRIDE', 'REMOVE');
+
+CREATE INDEX IF NOT EXISTS idx_personal_modifications_email ON personal_schedule_modifications(email);

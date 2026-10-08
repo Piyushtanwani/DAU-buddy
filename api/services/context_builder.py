@@ -32,6 +32,16 @@ def build_caller_context(identity: CallerIdentity) -> str:
             f"For their own schedule, location or free time, call the timetable "
             f"tools with \"{identity.timetable_name}\"."
         )
+        try:
+            from api.services import timetable_service
+            my_sched = timetable_service.get_personalized_faculty_schedule(identity, None)
+            sched_items = my_sched.get('schedule', [])
+            if sched_items:
+                sched_str = " | ".join([f"{str(s.get('day_of_week'))[:3]} {str(s.get('start_time'))[:5]}-{str(s.get('end_time'))[:5]} {s.get('course_code')} {s.get('room')}" for s in sched_items])
+                out.append(f"Their PERSONALIZED schedule (including overrides): {sched_str}")
+                out.append("Use this personalized schedule if they ask about their own timetable, instead of calling get_faculty_schedule.")
+        except Exception as e:
+            pass
 
     out.append(f"Email: {identity.email}")
 
@@ -85,11 +95,19 @@ def build_caller_context(identity: CallerIdentity) -> str:
             "admission year, not a record. Use it as a default and let them correct it."
         )
 
-    out.append(
-        "Their elective choices are not known. A programme timetable is the core "
-        "timetable only, so say that when you give them one."
-    )
-
+    try:
+        from api.services import timetable_service
+        my_sched = timetable_service.get_personalized_student_schedule(identity, None)
+        sched_items = my_sched.get('schedule', [])
+        if sched_items:
+            sched_str = " | ".join([f"{str(s.get('day_of_week'))[:3]} {str(s.get('start_time'))[:5]}-{str(s.get('end_time'))[:5]} {s.get('course_code')} {s.get('room')}" for s in sched_items])
+            out.append(f"Their PERSONALIZED schedule (including electives and overrides): {sched_str}")
+            out.append("Use this personalized schedule if they ask about their own timetable, instead of calling get_program_timetable.")
+        else:
+            out.append("Their personalized schedule is currently empty.")
+    except Exception as e:
+        out.append(f"Could not load personalized schedule. {e}")
+        
     return "\n".join(out)
 
 

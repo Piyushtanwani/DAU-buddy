@@ -21,8 +21,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source code
 COPY core/       /app/core/
 COPY api/        /app/api/
+COPY config/     /app/config/
+COPY connectors/ /app/connectors/
+COPY data/       /app/data/
+COPY parsers/    /app/parsers/
 COPY scrapers/   /app/scrapers/
-COPY dau_mcp/        /app/dau_mcp/
+COPY dau_mcp/    /app/dau_mcp/
 COPY frontend/   /app/frontend/
 COPY scripts/    /app/scripts/
 COPY .env.example /app/

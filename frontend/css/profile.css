@@ -1,0 +1,618 @@
+/* ==============================================================================
+   DA-IICT DAU Buddy - Profile Dashboard Styles (profile.css)
+   ============================================================================== */
+
+/* Layout & Containers */
+.profile-app-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-top: 16px;
+    width: 100%;
+}
+
+.profile-content-area {
+    flex: 1;
+    padding: 24px;
+}
+
+.profile-content-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.profile-area {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    background: var(--bg-body, #f8fafc);
+}
+
+.profile-viewport {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Sidebar navigation styling (for profile layout) */
+.sidebar {
+    width: 250px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px;
+}
+
+.nav-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.nav-item-btn i {
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-item-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+}
+
+.nav-item-btn.active {
+    background: #e0f2fe;
+    color: #0284c7;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .nav-item-btn.active {
+    background: rgba(2, 132, 199, 0.2);
+    color: #38bdf8;
+}
+
+/* Profile Header Card */
+.profile-header-card {
+    background: linear-gradient(135deg, #0f3b73 0%, #1a5b9c 100%);
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    color: white;
+    box-shadow: 0 12px 24px rgba(15, 59, 115, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40%;
+    background: url('/assets/dau_buddy_icon.png') no-repeat right center;
+    background-size: contain;
+    opacity: 0.05;
+    pointer-events: none;
+}
+
+.profile-avatar-container {
+    position: relative;
+    z-index: 2;
+}
+
+.profile-avatar-container img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    object-fit: cover;
+    background: white;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.profile-header-info {
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.profile-header-info h2 {
+    margin: 0 0 8px 0;
+    font-size: 32px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.profile-affiliation {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-email {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    opacity: 0.8;
+}
+
+.profile-role-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Academic Info Card */
+.academic-info-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
+
+.academic-info-card h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+}
+
+.academic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.academic-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.academic-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.academic-value {
+    font-size: 16px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* Quick Actions Section */
+.quick-actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.quick-actions-section h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.quick-action-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    text-align: left;
+}
+
+.quick-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px var(--shadow-color);
+    border-color: #0f3b73;
+}
+
+[data-theme="dark"] .quick-action-card:hover {
+    border-color: #38bdf8;
+}
+
+.qa-icon {
+    width: 40px;
+    height: 40px;
+    background: #e0f2fe;
+    color: #0284c7;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+[data-theme="dark"] .qa-icon {
+    background: rgba(2, 132, 199, 0.2);
+    color: #38bdf8;
+}
+
+.quick-action-card h4 {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.quick-action-card p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Bottom Split Section */
+.bottom-split-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+}
+
+.view-all-btn {
+    background: transparent;
+    border: none;
+    color: #0284c7;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.view-all-btn:hover {
+    color: #0369a1;
+}
+
+[data-theme="dark"] .view-all-btn {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .view-all-btn:hover {
+    color: #7dd3fc;
+}
+
+/* Timetable Card */
+.timetable-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    height: 300px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.timetable-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    color: var(--text-muted);
+    gap: 16px;
+}
+
+.timetable-empty-state i {
+    font-size: 48px;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .timetable-empty-state i {
+    color: #475569;
+}
+
+.timetable-empty-state p {
+    margin: 0;
+    font-size: 15px;
+    max-width: 250px;
+}
+
+.chat-fallback-btn {
+    background: #0f3b73;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.chat-fallback-btn:hover {
+    background: #0a2952;
+}
+
+/* Recent Chats Section */
+.recent-chats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    height: 300px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    overflow-y: auto;
+}
+
+.recent-chat-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.recent-chat-item:hover {
+    background: var(--bg-hover);
+}
+
+.recent-chat-icon {
+    width: 36px;
+    height: 36px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .recent-chat-icon {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.recent-chat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.recent-chat-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-chat-time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+
+/* Weekly Timetable Styling */
+.timetable-days-nav {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-color);
+    background: #f8fafc;
+}
+
+[data-theme="dark"] .timetable-days-nav {
+    background: var(--bg-hover);
+}
+
+.timetable-day-tab {
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.timetable-day-tab:hover {
+    color: var(--primary-color);
+}
+
+.timetable-day-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: var(--bg-card);
+}
+
+.timetable-slots-container {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.timetable-slot {
+    display: flex;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    transition: box-shadow 0.2s;
+}
+
+.timetable-slot:hover {
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.slot-time {
+    min-width: 100px;
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border-color);
+    margin-right: 16px;
+    padding-right: 16px;
+}
+
+.slot-details {
+    flex: 1;
+}
+
+.slot-course {
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 4px;
+    font-size: 15px;
+}
+
+.slot-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.slot-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .bottom-split-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+
+    .profile-header-card {
+        padding: 24px;
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+
+    .profile-header-info {
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-content-area {
+        padding: 12px;
+    }
+
+    .profile-header-card {
+        padding: 16px;
+    }
+
+    .profile-avatar-container img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .profile-header-info h2 {
+        font-size: 24px;
+    }
+
+    .timetable-slot {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .slot-time {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding-right: 0;
+        margin-right: 0;
+        padding-bottom: 8px;
+        text-align: left;
+    }
+}
