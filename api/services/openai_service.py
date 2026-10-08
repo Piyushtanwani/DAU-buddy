@@ -1,8 +1,9 @@
+import os
 import time
 import json
 import requests
 import asyncio
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 from core import config
 from core.schemas import ChatMessage
@@ -36,6 +37,45 @@ def record_openai_failure() -> None:
 
 
 # ==============================================================================
+# Provider configuration (env-driven so a local vLLM server can be used)
+# ==============================================================================
+DEFAULT_LLM_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_PROVIDER_ORDER = ("gemini", "openai")
+
+_KNOWN_PROVIDERS = {"gemini", "openai"}
+
+def get_llm_base_url() -> str:
+    # `or` (not a getenv default) so a blank `LLM_BASE_URL=` also falls back.
+    return (os.getenv("LLM_BASE_URL") or DEFAULT_LLM_BASE_URL).rstrip("/")
+
+def get_llm_model() -> str:
+    return os.getenv("LLM_MODEL") or DEFAULT_LLM_MODEL
+
+def openai_configured() -> bool:
+    """
+    The OpenAI-compatible path is usable if there is an API key (real OpenAI)
+    or a custom base URL (a local server needs no key).
+    """
+    return bool(os.getenv("OPENAI_API_KEY") or os.getenv("LLM_BASE_URL"))
+
+def get_provider_order() -> List[str]:
+    """
+    Parse LLM_PROVIDER_ORDER, e.g. "openai,gemini" puts the OpenAI-compatible
+    (local) model first. Unknown names are ignored; empty/invalid -> default.
+    """
+    raw = os.getenv("LLM_PROVIDER_ORDER") or ""
+    order = []
+    for name in raw.split(","):
+        name = name.strip().lower()
+        if name in _KNOWN_PROVIDERS and name not in order:
+            order.append(name)
+        elif name and name not in _KNOWN_PROVIDERS:
+            logger.warning(f"Ignoring unknown provider '{name}' in LLM_PROVIDER_ORDER.")
+    return order + [name for name in DEFAULT_PROVIDER_ORDER if name not in order]
+
+
+# ==============================================================================
 # OpenAI Tool JSON Schemas
 # ==============================================================================
 OPENAI_TOOLS = tool_bridge.openai_declarations()
@@ -46,15 +86,14 @@ MAX_TOOL_TURNS = 8
 # ==============================================================================
 # OpenAI Chat Execution
 # ==============================================================================
-def call_openai_api(api_key: str, system_instruction: str, history: List[ChatMessage]) -> Tuple[str, dict]:
+def call_openai_api(api_key: Optional[str], system_instruction: str, history: List[ChatMessage]) -> Tuple[str, dict]:
     """
-    Calls the OpenAI API with function-calling support.
+    Calls the OpenAI-compatible chat API (OpenAI itself or a local server such as vLLM) with function-calling support.
     """
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+    url = f"{get_llm_base_url()}/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    if api_key: # a local server needs no key
+        headers["Authorization"] = f"Bearer {api_key}"
 
     messages = [{"role": "system", "content": system_instruction}]
 
@@ -69,7 +108,7 @@ def call_openai_api(api_key: str, system_instruction: str, history: List[ChatMes
         messages.append({"role": "user", "content": "Hello"})
         
     payload = {
-        "model": "gpt-4o-mini",
+        "model": get_llm_model(),
         "messages": messages,
         "tools": OPENAI_TOOLS,
         "tool_choice": "auto",

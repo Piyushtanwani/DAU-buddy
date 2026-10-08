@@ -20,7 +20,8 @@ from api.services import (
     build_system_instruction,
 )
 from api.services.openai_service import (
-    call_openai_api, is_openai_available, record_openai_failure
+    call_openai_api, is_openai_available, record_openai_failure,
+    openai_configured, get_provider_order,
 )
 from api.auth import verify_google_token, resolve_role
 from api.context import user_role_var, user_email_var
@@ -337,7 +338,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
         gemini_available = bool(os.getenv("GEMINI_API_KEY") and is_gemini_available())
-        openai_available = bool(os.getenv("OPENAI_API_KEY") and is_openai_available())
+        openai_available = bool(openai_configured() and is_openai_available())
         
         if _is_library_query(body.message) and not (gemini_available or openai_available):
             logger.info("Chat trigger: library search detected (No AI APIs available).")
@@ -423,9 +424,9 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
 
         # Strategy A: Informational Queries (tool calling)
         gemini_api_key = os.getenv("GEMINI_API_KEY")
-        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY") # may be None for a local server
 
-        if (gemini_api_key and is_gemini_available()) or (openai_api_key and is_openai_available()):
+        if gemini_available or openai_available:
             logger.info("Processing via tool-calling pipeline (Strategy A)...")
             # Directory data is no longer injected into the prompt — the model
             # reaches it through the bridged directory tools. The user's role is
@@ -458,38 +459,39 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
             
             response_text = None
 
-            # Both clients are synchronous: they are run in a worker thread under
-            # a deadline so one slow call cannot stall the single uvicorn worker
-            # (which would take the whole site down, not just this request).
-
-            # Attempt 1: Gemini
-            if gemini_api_key and is_gemini_available():
-                try:
-                    response_text, token_usage = await _run_blocking(
-                        call_gemini_api, gemini_api_key, system_instruction, history
-                    )
-                    return ChatResponse(response=response_text)
-                except asyncio.TimeoutError:
-                    logger.error(f"Gemini RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
-                    record_gemini_failure()
-                except Exception:
-                    logger.exception("Gemini RAG failed.")
-                    record_gemini_failure()
-
-            # Attempt 2: OpenAI Fallback
-            if not response_text and openai_api_key and is_openai_available():
-                try:
-                    logger.info("Falling back to OpenAI RAG...")
-                    response_text, token_usage = await _run_blocking(
-                        call_openai_api, openai_api_key, system_instruction, history
-                    )
-                    return ChatResponse(response=response_text)
-                except asyncio.TimeoutError:
-                    logger.error(f"OpenAI RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
-                    record_openai_failure()
-                except Exception:
-                    logger.exception("OpenAI RAG failed.")
-                    record_openai_failure()
+            # Providers are tried in LLM_PROVIDER_ORDER (default: gemini, openai).
+            # Both clients are synchronous: they run in a worker thread under a
+            # deadline so one slow call cannot stall the single uvicorn worker.
+            for provider in get_provider_order():
+                if provider == "gemini":
+                    if not (gemini_api_key and is_gemini_available()):
+                        continue
+                    try:
+                        response_text, token_usage = await _run_blocking(
+                            call_gemini_api, gemini_api_key, system_instruction, history
+                        )
+                        return ChatResponse(response=response_text)
+                    except asyncio.TimeoutError:
+                        logger.error(f"Gemini RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
+                        record_gemini_failure()
+                    except Exception:
+                        logger.exception("Gemini RAG failed.")
+                        record_gemini_failure()
+                elif provider == "openai":
+                    if not (openai_configured() and is_openai_available()):
+                        continue
+                    try:
+                        logger.info("Trying OpenAI-compatible RAG...")
+                        response_text, token_usage = await _run_blocking(
+                            call_openai_api, openai_api_key, system_instruction, history
+                        )
+                        return ChatResponse(response=response_text)
+                    except asyncio.TimeoutError:
+                        logger.error(f"OpenAI RAG exceeded {LLM_TIMEOUT_S}s — abandoning.")
+                        record_openai_failure()
+                    except Exception:
+                        logger.exception("OpenAI RAG failed.")
+                        record_openai_failure()
             
             # If both fail or are skipped, fall through to NLP fallback
             logger.warning("RAG engines unavailable or failed — falling back to local NLP engine/library.")
