@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from core import config
 import hashlib
 from core.database import db_connection
+from core.question_log import log_chat_question
 from core.rate_limit import limiter
 from core.schemas import (
     ChatRequest, ChatResponse, ChatMessage,
@@ -335,6 +336,11 @@ async def chat_endpoint(request: Request, body: ChatRequest, auth: tuple[str, st
                     )
         except Exception as e:
             logger.error(f"Failed to log web chat analytics: {e}")
+
+        try:
+            await _run_blocking(log_chat_question, body.message, role, timeout=5)
+        except Exception as e:  # a slow insert (TimeoutError) must not fail the chat
+            logger.error(f"Failed to log chat question: {e}")
 
         # ── 0. Library Search Trigger (Fallback) ──────────────────────────────
         gemini_available = bool(os.getenv("GEMINI_API_KEY") and is_gemini_available())
