@@ -148,7 +148,9 @@ def call_openai_api(api_key: Optional[str], system_instruction: str, history: Li
                 try:
                     args = json.loads(tool_call["function"]["arguments"])
                 except json.JSONDecodeError:
-                    args = {}
+                    # The raw text reaches dispatch, which rejects it, so the
+                    # model is told and the eval runner scores it malformed_json.
+                    args = tool_call["function"]["arguments"]
 
                 logger.info(f"OpenAI requested tool call: {function_name}({args})")
                 

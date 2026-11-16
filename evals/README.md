@@ -36,6 +36,56 @@ signatures, or the calendar/timetable services. It stays out of `make test`:
 the unit suite is fast, free and offline, and this layer is slow, paid, and can
 wobble on phrasing.
 
+## Scoring a run against the SLA
+
+```bash
+python -m evals.run_eval --provider openai --model Qwen/Qwen3-8B --reps 3 --out runs/x
+```
+
+| Flag | Meaning |
+|---|---|
+| `--provider gemini\|openai` | `openai` uses `LLM_BASE_URL` / `LLM_MODEL` (and `OPENAI_API_KEY` if set); default `gemini` |
+| `--model` | model name; overrides `GEMINI_MODEL` / `LLM_MODEL` for this run |
+| `--reps N` | full passes over the selected cases (default 1) |
+| `--out DIR` | write trajectories and `summary.json` there |
+
+Without `--out` nothing is written, and plain `make eval` behaves as before.
+
+With `--out`, each case in each repetition gets
+`<case>.rep<N>.<run id>.jsonl`, one JSON line per event: `run_start`,
+`tool_call`, `tool_validation_error`, `tool_result` (with latency), `retry`,
+`run_end`. The format is Agent Anatomy's (`evals/trajectory.py`).
+`run_end.outcome` is one of:
+
+| Outcome | Signal |
+|---|---|
+| `completed` | a final answer that is neither canned reply below |
+| `non_attempt` | the case has `expect_tools` and no tool was called |
+| `turn_limit` | the reply starts "I wasn't able to pull all of that together" |
+| `empty_answer` | the reply is "I checked the system, but there is no additional information…" |
+| `truncated` | the service reported hitting its output-token limit; neither service reports this, so no case gets the label |
+| `harness_error` | the case ended `ERROR` |
+
+Every tool call's arguments are checked against the tool's schema (array items
+and `$ref` included). A call to an unregistered tool, or with arguments that
+fail the schema, counts toward the fabrication rate, as does an
+`answer_excludes` / `answer_not_matches` violation. Arguments that are not
+valid JSON are logged as `malformed_json` and count too. A scalar the tool
+coerces to the declared type (`"5"` or `5.0` for an integer) is logged as
+`coercible_type` and counted per case as `coercible_calls`, not as a
+fabrication.
+
+`run_end` token totals cover each user turn as the service reports it: OpenAI
+sums the whole tool loop, Gemini reports the final response only. Totals are
+not comparable across providers, and `peak_input_tokens` / `completions` are
+`null`.
+
+`summary.json` holds, per repetition and as the mean over repetitions,
+`pass_rate` (`PASS / (PASS + FAIL)`), `fabrication_rate` (share of scored cases
+that fabricated) and the `ERROR` count. `ERROR` cases are never scored; re-run
+them. Per-turn latency is recorded for diagnosis only — the SLA latency comes
+from the 4-chat load test.
+
 ## Reading a run
 
 | Status | Meaning | Exit code |
@@ -115,6 +165,9 @@ surfaced in the first place.
 - A database that drops and recovers inside one case can go unnoticed: many
   services turn a query error into answer text, and the check before and after
   the case both see a working database.
-- Nothing here checks latency, cost, or the OpenAI fallback path.
+- Latency: per-turn timings are recorded for diagnosis only. The SLA latency
+  comes from the 4-chat load test.
+- Cost: token totals are partial for Gemini (final response only).
+- The provider fallback order: `--provider` drives one service directly.
 - The model is nondeterministic. A single failure is a signal to look, not proof
   of a regression — re-run the case before you go hunting.
