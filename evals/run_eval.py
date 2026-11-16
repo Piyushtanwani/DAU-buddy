@@ -100,7 +100,9 @@ class ToolRecorder:
     environment reason (see ENVIRONMENT_ERRORS). When given a trajectory
     logger it also writes tool_call / tool_validation_error / tool_result
     events, and collects the calls whose arguments failed the tool's schema
-    (or that named a tool that is not registered) in `invalid_calls`.
+    (or that named a tool that is not registered) in `invalid_calls`, each
+    with its ToolValidationError; `fabricating` on that error says whether
+    the call counts toward the fabrication rate.
 
     Two patch points: tool_bridge.dispatch sees what the model asked for, and
     the MCP tool manager's call_tool sees the exception dispatch would
@@ -368,7 +370,8 @@ def classify_outcome(case: dict, status: str, answers: list, any_tool_called: bo
 
     Precedence: harness_error, turn_limit, empty_answer, truncated,
     non_attempt, completed. `truncated` is whatever the service reports about
-    hitting its output-token limit; neither service reports it today.
+    hitting its output-token limit; neither service reports it, so no case
+    gets that label.
     """
     if status == "ERROR":
         return "harness_error"
@@ -392,9 +395,10 @@ class CaseResult:
     messages: list
     outcome: str
     fabricated: bool
-    invalid_calls: int
+    invalid_calls: int          # calls that count toward fabrication
     turn_latency_s: list
     trajectory: str | None = None
+    coercible_calls: int = 0    # schema mismatches the tool coerces; not fabrication
 
 
 def summarize(results: list, *, provider: str, model: str, reps: int) -> dict:
@@ -425,6 +429,7 @@ def summarize(results: list, *, provider: str, model: str, reps: int) -> dict:
                 {
                     "id": r.case_id, "status": r.status, "outcome": r.outcome,
                     "fabricated": r.fabricated, "invalid_calls": r.invalid_calls,
+                    "coercible_calls": r.coercible_calls,
                     "turn_latency_s": [round(s, 3) for s in r.turn_latency_s],
                     "trajectory": r.trajectory,
                 }
@@ -448,14 +453,19 @@ def summarize(results: list, *, provider: str, model: str, reps: int) -> dict:
 
 
 def _usage_totals(usages: list) -> dict:
-    prompt = [u.get("prompt_token_count", 0) or 0 for u in usages]
+    """Token totals for run_end. Each usage dict covers one user turn: the
+    OpenAI service sums every request in its tool loop, Gemini reports the
+    final response only. The per-request figures (peak_input_tokens,
+    completions) are therefore None, and totals are not comparable across
+    providers."""
+    prompt = sum(u.get("prompt_token_count", 0) or 0 for u in usages)
     output = sum(u.get("candidates_token_count", 0) or 0 for u in usages)
     return {
-        "input_tokens": sum(prompt),
+        "input_tokens": prompt,
         "output_tokens": output,
-        "peak_input_tokens": max(prompt, default=0),
-        "total_tokens": sum(prompt) + output,
-        "completions": len(usages),
+        "peak_input_tokens": None,
+        "total_tokens": prompt + output,
+        "completions": None,
     }
 
 
@@ -471,6 +481,8 @@ def execute_case(case: dict, api_key, verbose: bool, *, provider: str = "gemini"
 
     With out_dir, writes one trajectory file: run_start before the first turn,
     run_end after the last (also when the case ends ERROR or the run stops).
+    A DailyQuotaExhausted raised from here carries that file's path as
+    `trajectory`.
     """
     logger = (
         TrajectoryLogger(out_dir, run_id=f"{case['id']}.rep{rep}.{_make_run_id()}")
@@ -530,9 +542,12 @@ def execute_case(case: dict, api_key, verbose: bool, *, provider: str = "gemini"
         # DailyQuotaExhausted, KeyboardInterrupt, a bug: still close the file.
         logger.run_end(False, f"run stopped: {e!r}", turns_run, time.monotonic() - started,
                        "harness_error", **_usage_totals(trace.usages), graded_ok=False)
+        if isinstance(e, DailyQuotaExhausted) and out_dir:
+            e.trajectory = str(logger.path)
         raise
 
-    fabricated = fabricated or bool(trace.invalid_calls)
+    fabricating = [call for call in trace.invalid_calls if call[1].fabricating]
+    fabricated = fabricated or bool(fabricating)
     outcome = classify_outcome(case, status, answers, any_tool_called)
     logger.run_end(
         status == "PASS",
@@ -545,9 +560,10 @@ def execute_case(case: dict, api_key, verbose: bool, *, provider: str = "gemini"
     )
     return CaseResult(
         case_id=case["id"], rep=rep, status=status, messages=messages, outcome=outcome,
-        fabricated=fabricated and status != "ERROR", invalid_calls=len(trace.invalid_calls),
+        fabricated=fabricated and status != "ERROR", invalid_calls=len(fabricating),
         turn_latency_s=trace.turn_latency_s,
         trajectory=str(logger.path) if out_dir else None,
+        coercible_calls=len(trace.invalid_calls) - len(fabricating),
     )
 
 
@@ -618,9 +634,11 @@ def main() -> int:
                 # Cases that never ran are ERRORs, so error_count stays honest.
                 pending = [(r, c) for r in range(rep, args.reps + 1)
                            for c in (cases[position:] if r == rep else cases)]
-                for r, c in pending:
+                for index, (r, c) in enumerate(pending):
+                    # Only the case that hit the quota started, so only it has a file.
+                    trajectory = getattr(e, "trajectory", None) if index == 0 else None
                     all_results.append(CaseResult(c["id"], r, "ERROR", [str(e)], "harness_error",
-                                                  False, 0, []))
+                                                  False, 0, [], trajectory=trajectory))
                 print(f"  STOP  {e}; {len(pending)} case(s) not run")
                 stopped = True
                 break

@@ -102,7 +102,7 @@ def _run_async(coro):
     return result[0]
 
 
-def dispatch(name: str, arguments: Dict[str, Any]) -> str:
+def dispatch(name: str, arguments: Any) -> str:
     """Execute a tool by name and return its text result (sync).
 
     All chat backends funnel through here, so tool access and logging are
@@ -110,6 +110,8 @@ def dispatch(name: str, arguments: Dict[str, Any]) -> str:
     """
     if name in EXCLUDED_TOOLS:
         return f"Tool '{name}' is not available in chat."
+    if arguments is not None and not isinstance(arguments, dict):
+        return f"Tool '{name}' failed: arguments must be a JSON object."
 
     logger.info(f"Bridge dispatch: {name}({arguments})")
     try:
