@@ -524,7 +524,7 @@ def main():
         with db_connection() as conn:
             with conn.cursor() as cur:
                 # TRUNCATE existing timetables to keep only active timetable dataset
-                cur.execute("TRUNCATE TABLE timetables;")
+                cur.execute("TRUNCATE TABLE timetables CASCADE;")
                 logger.info("Cleared existing timetables table.")
 
                 INSERT_SQL = """

@@ -31,25 +31,22 @@ def resolve_role(email: str) -> str:
     Centralize the role resolution logic:
     maintainer list → numeric local-part → faculty table → staff table → default 'Student'
     """
-    if email in config.get_feedback_recipient_emails():
-        local_part = email.split('@')[0]
-        return 'Student / Maintainer' if local_part.isdigit() else 'Maintainer'
-    
+    is_maintainer = email in config.get_feedback_recipient_emails()
     local_part = email.split('@')[0]
-    if local_part.isdigit():
-        return 'Student'
     
-    try:
-        with db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
-                if cursor.fetchone():
-                    return 'Faculty'
-                
-                cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
-                if cursor.fetchone():
-                    return 'Staff'
-    except Exception as e:
-        logger.error(f"Error checking directories for role assignment: {e}")
-        
-    return 'Student'
+    base_role = 'Student'
+    if not local_part.isdigit():
+        try:
+            with db_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT 1 FROM faculty WHERE email = %s LIMIT 1", (email,))
+                    if cursor.fetchone():
+                        base_role = 'Faculty'
+                    else:
+                        cursor.execute("SELECT 1 FROM staff WHERE email = %s LIMIT 1", (email,))
+                        if cursor.fetchone():
+                            base_role = 'Staff'
+        except Exception as e:
+            logger.error(f"Error checking directories for role assignment: {e}")
+            
+    return f"{base_role} / Maintainer" if is_maintainer else base_role
