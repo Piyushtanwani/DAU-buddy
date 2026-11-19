@@ -105,7 +105,7 @@ def test_check_turn_reports_each_assertion_kind():
 
 def _tool_names_in_cases() -> set[str]:
     names = set()
-    for case in yaml.safe_load(run_eval.CASES_FILE.read_text()):
+    for case in yaml.safe_load(run_eval.CASES_FILE.read_text(encoding="utf-8")):
         for turn in case["turns"]:
             for spec in turn.get("expect_tools", []) + turn.get("forbid_tools", []):
                 names.add(spec["name"] if isinstance(spec, dict) else spec)
@@ -182,7 +182,7 @@ def test_database_down_errors_the_case(monkeypatch, when):
 
 
 def test_pronoun_case_catches_a_pronoun_opening_the_answer():
-    case = next(c for c in yaml.safe_load(run_eval.CASES_FILE.read_text())
+    case = next(c for c in yaml.safe_load(run_eval.CASES_FILE.read_text(encoding="utf-8"))
                 if c["id"] == "no-gender-guessed-from-name")
     turn = case["turns"][0]
 

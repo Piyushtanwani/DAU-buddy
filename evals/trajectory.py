@@ -1,22 +1,23 @@
 """
 Trajectory logging and tool-argument validation for the eval runner.
 
-One JSONL file per run, one JSON object per event, in the Agent Anatomy
-trajectory format. Event `type` values: run_start, tool_call, tool_result,
-tool_validation_error, retry, run_end.
+Changes from the originals:
+  * RUN_OUTCOMES gains `empty_answer`.
+  * validate_tool_arguments takes the tool's JSON-schema dict (the
+    tool_bridge.list_tools() "parameters" value) instead of a Tool object.
+  * Array items are checked against `items`, resolving `$ref` from `$defs`.
+  * A null for a parameter that is not required is accepted: tool_bridge
+    flattens Optional[...] anyOf and drops the null branch, but the tool itself
+    accepts None, so rejecting it would count a legal call as a fabrication.
 
-validate_tool_arguments checks a call against the tool's JSON-schema dict (the
-tool_bridge.list_tools() "parameters" value). A null for a parameter that is
-not required is accepted: tool_bridge flattens Optional[...] anyOf and drops
-the null branch, but the tool itself accepts None. A scalar the tool's
-argument model coerces to the declared type (`"5"` or `5.0` for an integer)
-is reported as `coercible_type`, which does not count as a fabrication.
+One JSONL file per run, one JSON object per event. Event `type` values used:
+run_start, tool_call, tool_result, tool_validation_error, retry, run_end.
+(`prompt`, `completion` and `truncated` writers are kept for format parity.)
 """
 
 from __future__ import annotations
 
 import json
-import re
 import time
 import uuid
 from dataclasses import asdict, dataclass, is_dataclass
@@ -32,12 +33,12 @@ RUN_OUTCOMES = {
     "non_attempt",     # The model answered without ever calling a warranted tool.
     "truncated",       # Output max_tokens cap hit before the completion finished.
     "turn_limit",      # The agent exhausted max_turns before a final answer.
+    "token_limit",     # Cumulative model-reported token usage crossed the run budget.
+    "no_progress",     # The same tool call with the same args repeated too often.
+    "tool_error_loop", # Reserved for repeated tool-error-specific stall detection.
     "harness_error",   # The harness itself raised while running/logging/grading.
     "empty_answer",    # The model returned neither text nor a tool call.
 }
-
-# Validation rules that record a call without counting it as a fabrication.
-NON_FABRICATING_RULES = {"coercible_type"}
 
 
 def _make_run_id() -> str:
@@ -85,7 +86,20 @@ class TrajectoryLogger:
     def run_start(self, task_id: str, backend: str, model: str, config: dict):
         self._write("run_start", task_id=task_id, backend=backend, model=model, config=config)
 
-    def tool_call(self, name: str, arguments: Any):
+    def prompt(self, messages: list[dict], system: str | None):
+        self._write("prompt", messages=messages, system=system)
+
+    def completion(self, response):
+        self._write(
+            "completion",
+            content=response.content,
+            tool_calls=response.tool_calls,
+            stop_reason=response.stop_reason,
+            usage=response.usage,
+            latency_s=response.latency_s,
+        )
+
+    def tool_call(self, name: str, arguments: dict):
         self._write("tool_call", name=name, arguments=arguments)
 
     def tool_result(self, name: str, result: str | None, error: str | None, latency_s: float):
@@ -142,6 +156,9 @@ class TrajectoryLogger:
             attempt_duration_s=attempt_duration_s,
         )
 
+    def truncated(self, reason: str):
+        self._write("truncated", reason=reason)
+
     def next_turn(self):
         self._turn += 1
 
@@ -154,13 +171,11 @@ class TrajectoryLogger:
         outcome: str,
         input_tokens: int,
         output_tokens: int,
-        peak_input_tokens: int | None,
+        peak_input_tokens: int,
         total_tokens: int,
-        completions: int | None,
+        completions: int,
         graded_ok: bool,
     ):
-        """`peak_input_tokens` and `completions` are per-request figures; they
-        are None when the service reports usage only per user turn."""
         if outcome not in RUN_OUTCOMES:
             raise ValueError(f"unknown run outcome: {outcome!r}")
         self._write(
@@ -190,11 +205,6 @@ class ToolValidationError:
     expected_type: str | None = None
     actual_type: str | None = None
 
-    @property
-    def fabricating(self) -> bool:
-        """Whether this call counts toward the fabrication rate."""
-        return self.rule not in NON_FABRICATING_RULES
-
 
 def validate_tool_arguments(schema: dict[str, Any], arguments: Any) -> ToolValidationError | None:
     """Validate the small JSON-Schema subset the chat tools use.
@@ -204,17 +214,7 @@ def validate_tool_arguments(schema: dict[str, Any], arguments: Any) -> ToolValid
     tool body. A schema using any other keyword needs support added here first.
     Unknown parameters are rejected at the top level only: the sanitized
     schemas drop additionalProperties, so nested extras cannot be judged.
-
-    Returns the first fabricating error; when every mismatch is coercible,
-    the first `coercible_type` error; None for a call that fits the schema.
     """
-    if isinstance(arguments, str):
-        return ToolValidationError(
-            rule="malformed_json",
-            message="tool arguments are not valid JSON",
-            expected_type="object",
-            actual_type="str",
-        )
     if not isinstance(arguments, dict):
         return ToolValidationError(
             rule="wrong_type",
@@ -234,7 +234,6 @@ def validate_tool_arguments(schema: dict[str, Any], arguments: Any) -> ToolValid
 
     required = set(schema.get("required", []))
     defs = schema.get("$defs", {})
-    coercible: list[ToolValidationError] = []
     for name, value in arguments.items():
         property_schema = properties.get(name)
         if property_schema is None:
@@ -245,10 +244,10 @@ def validate_tool_arguments(schema: dict[str, Any], arguments: Any) -> ToolValid
             )
         if value is None and name not in required:
             continue
-        error = _validate_value(property_schema, value, name, defs, coercible)
+        error = _validate_value(property_schema, value, name, defs)
         if error:
             return error
-    return coercible[0] if coercible else None
+    return None
 
 
 def _resolve_ref(node: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
@@ -259,33 +258,21 @@ def _resolve_ref(node: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
     return defs.get(ref[len("#/$defs/"):], node)
 
 
-def _validate_value(
-    node: dict[str, Any],
-    value: Any,
-    path: str,
-    defs: dict[str, Any],
-    coercible: list[ToolValidationError],
-) -> ToolValidationError | None:
-    """The first fabricating error under `node`; coercible mismatches are
-    appended to `coercible` and validation continues past them."""
+def _validate_value(node: dict[str, Any], value: Any, path: str, defs: dict[str, Any]) -> ToolValidationError | None:
     node = _resolve_ref(node, defs)
     expected_type = node.get("type")
     if expected_type and not _matches_json_type(value, expected_type):
-        mismatch = ToolValidationError(
-            rule="coercible_type" if _coerces_to(value, expected_type) else "wrong_type",
+        return ToolValidationError(
+            rule="wrong_type",
             message=f"parameter {path} must be {expected_type}, got {type(value).__name__}",
             parameter=path,
             expected_type=expected_type,
             actual_type=type(value).__name__,
         )
-        if mismatch.fabricating:
-            return mismatch
-        coercible.append(mismatch)
-        return None
 
     if expected_type == "array" and isinstance(node.get("items"), dict):
         for index, item in enumerate(value):
-            error = _validate_value(node["items"], item, f"{path}[{index}]", defs, coercible)
+            error = _validate_value(node["items"], item, f"{path}[{index}]", defs)
             if error:
                 return error
 
@@ -300,7 +287,7 @@ def _validate_value(
                 )
         for name, child in value.items():
             if name in properties and not (child is None and name not in node.get("required", [])):
-                error = _validate_value(properties[name], child, f"{path}.{name}", defs, coercible)
+                error = _validate_value(properties[name], child, f"{path}.{name}", defs)
                 if error:
                     return error
     return None
@@ -321,33 +308,3 @@ def _matches_json_type(value: Any, expected_type: str) -> bool:
         "array": isinstance(value, list),
     }
     return matches.get(expected_type, False)
-
-
-_INTEGER_TEXT = re.compile(r"[+-]?[0-9]+(?:_[0-9]+)*(?:\.0+)?")
-_BOOLEAN_TEXT = {"true", "false", "1", "0", "yes", "no", "on", "off", "t", "f", "y", "n"}
-
-
-def _coerces_to(value: Any, expected_type: str) -> bool:
-    """Whether the tools' argument models (pydantic, lax mode) accept `value`
-    as `expected_type`. Only scalar conversions are listed; any change to the
-    argument models' strictness has to be mirrored here, or legal calls are
-    scored as fabrications."""
-    if isinstance(value, bool):
-        return False
-    if expected_type == "integer":
-        if isinstance(value, float):
-            return value.is_integer()
-        return isinstance(value, str) and bool(_INTEGER_TEXT.fullmatch(value.strip()))
-    if expected_type == "number":
-        if not isinstance(value, str) or not value.isascii():
-            return False
-        try:
-            float(value)
-        except ValueError:
-            return False
-        return True
-    if expected_type == "boolean":
-        if isinstance(value, int):
-            return value in (0, 1)
-        return isinstance(value, str) and value.strip().lower() in _BOOLEAN_TEXT
-    return False
