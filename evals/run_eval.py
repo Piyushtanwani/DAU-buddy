@@ -100,7 +100,9 @@ class ToolRecorder:
     environment reason (see ENVIRONMENT_ERRORS). When given a trajectory
     logger it also writes tool_call / tool_validation_error / tool_result
     events, and collects the calls whose arguments failed the tool's schema
-    (or that named a tool that is not registered) in `invalid_calls`.
+    (or that named a tool that is not registered) in `invalid_calls`, each
+    with its ToolValidationError; `fabricating` on that error says whether
+    the call counts toward the fabrication rate.
 
     Two patch points: tool_bridge.dispatch sees what the model asked for, and
     the MCP tool manager's call_tool sees the exception dispatch would
